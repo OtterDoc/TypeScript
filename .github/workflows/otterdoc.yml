@@ -38,6 +38,7 @@ jobs:
         uses: Hedge-Finance/otterdoc-actions@main # TODO Change this. Testing only
         with:
           key: ${{ secrets.OTTERDOC_KEY }}
+          includeFiles: 'src/services/**/*'
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5.0.1
