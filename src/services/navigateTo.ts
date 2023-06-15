@@ -59,6 +59,15 @@ export function getNavigateToItems(sourceFiles: readonly SourceFile[], checker: 
     return (maxResultCount === undefined ? rawItems : rawItems.slice(0, maxResultCount)).map(createNavigateToItem);
 }
 
+/**
+ * Retrieves items from a named declaration based on a pattern matcher and name.
+ * @param patternMatcher - The pattern matcher used to match the name.
+ * @param name - The name of the declaration to retrieve items from.
+ * @param declarations - The list of declarations to search through.
+ * @param checker - The type checker used to check the declarations.
+ * @param fileName - The name of the file containing the declarations.
+ * @param rawItems - The list of raw navigate to items to add the retrieved items to.
+ */
 function getItemsFromNamedDeclaration(patternMatcher: PatternMatcher, name: string, declarations: readonly Declaration[], checker: TypeChecker, fileName: string, rawItems: RawNavigateToItem[]): void {
     // First do a quick check to see if the name of the declaration matches the
     // last portion of the (possibly) dotted name they're searching for.
@@ -113,6 +122,11 @@ function pushLiteral(node: Node, containers: string[]): boolean {
     return isPropertyNameLiteral(node) && (containers.push(getTextOfIdentifierOrLiteral(node)), true);
 }
 
+/**
+ * Returns an array of strings representing the containers of a given declaration.
+ * @param declaration - The declaration to get the containers of.
+ * @returns An array of strings representing the containers of the given declaration.
+ */
 function getContainers(declaration: Declaration): readonly string[] {
     const containers: string[] = [];
 
@@ -145,6 +159,12 @@ function compareNavigateToItems(i1: RawNavigateToItem, i2: RawNavigateToItem) {
         || compareStringsCaseSensitiveUI(i1.name, i2.name);
 }
 
+/**
+ * Creates a NavigateToItem object from a RawNavigateToItem object.
+ * @param {RawNavigateToItem} rawItem - The raw item to create the NavigateToItem from.
+ * @returns {NavigateToItem} - The created NavigateToItem object.
+ * @remarks - The containerName property may be empty if the container has a computed name.
+ */
 function createNavigateToItem(rawItem: RawNavigateToItem): NavigateToItem {
     const declaration = rawItem.declaration;
     const container = getContainerNode(declaration);

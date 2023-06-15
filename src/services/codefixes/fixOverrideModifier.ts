@@ -149,6 +149,13 @@ registerCodeFix({
         })
 });
 
+/**
+ * Dispatches changes based on the error code.
+ * @param {textChanges.ChangeTracker} changeTracker - The change tracker.
+ * @param {CodeFixContext | CodeFixAllContext} context - The code fix context.
+ * @param {number} errorCode - The error code.
+ * @param {number} pos - The position.
+ */
 function dispatchChanges(
     changeTracker: textChanges.ChangeTracker,
     context: CodeFixContext | CodeFixAllContext,
@@ -171,6 +178,12 @@ function dispatchChanges(
     }
 }
 
+/**
+ * Adds an override modifier to a class element and updates the source file using a change tracker.
+ * @param changeTracker - The change tracker to use for updating the source file.
+ * @param sourceFile - The source file to update.
+ * @param pos - The position of the class element to modify.
+ */
 function doAddOverrideModifierChange(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, pos: number) {
     const classElement = findContainerClassElementLike(sourceFile, pos);
     if (isSourceFileJS(sourceFile)) {
@@ -190,6 +203,12 @@ function doAddOverrideModifierChange(changeTracker: textChanges.ChangeTracker, s
     changeTracker.insertModifierAt(sourceFile, modifierPos, SyntaxKind.OverrideKeyword, options);
 }
 
+/**
+ * Removes the override modifier from a class element and updates the change tracker.
+ * @param {textChanges.ChangeTracker} changeTracker - The change tracker to update.
+ * @param {SourceFile} sourceFile - The source file containing the class element.
+ * @param {number} pos - The position of the class element in the source file.
+ */
 function doRemoveOverrideModifierChange(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, pos: number) {
     const classElement = findContainerClassElementLike(sourceFile, pos);
     if (isSourceFileJS(sourceFile)) {
@@ -202,6 +221,11 @@ function doRemoveOverrideModifierChange(changeTracker: textChanges.ChangeTracker
     changeTracker.deleteModifier(sourceFile, overrideModifier);
 }
 
+/**
+ * Determines if a given node is a class element with JSDoc comments.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is a class element with JSDoc comments, false otherwise.
+ */
 function isClassElementLikeHasJSDoc(node: Node): node is ClassElementLikeHasJSDoc {
     switch (node.kind) {
         case SyntaxKind.Constructor:
@@ -217,6 +241,12 @@ function isClassElementLikeHasJSDoc(node: Node): node is ClassElementLikeHasJSDo
     }
 }
 
+/**
+ * Finds the nearest class element with JSDoc comments in a given TypeScript source file at a specified position.
+ * @param {SourceFile} sourceFile - The TypeScript source file to search in.
+ * @param {number} pos - The position to start searching from.
+ * @returns {Node | undefined} - The nearest class element with JSDoc comments, or undefined if none is found.
+ */
 function findContainerClassElementLike(sourceFile: SourceFile, pos: number) {
     const token = getTokenAtPosition(sourceFile, pos);
     const classElement = findAncestor(token, node => {

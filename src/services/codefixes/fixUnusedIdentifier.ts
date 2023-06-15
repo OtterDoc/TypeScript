@@ -82,6 +82,16 @@ const errorCodes = [
 
 registerCodeFix({
     errorCodes,
+    /**
+     * Returns an array of CodeFixAction objects based on the context provided. The context object should contain the following properties:
+     * - errorCode: the error code associated with the context
+     * - sourceFile: the source file associated with the context
+     * - program: the program associated with the context
+     * - cancellationToken: the cancellation token associated with the context
+     * The method uses the context to perform various fixes, such as deleting unused imports, unused declarations, and unused destructuring declarations. It also has the ability to change "infer" keywords to "unknown" and prefix unused declarations with an underscore.
+     * @param {Object} context - the context object containing the necessary properties
+     * @returns {Array<CodeFixAction>} - an array of CodeFixAction objects
+     */
     getCodeActions(context) {
         const { errorCode, sourceFile, program, cancellationToken } = context;
         const checker = program.getTypeChecker();
@@ -250,6 +260,13 @@ function deleteDestructuringElements(changes: textChanges.ChangeTracker, sourceF
     forEach(node.elements, n => changes.delete(sourceFile, n));
 }
 
+/**
+ * Deletes destructuring from the given context and changes the source file accordingly.
+ * @param {CodeFixContext} context - The context for the code fix.
+ * @param {textChanges.ChangeTracker} changes - The change tracker for the source file.
+ * @param {SourceFile} sourceFile - The source file to make changes to.
+ * @param {ObjectBindingPattern | ArrayBindingPattern} - The parent object or array binding pattern to delete.
+ */
 function deleteDestructuring(context: CodeFixContext, changes: textChanges.ChangeTracker, sourceFile: SourceFile, { parent }: ObjectBindingPattern | ArrayBindingPattern) {
     if (isVariableDeclaration(parent) && parent.initializer && isCallLikeExpression(parent.initializer)) {
         if (isVariableDeclarationList(parent.parent) && length(parent.parent.declarations) > 1) {
@@ -271,6 +288,14 @@ function deleteDestructuring(context: CodeFixContext, changes: textChanges.Chang
     }
 }
 
+/**
+ * Tries to prefix an identifier with an underscore if it is not a property and can be prefixed.
+ * @param changes - The change tracker to record the changes made to the source file.
+ * @param errorCode - The error code to check if the property is declared but not read.
+ * @param sourceFile - The source file containing the token to be prefixed.
+ * @param token - The token to be prefixed.
+ * @returns void
+ */
 function tryPrefixDeclaration(changes: textChanges.ChangeTracker, errorCode: number, sourceFile: SourceFile, token: Node): void {
     // Don't offer to prefix a property.
     if (errorCode === Diagnostics.Property_0_is_declared_but_its_value_is_never_read.code) return;
@@ -289,6 +314,11 @@ function tryPrefixDeclaration(changes: textChanges.ChangeTracker, errorCode: num
     }
 }
 
+/**
+ * Determines if a given token can be prefixed.
+ * @param {Identifier} token - The token to check.
+ * @returns {boolean} - True if the token can be prefixed, false otherwise.
+ */
 function canPrefix(token: Identifier): boolean {
     switch (token.parent.kind) {
         case SyntaxKind.Parameter:
@@ -306,6 +336,18 @@ function canPrefix(token: Identifier): boolean {
     return false;
 }
 
+/**
+ * Deletes a declaration from a source file and all its references.
+ *
+ * @param sourceFile - The source file containing the declaration.
+ * @param token - The node representing the declaration to delete.
+ * @param changes - The text changes tracker to record the deletion.
+ * @param checker - The type checker for the program.
+ * @param sourceFiles - An array of all source files in the program.
+ * @param program - The program containing the source file.
+ * @param cancellationToken - The cancellation token.
+ * @param isFixAll - A boolean indicating whether to delete all references or just the current one.
+ */
 function tryDeleteDeclaration(sourceFile: SourceFile, token: Node, changes: textChanges.ChangeTracker, checker: TypeChecker, sourceFiles: readonly SourceFile[], program: Program, cancellationToken: CancellationToken, isFixAll: boolean) {
     tryDeleteDeclarationWorker(token, changes, sourceFile, checker, sourceFiles, program, cancellationToken, isFixAll);
     if (isIdentifier(token)) {
@@ -318,6 +360,18 @@ function tryDeleteDeclaration(sourceFile: SourceFile, token: Node, changes: text
     }
 }
 
+/**
+ * Tries to delete a declaration worker.
+ * @param {Node} token - The token to delete.
+ * @param {textChanges.ChangeTracker} changes - The changes to make.
+ * @param {SourceFile} sourceFile - The source file to delete from.
+ * @param {TypeChecker} checker - The type checker.
+ * @param {readonly SourceFile[]} sourceFiles - The source files to check.
+ * @param {Program} program - The program to use.
+ * @param {CancellationToken} cancellationToken - The cancellation token.
+ * @param {boolean} isFixAll - Whether to fix all instances.
+ * @returns {void}
+ */
 function tryDeleteDeclarationWorker(token: Node, changes: textChanges.ChangeTracker, sourceFile: SourceFile, checker: TypeChecker, sourceFiles: readonly SourceFile[], program: Program, cancellationToken: CancellationToken, isFixAll: boolean): void {
     const { parent } = token;
     if (isParameter(parent)) {
@@ -330,6 +384,18 @@ function tryDeleteDeclarationWorker(token: Node, changes: textChanges.ChangeTrac
     }
 }
 
+/**
+ * Deletes a parameter from a given source file if it is safe to do so.
+ * @param changes - The text changes to be made.
+ * @param sourceFile - The source file containing the parameter to be deleted.
+ * @param parameter - The parameter to be deleted.
+ * @param checker - The type checker for the program.
+ * @param sourceFiles - An array of all source files in the program.
+ * @param program - The program containing the source file.
+ * @param cancellationToken - A token that can be used to request cancellation of the operation.
+ * @param isFixAll - Whether to fix all occurrences of the parameter.
+ * @remarks This function checks if it is safe to delete the parameter and then deletes it if it is safe to do so. If the parameter has modifiers, it deletes them first before deleting the parameter. If the parameter has no initializer and is not used in any function calls, it is safe to delete the parameter.
+ */
 function tryDeleteParameter(
     changes: textChanges.ChangeTracker,
     sourceFile: SourceFile,
@@ -360,6 +426,17 @@ function isNotProvidedArguments(parameter: ParameterDeclaration, checker: TypeCh
     return !FindAllReferences.Core.someSignatureUsage(parameter.parent, sourceFiles, checker, (_, call) => !call || call.arguments.length > index);
 }
 
+/**
+ * Determines whether a parameter can be safely deleted from a function declaration or expression.
+ * @param {TypeChecker} checker - The type checker for the program.
+ * @param {SourceFile} sourceFile - The source file containing the function declaration or expression.
+ * @param {ParameterDeclaration} parameter - The parameter to be deleted.
+ * @param {readonly SourceFile[]} sourceFiles - The source files in the program.
+ * @param {Program} program - The program containing the source files.
+ * @param {CancellationToken} cancellationToken - The cancellation token.
+ * @param {boolean} isFixAll - Whether the deletion is part of a code-fix-all operation.
+ * @returns {boolean} - Whether the parameter can be safely deleted.
+ */
 function mayDeleteParameter(checker: TypeChecker, sourceFile: SourceFile, parameter: ParameterDeclaration, sourceFiles: readonly SourceFile[], program: Program, cancellationToken: CancellationToken, isFixAll: boolean): boolean {
     const { parent } = parameter;
     switch (parent.kind) {

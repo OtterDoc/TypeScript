@@ -121,6 +121,12 @@ registerRefactor(refactorName, {
     getAvailableActions: getRefactorActionsToConvertParametersToDestructuredObject
 });
 
+/**
+ * Returns an array of applicable refactor actions to convert function parameters to a destructured object.
+ * @param {RefactorContext} context - The context object containing information about the file and starting position.
+ * @returns {readonly ApplicableRefactorInfo[]} - An array of applicable refactor actions.
+ * @remarks This function checks if the file is a JavaScript file and returns an empty array if it is. It also retrieves the function declaration at the starting position and returns an array of applicable refactor actions.
+ */
 function getRefactorActionsToConvertParametersToDestructuredObject(context: RefactorContext): readonly ApplicableRefactorInfo[] {
     const { file, startPosition } = context;
     const isJSFile = isSourceFileJS(file);
@@ -135,6 +141,12 @@ function getRefactorActionsToConvertParametersToDestructuredObject(context: Refa
     }];
 }
 
+/**
+ * Retrieves the refactor edits needed to convert function parameters to a destructured object.
+ * @param {RefactorContext} context - The context of the refactor.
+ * @param {string} actionName - The name of the action to perform.
+ * @returns {RefactorEditInfo | undefined} - The edits needed to perform the refactor, or undefined if the function declaration or cancellation token is missing.
+ */
 function getRefactorEditsToConvertParametersToDestructuredObject(context: RefactorContext, actionName: string): RefactorEditInfo | undefined {
     Debug.assert(actionName === refactorName, "Unexpected action name");
     const { file, startPosition, program, cancellationToken, host } = context;
@@ -321,7 +333,10 @@ function getGroupedReferences(functionDeclaration: ValidFunctionDeclaration, pro
 }
 
 /**
- * Gets the symbol for the contextual type of the node if it is not a union or intersection.
+ * Retrieves the symbol for the contextual type of a given node, provided it is not a union or intersection.
+ * @param {Node} node - The node to retrieve the contextual type symbol for.
+ * @param {TypeChecker} checker - The TypeChecker instance to use for retrieving the contextual type.
+ * @returns {Symbol | undefined} The symbol for the contextual type of the node, or undefined if it is a union or intersection or if no symbol is found.
  */
 function getSymbolForContextualType(node: Node, checker: TypeChecker): Symbol | undefined {
     const element = getContainingObjectLiteralElement(node);
@@ -334,6 +349,11 @@ function getSymbolForContextualType(node: Node, checker: TypeChecker): Symbol | 
     }
 }
 
+/**
+ * Returns a Node or undefined based on the given FindAllReferences.NodeEntry object.
+ * @param {FindAllReferences.NodeEntry} entry - The NodeEntry object to be processed.
+ * @returns {Node | undefined} - Returns a Node or undefined.
+ */
 function entryToImportOrExport(entry: FindAllReferences.NodeEntry): Node | undefined {
     const node = entry.node;
 
@@ -357,6 +377,11 @@ function entryToDeclaration(entry: FindAllReferences.NodeEntry): Node | undefine
     return undefined;
 }
 
+/**
+ * Given a NodeEntry, this function attempts to find the corresponding CallExpression or NewExpression that references the node.
+ * @param {FindAllReferences.NodeEntry} entry - The NodeEntry to search for references of.
+ * @returns {CallExpression | NewExpression | undefined} - The corresponding CallExpression or NewExpression, or undefined if not found.
+ */
 function entryToFunctionCall(entry: FindAllReferences.NodeEntry): CallExpression | NewExpression | undefined {
     if (entry.node.parent) {
         const functionReference = entry.node;
@@ -395,6 +420,11 @@ function entryToFunctionCall(entry: FindAllReferences.NodeEntry): CallExpression
     return undefined;
 }
 
+/**
+ * Returns an ElementAccessExpression or PropertyAccessExpression based on the provided NodeEntry.
+ * @param {FindAllReferences.NodeEntry} entry - The NodeEntry to be used.
+ * @returns {ElementAccessExpression | PropertyAccessExpression | undefined} - The resulting access expression or undefined if none is found.
+ */
 function entryToAccessExpression(entry: FindAllReferences.NodeEntry): ElementAccessExpression | PropertyAccessExpression | undefined {
     if (entry.node.parent) {
         const reference = entry.node;
@@ -427,6 +457,13 @@ function entryToType(entry: FindAllReferences.NodeEntry): Node | undefined {
     return undefined;
 }
 
+/**
+ * Retrieves the function declaration at a given position in a source file.
+ * @param {SourceFile} file - The source file to search in.
+ * @param {number} startPosition - The position to search for the function declaration.
+ * @param {TypeChecker} checker - The type checker to use for validation.
+ * @returns {ValidFunctionDeclaration | undefined} The function declaration at the given position, or undefined if not found.
+ */
 function getFunctionDeclarationAtPosition(file: SourceFile, startPosition: number, checker: TypeChecker): ValidFunctionDeclaration | undefined {
     const node = getTouchingToken(file, startPosition);
     const functionDeclaration = getContainingFunctionDeclaration(node);
@@ -455,6 +492,12 @@ function isValidMethodSignature(node: Node): node is ValidMethodSignature {
     return isMethodSignature(node) && (isInterfaceDeclaration(node.parent) || isTypeLiteralNode(node.parent));
 }
 
+/**
+ * Determines if a given function declaration is valid based on its parameters and implementation.
+ * @param functionDeclaration The function declaration to check.
+ * @param checker The TypeChecker instance to use for type checking.
+ * @returns A boolean indicating whether the function declaration is valid or not.
+ */
 function isValidFunctionDeclaration(
     functionDeclaration: FunctionLikeDeclaration,
     checker: TypeChecker): functionDeclaration is ValidFunctionDeclaration {
@@ -542,6 +585,12 @@ function createPropertyOrShorthandAssignment(name: string, initializer: Expressi
     return factory.createPropertyAssignment(name, initializer);
 }
 
+/**
+ * Creates a new object literal expression based on the provided function declaration and arguments.
+ * @param functionDeclaration - The function declaration to use as a template for the object literal.
+ * @param functionArguments - The arguments to use for the object literal properties.
+ * @returns An object literal expression.
+ */
 function createNewArgument(functionDeclaration: ValidFunctionDeclaration, functionArguments: NodeArray<Expression>): ObjectLiteralExpression {
     const parameters = getRefactorableParameters(functionDeclaration.parameters);
     const hasRestParameter = isRestParameter(last(parameters));
@@ -566,6 +615,13 @@ function createNewArgument(functionDeclaration: ValidFunctionDeclaration, functi
     return objectLiteral;
 }
 
+/**
+ * Creates a new set of parameters for a given function declaration or method signature.
+ * @param functionDeclaration The function declaration or method signature to create new parameters for.
+ * @param program The TypeScript program.
+ * @param host The language service host.
+ * @returns A NodeArray of ParameterDeclarations representing the new set of parameters.
+ */
 function createNewParameters(functionDeclaration: ValidFunctionDeclaration | ValidMethodSignature, program: Program, host: LanguageServiceHost): NodeArray<ParameterDeclaration> {
     const checker = program.getTypeChecker();
     const refactorableParameters = getRefactorableParameters(functionDeclaration.parameters);
@@ -607,6 +663,11 @@ function createNewParameters(functionDeclaration: ValidFunctionDeclaration | Val
     }
     return factory.createNodeArray([objectParameter]);
 
+    /**
+     * Creates a binding element from a valid parameter declaration.
+     * @param {ValidParameterDeclaration} parameterDeclaration - The parameter declaration to create the binding element from.
+     * @returns {BindingElement} The created binding element.
+     */
     function createBindingElementFromParameterDeclaration(parameterDeclaration: ValidParameterDeclaration): BindingElement {
         const element = factory.createBindingElement(
             /*dotDotDotToken*/ undefined,
@@ -627,6 +688,11 @@ function createNewParameters(functionDeclaration: ValidFunctionDeclaration | Val
         return typeNode;
     }
 
+    /**
+     * Creates a PropertySignature from a ValidParameterDeclaration object.
+     * @param {ValidParameterDeclaration} parameterDeclaration - The parameter declaration to create the PropertySignature from.
+     * @returns {PropertySignature} - The created PropertySignature.
+     */
     function createPropertySignatureFromParameterDeclaration(parameterDeclaration: ValidParameterDeclaration): PropertySignature {
         let parameterType = parameterDeclaration.type;
         if (!parameterType && (parameterDeclaration.initializer || isRestParameter(parameterDeclaration))) {
@@ -666,6 +732,11 @@ function getParameterName(paramDeclaration: ValidParameterDeclaration) {
     return getTextOfIdentifierOrLiteral(paramDeclaration.name);
 }
 
+/**
+ * Returns an array of Identifier or Modifier objects representing the class names of a given constructor declaration.
+ * @param constructorDeclaration - A ValidConstructor object representing the constructor declaration.
+ * @returns An array of Identifier or Modifier objects representing the class names.
+ */
 function getClassNames(constructorDeclaration: ValidConstructor): (Identifier | Modifier)[] {
     switch (constructorDeclaration.parent.kind) {
         case SyntaxKind.ClassDeclaration:
@@ -686,6 +757,11 @@ function getClassNames(constructorDeclaration: ValidConstructor): (Identifier | 
     }
 }
 
+/**
+ * Returns an array of Node objects representing the names of the functions in the provided ValidFunctionDeclaration object.
+ * @param {ValidFunctionDeclaration} functionDeclaration - The function declaration object to extract function names from.
+ * @returns {Node[]} An array of Node objects representing the names of the functions in the provided ValidFunctionDeclaration object.
+ */
 function getFunctionNames(functionDeclaration: ValidFunctionDeclaration): Node[] {
     switch (functionDeclaration.kind) {
         case SyntaxKind.FunctionDeclaration:

@@ -51,6 +51,14 @@ registerCodeFix({
     }
 });
 
+/**
+ * Modifies a Promise declaration to include a `void` type argument or append ` | void` to an existing type argument.
+ * @param {textChanges.ChangeTracker} changes - The change tracker to use for modifying the source file.
+ * @param {SourceFile} sourceFile - The source file containing the Promise declaration.
+ * @param {TextSpan} span - The text span of the Promise declaration.
+ * @param {Program} program - The program containing the source file.
+ * @param {Set<ParameterDeclaration>} [seen] - A set of previously seen ParameterDeclarations to avoid making duplicate changes.
+ */
 function makeChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, span: TextSpan, program: Program, seen?: Set<ParameterDeclaration>) {
     const node = getTokenAtPosition(sourceFile, span.start);
     if (!isIdentifier(node) || !isCallExpression(node.parent) || node.parent.expression !== node || node.parent.arguments.length !== 0) return;
@@ -98,6 +106,11 @@ function makeChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, 
     }
 }
 
+/**
+ * Returns the effective type arguments of a NewExpression node. If the node is in a JavaScript file and is a Promise type wrapped in a ParenthesizedExpression with a JSDocType tag, returns the type arguments from the JSDocType. Otherwise, returns the type arguments from the node.
+ * @param {NewExpression} node - The NewExpression node to get the effective type arguments from.
+ * @returns {NodeArray<TypeNode> | undefined} - The effective type arguments of the node, or undefined if none are found.
+ */
 function getEffectiveTypeArguments(node: NewExpression) {
     if (isInJSFile(node)) {
         if (isParenthesizedExpression(node.parent)) {

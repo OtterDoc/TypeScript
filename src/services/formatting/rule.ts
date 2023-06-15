@@ -18,7 +18,21 @@ export type ContextPredicate = (context: FormattingContext) => boolean;
 /** @internal */
 export const anyContext: readonly ContextPredicate[] = emptyArray;
 
-/** @internal */
+/**
+ * Represents the possible actions that can be taken by a rule.
+ * @enum {number}
+ * @property {number} None - No action to be taken.
+ * @property {number} StopProcessingSpaceActions - Stop processing space actions.
+ * @property {number} StopProcessingTokenActions - Stop processing token actions.
+ * @property {number} InsertSpace - Insert a space.
+ * @property {number} InsertNewLine - Insert a new line.
+ * @property {number} DeleteSpace - Delete a space.
+ * @property {number} DeleteToken - Delete a token.
+ * @property {number} InsertTrailingSemicolon - Insert a trailing semicolon.
+ * @property {number} StopAction - Stop processing both space and token actions.
+ * @property {number} ModifySpaceAction - Modify space actions.
+ * @property {number} ModifyTokenAction - Modify token actions.
+ */
 export const enum RuleAction {
     None                       = 0,
     StopProcessingSpaceActions = 1 << 0,

@@ -43,6 +43,13 @@ interface Info {
     readonly name: Identifier;
     readonly moduleSpecifier: Expression;
 }
+/**
+ * Retrieves information about an identifier at a specific position in a source file.
+ * @param {SourceFile} sourceFile - The source file to retrieve information from.
+ * @param {number} pos - The position of the identifier in the source file.
+ * @returns {Info|undefined} - An object containing information about the identifier, or undefined if the input is invalid.
+ * @remarks - This function checks if the identifier is part of an import statement and returns information about the import if so.
+ */
 function getInfo(sourceFile: SourceFile, pos: number): Info | undefined {
     const name = getTokenAtPosition(sourceFile, pos);
     if (!isIdentifier(name)) return undefined; // bad input

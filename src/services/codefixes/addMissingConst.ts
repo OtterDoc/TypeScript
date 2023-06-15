@@ -45,6 +45,15 @@ registerCodeFix({
     },
 });
 
+/**
+ * Applies a change to the source file based on the given parameters.
+ * @param {textChanges.ChangeTracker} changeTracker - The change tracker to use for making the change.
+ * @param {SourceFile} sourceFile - The source file to apply the change to.
+ * @param {number} pos - The position in the source file where the change should be applied.
+ * @param {Program} program - The program to use for type checking.
+ * @param {Set<Node>} [fixedNodes] - Optional set of nodes to fix.
+ * @returns {void}
+ */
 function makeChange(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, pos: number, program: Program, fixedNodes?: Set<Node>) {
     const token = getTokenAtPosition(sourceFile, pos);
     const forInitializer = findAncestor(token, node =>
@@ -87,6 +96,11 @@ function applyChange(changeTracker: textChanges.ChangeTracker, initializer: Node
     }
 }
 
+/**
+ * Determines if a given node is possibly part of a destructuring operation.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is possibly part of a destructuring operation, false otherwise.
+ */
 function isPossiblyPartOfDestructuring(node: Node): boolean {
     switch (node.kind) {
         case SyntaxKind.Identifier:
@@ -108,6 +122,11 @@ function arrayElementCouldBeVariableDeclaration(expression: Expression, checker:
     return !!identifier && !checker.getSymbolAtLocation(identifier);
 }
 
+/**
+ * Determines if a given node is possibly part of a comma-separated initializer.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is possibly part of a comma-separated initializer, false otherwise.
+ */
 function isPossiblyPartOfCommaSeperatedInitializer(node: Node): boolean {
     switch (node.kind) {
         case SyntaxKind.Identifier:
@@ -119,6 +138,12 @@ function isPossiblyPartOfCommaSeperatedInitializer(node: Node): boolean {
     }
 }
 
+/**
+ * Determines if the given expression could be a variable declaration.
+ * @param {Node} expression - The expression to check.
+ * @param {TypeChecker} checker - The type checker to use.
+ * @returns {boolean} - True if the expression could be a variable declaration, false otherwise.
+ */
 function expressionCouldBeVariableDeclaration(expression: Node, checker: TypeChecker): boolean {
     if (!isBinaryExpression(expression)) {
         return false;

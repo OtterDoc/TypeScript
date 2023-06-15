@@ -60,6 +60,11 @@ interface FunctionBracesInfo {
     addBraces: boolean;
 }
 
+/**
+ * Returns an array of applicable refactor actions to remove function braces.
+ * @param {RefactorContext} context - The context for the refactor action.
+ * @returns {readonly ApplicableRefactorInfo[]} - An array of applicable refactor actions.
+ */
 function getRefactorActionsToRemoveFunctionBraces(context: RefactorContext): readonly ApplicableRefactorInfo[] {
     const { file, startPosition, triggerReason } = context;
     const info = getConvertibleArrowFunctionAtPosition(file, startPosition, triggerReason === "invoked");
@@ -89,6 +94,12 @@ function getRefactorActionsToRemoveFunctionBraces(context: RefactorContext): rea
     return emptyArray;
 }
 
+/**
+ * Given a RefactorContext and an actionName, returns a RefactorEditInfo object that removes function braces.
+ * @param {RefactorContext} context - The RefactorContext object.
+ * @param {string} actionName - The name of the action to perform.
+ * @returns {RefactorEditInfo | undefined} - The RefactorEditInfo object or undefined.
+ */
 function getRefactorEditsToRemoveFunctionBraces(context: RefactorContext, actionName: string): RefactorEditInfo | undefined {
     const { file, startPosition } = context;
     const info = getConvertibleArrowFunctionAtPosition(file, startPosition);
@@ -121,6 +132,14 @@ function getRefactorEditsToRemoveFunctionBraces(context: RefactorContext, action
     return { renameFilename: undefined, renameLocation: undefined, edits };
 }
 
+/**
+ * Returns information about a convertible arrow function at a given position in a source file.
+ * @param {SourceFile} file - The source file to search in.
+ * @param {number} startPosition - The position to search for the function at.
+ * @param {boolean} [considerFunctionBodies=true] - Whether or not to consider function bodies.
+ * @param {string} [kind] - The kind of refactor to perform.
+ * @returns {FunctionBracesInfo | RefactorErrorInfo | undefined} - Information about the convertible arrow function, or undefined if none found.
+ */
 function getConvertibleArrowFunctionAtPosition(file: SourceFile, startPosition: number, considerFunctionBodies = true, kind?: string): FunctionBracesInfo | RefactorErrorInfo | undefined {
     const node = getTokenAtPosition(file, startPosition);
     const func = getContainingFunction(node);

@@ -34,6 +34,11 @@ export function preProcessFile(sourceText: string, readImportFiles = true, detec
     // ambient modules that are found inside external modules are interpreted as module augmentations
     let externalModule = false;
 
+    /**
+     * Retrieves the next token from the scanner and updates the lastToken and currentToken variables accordingly.
+     * If the currentToken is an open brace, braceNesting is incremented. If it is a close brace, braceNesting is decremented.
+     * @returns {number} The current token retrieved from the scanner.
+     */
     function nextToken() {
         lastToken = currentToken;
         currentToken = scanner.scan();
@@ -72,7 +77,9 @@ export function preProcessFile(sourceText: string, readImportFiles = true, detec
     }
 
     /**
-     * Returns true if at least one token was consumed from the stream
+     * Attempts to consume a "declare" keyword from the scanner and, if successful, checks for an ambient external module declaration and records it.
+     * @returns {boolean} True if at least one token was consumed from the stream, false otherwise.
+     * @remarks This function is used in the TypeScript compiler to handle ambient external module declarations.
      */
     function tryConsumeDeclare(): boolean {
         let token = scanner.getToken();
@@ -92,7 +99,8 @@ export function preProcessFile(sourceText: string, readImportFiles = true, detec
     }
 
     /**
-     * Returns true if at least one token was consumed from the stream
+     * Tries to consume an import statement from the token stream.
+     * @returns {boolean} True if at least one token was consumed from the stream, false otherwise.
      */
     function tryConsumeImport(): boolean {
         if (lastToken === SyntaxKind.DotToken) {
@@ -200,6 +208,10 @@ export function preProcessFile(sourceText: string, readImportFiles = true, detec
         return false;
     }
 
+    /**
+     * Tries to consume an export statement from the current position in the scanner.
+     * @returns {boolean} True if an export statement was consumed, false otherwise.
+     */
     function tryConsumeExport(): boolean {
         let token = scanner.getToken();
         if (token === SyntaxKind.ExportKeyword) {
@@ -273,6 +285,12 @@ export function preProcessFile(sourceText: string, readImportFiles = true, detec
         return false;
     }
 
+    /**
+     * Tries to consume a require call.
+     * @param skipCurrentToken - A boolean indicating whether to skip the current token.
+     * @param allowTemplateLiterals - A boolean indicating whether to allow template literals.
+     * @returns A boolean indicating whether a require call was successfully consumed.
+     */
     function tryConsumeRequireCall(skipCurrentToken: boolean, allowTemplateLiterals = false): boolean {
         let token = skipCurrentToken ? nextToken() : scanner.getToken();
         if (token === SyntaxKind.RequireKeyword) {
@@ -290,6 +308,11 @@ export function preProcessFile(sourceText: string, readImportFiles = true, detec
         return false;
     }
 
+    /**
+     * Attempts to consume a "define" statement from the scanner's current position.
+     * If successful, records any module names in the dependency list.
+     * @returns {boolean} True if a "define" statement was consumed, false otherwise.
+     */
     function tryConsumeDefine(): boolean {
         let token = scanner.getToken();
         if (token === SyntaxKind.Identifier && scanner.getTokenValue() === "define") {
@@ -333,6 +356,25 @@ export function preProcessFile(sourceText: string, readImportFiles = true, detec
         return false;
     }
 
+    /**
+     * Processes imports in the source text.
+     * Looks for import statements in the following formats:
+     * - import "mod";
+     * - import d from "mod";
+     * - import {a as A } from "mod";
+     * - import * as NS from "mod";
+     * - import d, {a, b as B} from "mod";
+     * - import i = require("mod");
+     * - import("mod");
+     * - export * from "mod";
+     * - export {a as b} from "mod";
+     * - export import i = require("mod");
+     * - (for JavaScript files) require("mod");
+     * Does not look for:
+     * - AnySymbol.import("mod");
+     * - AnySymbol.nested.import("mod");
+     * @returns {void}
+     */
     function processImports(): void {
         scanner.setText(sourceText);
         nextToken();

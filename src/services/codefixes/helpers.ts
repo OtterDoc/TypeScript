@@ -459,7 +459,18 @@ export function createSignatureDeclarationFromSignature(
     return undefined;
 }
 
-/** @internal */
+/**
+ * Creates a signature declaration from a call expression.
+ * @param kind The kind of declaration to create.
+ * @param context The code fix context.
+ * @param importAdder The import adder.
+ * @param call The call expression.
+ * @param name The identifier or private identifier or string name.
+ * @param modifierFlags The modifier flags.
+ * @param contextNode The context node.
+ * @returns A method declaration, function declaration, or method signature.
+ * @remarks This function is intended for internal use only.
+ */
 export function createSignatureDeclarationFromCallExpression(
     kind: SyntaxKind.MethodDeclaration | SyntaxKind.FunctionDeclaration | SyntaxKind.MethodSignature,
     context: CodeFixContextBase,
@@ -539,6 +550,13 @@ export interface ArgumentTypeParameterAndConstraint {
     constraint?: TypeNode;
 }
 
+/**
+ * Creates type parameters for arguments.
+ * @param {TypeChecker} checker - The type checker.
+ * @param {[string, ArgumentTypeParameterAndConstraint | undefined][]} argumentTypeParameters - An array of tuples containing the argument name and its type parameter and constraint.
+ * @param {NodeArray<TypeNode> | undefined} typeArguments - An optional array of type arguments.
+ * @returns {TypeParameterDeclaration[]} An array of type parameter declarations.
+ */
 function createTypeParametersForArguments(checker: TypeChecker, argumentTypeParameters: [string, ArgumentTypeParameterAndConstraint | undefined][], typeArguments: NodeArray<TypeNode> | undefined) {
     const usedNames = new Set(argumentTypeParameters.map(pair => pair[0]));
     const constraintsByName = new Map(argumentTypeParameters);
@@ -563,7 +581,18 @@ function createTypeParameterName(index: number) {
         : `T${index}`;
 }
 
-/** @internal */
+/**
+ * Converts a given type to an auto-importable TypeNode.
+ * @param checker - The TypeChecker instance.
+ * @param importAdder - The ImportAdder instance.
+ * @param type - The type to convert.
+ * @param contextNode - The context node.
+ * @param scriptTarget - The script target.
+ * @param flags - The NodeBuilderFlags.
+ * @param tracker - The SymbolTracker instance.
+ * @returns The converted TypeNode or undefined.
+ * @internal
+ */
 export function typeToAutoImportableTypeNode(checker: TypeChecker, importAdder: ImportAdder, type: Type, contextNode: Node | undefined, scriptTarget: ScriptTarget, flags?: NodeBuilderFlags, tracker?: SymbolTracker): TypeNode | undefined {
     let typeNode = checker.typeToTypeNode(type, contextNode, flags, tracker);
     if (typeNode && isImportTypeNode(typeNode)) {
@@ -586,7 +615,17 @@ function typeContainsTypeParameter(type: Type) {
     return type.flags & TypeFlags.TypeParameter;
 }
 
-/** @internal */
+/**
+ * Returns an object containing the types of the parameters in the new function and the names of type parameters provided as arguments to the call.
+ * @param checker - The TypeChecker object.
+ * @param importAdder - The ImportAdder object.
+ * @param instanceTypes - An array of types to be used as the types of the parameters in the new function.
+ * @param contextNode - The context node.
+ * @param scriptTarget - The script target.
+ * @param flags - The NodeBuilderFlags object.
+ * @param tracker - The SymbolTracker object.
+ * @returns An object containing the argumentTypeNodes and argumentTypeParameters.
+ */
 export function getArgumentTypesAndTypeParameters(checker: TypeChecker, importAdder: ImportAdder, instanceTypes: Type[], contextNode: Node | undefined, scriptTarget: ScriptTarget, flags?: NodeBuilderFlags, tracker?: SymbolTracker) {
     // Types to be used as the types of the parameters in the new function
     // E.g. from this source:
@@ -663,6 +702,11 @@ function isAnonymousObjectConstraintType(type: Type) {
     return (type.flags & TypeFlags.Object) && (type as ObjectType).objectFlags === ObjectFlags.Anonymous;
 }
 
+/**
+ * Returns the name of the first type parameter of a given Type object.
+ * @param type - The Type object to search for the first type parameter name.
+ * @returns The name of the first type parameter as a string, or undefined if no type parameter is found.
+ */
 function getFirstTypeParameterName(type: Type): string | undefined {
     if (type.flags & (TypeFlags.Union | TypeFlags.Intersection)) {
         for (const subType of (type as UnionType | IntersectionType).types) {
@@ -783,7 +827,13 @@ function createStubbedMethodBody(quotePreference: QuotePreference) {
     return createStubbedBody(Diagnostics.Method_not_implemented.message, quotePreference);
 }
 
-/** @internal */
+/**
+ * Creates a stubbed body with a throw statement that throws an Error with the provided text.
+ * @param {string} text - The text to include in the Error message.
+ * @param {QuotePreference} quotePreference - The preferred quote style for the string literal.
+ * @returns {Block} - The created Block with the throw statement.
+ * @internal
+ */
 export function createStubbedBody(text: string, quotePreference: QuotePreference): Block {
     return factory.createBlock(
         [factory.createThrowStatement(
@@ -795,7 +845,13 @@ export function createStubbedBody(text: string, quotePreference: QuotePreference
         /*multiLine*/ true);
 }
 
-/** @internal */
+/**
+ * Sets the values of specified JSON compiler options in a TypeScript configuration file.
+ * @param changeTracker - The text changes change tracker.
+ * @param configFile - The TypeScript configuration file.
+ * @param options - An array of tuples containing the name and value of the compiler options to set.
+ * @remarks This function modifies the TypeScript configuration file by adding or updating the specified compiler options.
+ */
 export function setJsonCompilerOptionValues(
     changeTracker: textChanges.ChangeTracker,
     configFile: TsConfigSourceFile,
@@ -849,10 +905,10 @@ export function findJsonProperty(obj: ObjectLiteralExpression, name: string): Pr
 }
 
 /**
- * Given a type node containing 'import("./a").SomeType<import("./b").OtherType<...>>',
- * returns an equivalent type reference node with any nested ImportTypeNodes also replaced
- * with type references, and a list of symbols that must be imported to use the type reference.
- *
+ * Given a type node containing an imported type, returns an equivalent type reference node with any nested ImportTypeNodes also replaced with type references, and a list of symbols that must be imported to use the type reference.
+ * @param importTypeNode The type node containing the imported type.
+ * @param scriptTarget The script target.
+ * @returns An object containing the type reference node and a list of symbols that must be imported to use the type reference.
  * @internal
  */
 export function tryGetAutoImportableReferenceFromTypeNode(importTypeNode: TypeNode | undefined, scriptTarget: ScriptTarget) {
@@ -862,6 +918,11 @@ export function tryGetAutoImportableReferenceFromTypeNode(importTypeNode: TypeNo
         return { typeNode, symbols };
     }
 
+    /**
+     * Visits a given node and returns a modified version of it.
+     * @param node - The node to visit.
+     * @returns The modified node.
+     */
     function visit(node: Node): Node {
         if (isLiteralImportTypeNode(node) && node.qualifier) {
             // Symbol for the left-most thing after the dot

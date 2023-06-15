@@ -34,6 +34,13 @@ registerCodeFix({
     },
 });
 
+/**
+ * Inserts a "declare" modifier before a PropertyDeclaration node in a given SourceFile if the node is an identifier and is not already fixed.
+ * @param {textChanges.ChangeTracker} changeTracker - The change tracker object.
+ * @param {SourceFile} sourceFile - The source file containing the node.
+ * @param {number} pos - The position of the node in the source file.
+ * @param {Set<Node>} [fixedNodes] - A set of nodes that have already been fixed.
+ */
 function makeChange(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, pos: number, fixedNodes?: Set<Node>) {
     const token = getTokenAtPosition(sourceFile, pos);
     if (!isIdentifier(token)) {

@@ -51,6 +51,12 @@ registerCodeFix({
 });
 
 interface Info { readonly indexSignature: IndexSignatureDeclaration; readonly container: FixableDeclaration; }
+/**
+ * Retrieves information about an index signature declaration within a source file at a given position.
+ * @param sourceFile - The source file to search for the index signature declaration.
+ * @param pos - The position within the source file to search for the index signature declaration.
+ * @returns An object containing the index signature declaration and its container, or undefined if not found.
+ */
 function getInfo(sourceFile: SourceFile, pos: number): Info | undefined {
     const token = getTokenAtPosition(sourceFile, pos);
     const indexSignature = tryCast(token.parent.parent, isIndexSignatureDeclaration);
@@ -66,6 +72,13 @@ function createTypeAliasFromInterface(declaration: FixableDeclaration, type: Typ
     return factory.createTypeAliasDeclaration(declaration.modifiers, declaration.name, declaration.typeParameters, type);
 }
 
+/**
+ * Transforms an interface declaration into a type alias with additional mapped type parameter.
+ * @param changes - The text changes object.
+ * @param sourceFile - The source file containing the interface declaration.
+ * @param info - An object containing the index signature and container of the interface declaration.
+ * @remarks - This function replaces the original interface declaration with a type alias that includes the mapped type parameter.
+ */
 function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, { indexSignature, container }: Info): void {
     const members = isInterfaceDeclaration(container) ? container.members : (container.type as TypeLiteralNode).members;
     const otherMembers = members.filter(member => !isIndexSignatureDeclaration(member));

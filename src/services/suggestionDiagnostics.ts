@@ -63,7 +63,13 @@ import {
 
 const visitedNestedConvertibleFunctions = new Map<string, true>();
 
-/** @internal */
+/**
+ * Computes suggestion diagnostics for a given source file and program.
+ * @param sourceFile - The source file to compute suggestion diagnostics for.
+ * @param program - The program to use for type checking.
+ * @param cancellationToken - Optional cancellation token.
+ * @returns An array of DiagnosticWithLocation objects representing the suggestion diagnostics.
+ */
 export function computeSuggestionDiagnostics(sourceFile: SourceFile, program: Program, cancellationToken: CancellationToken): DiagnosticWithLocation[] {
     program.getSemanticDiagnostics(sourceFile, cancellationToken);
     const diags: DiagnosticWithLocation[] = [];
@@ -99,6 +105,11 @@ export function computeSuggestionDiagnostics(sourceFile: SourceFile, program: Pr
     addRange(diags, program.getSuggestionDiagnostics(sourceFile, cancellationToken));
     return diags.sort((d1, d2) => d1.start - d2.start);
 
+    /**
+     * Checks a Node for potential code fixes and adds corresponding diagnostics to the provided array.
+     * @param node The Node to check.
+     * @returns void
+     */
     function check(node: Node) {
         if (isJsFile) {
             if (canBeConvertedToClass(node, checker)) {
@@ -134,6 +145,11 @@ export function computeSuggestionDiagnostics(sourceFile: SourceFile, program: Pr
 }
 
 // convertToEsModule only works on top-level, so don't trigger it if commonjs code only appears in nested scopes.
+/**
+ * Determines if a given source file contains top level CommonJS statements.
+ * @param {SourceFile} sourceFile - The source file to check.
+ * @returns {boolean} - True if the source file contains top level CommonJS statements, false otherwise.
+ */
 function containsTopLevelCommonjs(sourceFile: SourceFile): boolean {
     return sourceFile.statements.some(statement => {
         switch (statement.kind) {
@@ -156,6 +172,11 @@ function propertyAccessLeftHandSide(node: Expression): Expression {
     return isPropertyAccessExpression(node) ? propertyAccessLeftHandSide(node.expression) : node;
 }
 
+/**
+ * Returns the identifier for converting to default import.
+ * @param {AnyValidImportOrReExport} node - The import or re-export node to convert.
+ * @returns {Identifier|undefined} - The identifier for default import or undefined if not found.
+ */
 function importNameForConvertToDefaultImport(node: AnyValidImportOrReExport): Identifier | undefined {
     switch (node.kind) {
         case SyntaxKind.ImportDeclaration:
@@ -208,7 +229,16 @@ export function isReturnStatementWithFixablePromiseHandler(node: Node, checker: 
 }
 
 // Should be kept up to date with transformExpression in convertToAsyncFunction.ts
-/** @internal */
+/**
+ * Determines if a given node is a fixable promise handler.
+ *
+ * @param {Node} node - The node to check.
+ * @param {TypeChecker} checker - The type checker to use.
+ * @returns {boolean} - True if the node is a fixable promise handler, false otherwise.
+ *
+ * @remarks
+ * A fixable promise handler is a function that is passed as a handler to a Promise method, and that can be fixed by adding a return statement or changing the return type.
+ */
 export function isFixablePromiseHandler(node: Node, checker: TypeChecker): boolean {
     // ensure outermost call exists and is a promise handler
     if (!isPromiseHandler(node) || !hasSupportedNumberOfArguments(node) || !node.arguments.every(arg => isFixablePromiseArgument(arg, checker))) {
@@ -249,6 +279,12 @@ function hasSupportedNumberOfArguments(node: CallExpression & { readonly express
 }
 
 // should be kept up to date with getTransformationBody in convertToAsyncFunction.ts
+/**
+ * Determines if the given argument is a fixable Promise argument.
+ * @param {Expression} arg - The argument to check.
+ * @param {TypeChecker} checker - The TypeChecker to use.
+ * @returns {boolean} - True if the argument is fixable, false otherwise.
+ */
 function isFixablePromiseArgument(arg: Expression, checker: TypeChecker): boolean {
     switch (arg.kind) {
         case SyntaxKind.FunctionDeclaration:
@@ -281,6 +317,12 @@ function getKeyFromNode(exp: FunctionLikeDeclaration) {
     return `${exp.pos.toString()}:${exp.end.toString()}`;
 }
 
+/**
+ * Determines if a given Node can be converted to a class.
+ * @param {Node} node - The Node to check.
+ * @param {TypeChecker} checker - The TypeChecker to use.
+ * @returns {boolean} - True if the Node can be converted to a class, false otherwise.
+ */
 function canBeConvertedToClass(node: Node, checker: TypeChecker): boolean {
     if (isFunctionExpression(node)) {
         if (isVariableDeclaration(node.parent) && node.symbol.members?.size) {
@@ -298,7 +340,12 @@ function canBeConvertedToClass(node: Node, checker: TypeChecker): boolean {
     return false;
 }
 
-/** @internal */
+/**
+ * Determines if a given node can be converted to an async function.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node can be converted to an async function, false otherwise.
+ * @internal
+ */
 export function canBeConvertedToAsync(node: Node): node is FunctionDeclaration | MethodDeclaration | FunctionExpression | ArrowFunction {
     switch (node.kind) {
         case SyntaxKind.FunctionDeclaration:

@@ -37,6 +37,13 @@ registerCodeFix({
     }),
 });
 
+/**
+ * Finds the BinaryExpression node in a given SourceFile at a specified position.
+ * @param {SourceFile} sourceFile - The SourceFile to search in.
+ * @param {number} pos - The position to search for.
+ * @returns {BinaryExpression | undefined} - The BinaryExpression node found, or undefined if not found.
+ * @remarks - The function looks for the first token that is "<" in "<a /><a />" and finds the BinaryExpression node that contains it.
+ */
 function findNodeToFix(sourceFile: SourceFile, pos: number): BinaryExpression | undefined {
     // The error always at 1st token that is "<" in "<a /><a />"
     const lessThanToken = getTokenAtPosition(sourceFile, pos);
@@ -60,6 +67,11 @@ function doChange(changeTracker: textChanges.ChangeTracker, sf: SourceFile, node
 // InvalidJsxTree :: One of
 //     JsxElement CommaToken InvalidJsxTree
 //     JsxElement CommaToken JsxElement
+/**
+ * Flattens an invalid binary expression node into an array of JSX children.
+ * @param {Node} node - The node to flatten.
+ * @returns {JsxChild[] | undefined} - An array of JSX children or undefined if the node cannot be flattened.
+ */
 function flattenInvalidBinaryExpr(node: Node): JsxChild[] | undefined {
     const children: JsxChild[] = [];
     let current = node;

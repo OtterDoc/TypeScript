@@ -25,7 +25,10 @@ import {
 const standardScanner = createScanner(ScriptTarget.Latest, /*skipTrivia*/ false, LanguageVariant.Standard);
 const jsxScanner = createScanner(ScriptTarget.Latest, /*skipTrivia*/ false, LanguageVariant.JSX);
 
-/** @internal */
+/**
+ * Interface for a formatting scanner.
+ * @internal
+ */
 export interface FormattingScanner {
     advance(): void;
     getTokenFullStart(): number;
@@ -85,6 +88,10 @@ export function getFormattingScanner<T>(text: string, languageVariant: LanguageV
 
     return res;
 
+    /**
+     * Advances the scanner to the next token and updates the relevant token information.
+     * @returns {void}
+     */
     function advance(): void {
         lastTokenInfo = undefined;
         const isStarted = scanner.getTokenFullStart() !== startPos;
@@ -124,6 +131,11 @@ export function getFormattingScanner<T>(text: string, languageVariant: LanguageV
         savedPos = scanner.getTokenFullStart();
     }
 
+    /**
+     * Determines if a given node should be rescanned for a GreaterThanToken.
+     * @param {Node} node - The node to check.
+     * @returns {boolean} - True if the node should be rescanned, false otherwise.
+     */
     function shouldRescanGreaterThanToken(node: Node): boolean {
         switch (node.kind) {
             case SyntaxKind.GreaterThanEqualsToken:
@@ -137,6 +149,11 @@ export function getFormattingScanner<T>(text: string, languageVariant: LanguageV
         return false;
     }
 
+    /**
+     * Determines if a given node should be rescanned as a JSX identifier.
+     * @param {Node} node - The node to check.
+     * @returns {boolean} - True if the node should be rescanned, false otherwise.
+     */
     function shouldRescanJsxIdentifier(node: Node): boolean {
         if (node.parent) {
             switch (node.parent.kind) {
@@ -173,6 +190,11 @@ export function getFormattingScanner<T>(text: string, languageVariant: LanguageV
         return t === SyntaxKind.SlashToken || t === SyntaxKind.SlashEqualsToken;
     }
 
+    /**
+     * Returns information about the next token in the scanner.
+     * @param {Node} n - The context node.
+     * @returns {TokenInfo} - The token information.
+     */
     function readTokenInfo(n: Node): TokenInfo {
         Debug.assert(isOnToken());
 
@@ -244,6 +266,12 @@ export function getFormattingScanner<T>(text: string, languageVariant: LanguageV
         return fixTokenKind(lastTokenInfo, n);
     }
 
+    /**
+     * Returns the next token in the scanner and updates the last scan action based on the expected scan action.
+     * @param {Node} n - The node to be scanned.
+     * @param {ScanAction} expectedScanAction - The expected scan action.
+     * @returns {SyntaxKind} - The next token in the scanner.
+     */
     function getNextToken(n: Node, expectedScanAction: ScanAction): SyntaxKind {
         const token = scanner.getToken();
         lastScanAction = ScanAction.Scan;

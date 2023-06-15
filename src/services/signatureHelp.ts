@@ -110,7 +110,15 @@ interface ArgumentListInfo {
     readonly argumentCount: number;
 }
 
-/** @internal */
+/**
+ * Retrieves signature help items for a given position in a source file.
+ * @param program - The TypeScript program.
+ * @param sourceFile - The source file.
+ * @param position - The position in the source file.
+ * @param triggerReason - The reason for triggering signature help, if any.
+ * @param cancellationToken - The cancellation token.
+ * @returns The signature help items, if any.
+ */
 export function getSignatureHelpItems(program: Program, sourceFile: SourceFile, position: number, triggerReason: SignatureHelpTriggerReason | undefined, cancellationToken: CancellationToken): SignatureHelpItems | undefined {
     const typeChecker = program.getTypeChecker();
 
@@ -162,6 +170,15 @@ interface TypeInfo {
     readonly symbol: Symbol;
 }
 
+/**
+ * Returns information about a candidate or type based on the provided argument list info.
+ * @param {ArgumentListInfo} argumentListInfo - The argument list info.
+ * @param {TypeChecker} checker - The type checker.
+ * @param {SourceFile} sourceFile - The source file.
+ * @param {Node} startingToken - The starting token.
+ * @param {boolean} onlyUseSyntacticOwners - Whether to only use syntactic owners.
+ * @returns {CandidateInfo | TypeInfo | undefined} - The candidate or type info, or undefined if none found.
+ */
 function getCandidateOrTypeInfo({ invocation, argumentCount }: ArgumentListInfo, checker: TypeChecker, sourceFile: SourceFile, startingToken: Node, onlyUseSyntacticOwners: boolean): CandidateInfo | TypeInfo | undefined {
     switch (invocation.kind) {
         case InvocationKind.Call: {
@@ -190,6 +207,13 @@ function getCandidateOrTypeInfo({ invocation, argumentCount }: ArgumentListInfo,
     }
 }
 
+/**
+ * Determines if the given startingToken is a syntactic owner of the given CallLikeExpression node in the provided SourceFile.
+ * @param startingToken - The starting token to check.
+ * @param node - The CallLikeExpression node to check.
+ * @param sourceFile - The SourceFile to check.
+ * @returns {boolean} - True if the startingToken is a syntactic owner of the node, false otherwise.
+ */
 function isSyntacticOwner(startingToken: Node, node: CallLikeExpression, sourceFile: SourceFile): boolean {
     if (!isCallOrNewExpression(node)) return false;
     const invocationChildren = node.getChildren(sourceFile);
@@ -207,6 +231,13 @@ function isSyntacticOwner(startingToken: Node, node: CallLikeExpression, sourceF
     }
 }
 
+/**
+ * Creates signature help items for a given argument list info, program, and cancellation token.
+ * @param argumentInfo - The argument list info.
+ * @param program - The program.
+ * @param cancellationToken - The cancellation token.
+ * @returns The signature help items or undefined.
+ */
 function createJSSignatureHelpItems(argumentInfo: ArgumentListInfo, program: Program, cancellationToken: CancellationToken): SignatureHelpItems | undefined {
     if (argumentInfo.invocation.kind === InvocationKind.Contextual) return undefined;
     // See if we can find some symbol with the call expression name that has call signatures.
@@ -231,6 +262,13 @@ function createJSSignatureHelpItems(argumentInfo: ArgumentListInfo, program: Pro
         }));
 }
 
+/**
+ * Determines if the given starting token has a preceding token that is contained within the given container.
+ * @param startingToken - The starting token to search for a preceding token.
+ * @param sourceFile - The source file containing the tokens.
+ * @param container - The container node to search for the preceding token.
+ * @returns True if a preceding token is found that is contained within the container, otherwise false.
+ */
 function containsPrecedingToken(startingToken: Node, sourceFile: SourceFile, container: Node) {
     const pos = startingToken.getFullStart();
     // There's a possibility that `startingToken.parent` contains only `startingToken` and
@@ -262,6 +300,13 @@ export function getArgumentInfoForCompletions(node: Node, position: number, sour
         : { invocation: info.invocation.node, argumentCount: info.argumentCount, argumentIndex: info.argumentIndex };
 }
 
+/**
+ * Retrieves information about the argument or parameter list of a given node.
+ * @param node - The node to retrieve information from.
+ * @param position - The position of the node in the source file.
+ * @param sourceFile - The source file containing the node.
+ * @returns An object containing the list of arguments or parameters, the index of the current argument or parameter, the total number of arguments or parameters, and the span of the arguments or parameters in the source file. Returns undefined if no information is available.
+ */
 function getArgumentOrParameterListInfo(node: Node, position: number, sourceFile: SourceFile): { readonly list: Node, readonly argumentIndex: number, readonly argumentCount: number, readonly argumentsSpan: TextSpan } | undefined {
     const info = getArgumentOrParameterListAndIndex(node, sourceFile);
     if (!info) return undefined;
@@ -274,6 +319,12 @@ function getArgumentOrParameterListInfo(node: Node, position: number, sourceFile
     const argumentsSpan = getApplicableSpanForArguments(list, sourceFile);
     return { list, argumentIndex, argumentCount, argumentsSpan };
 }
+/**
+ * Returns the argument or parameter list and index of a given node in a source file.
+ * @param node - The node to get the argument or parameter list and index for.
+ * @param sourceFile - The source file containing the node.
+ * @returns An object with the list of arguments or parameters and the index of the node within the list, or undefined if the node is not within a list.
+ */
 function getArgumentOrParameterListAndIndex(node: Node, sourceFile: SourceFile): { readonly list: Node, readonly argumentIndex: number } | undefined {
     if (node.kind === SyntaxKind.LessThanToken || node.kind === SyntaxKind.OpenParenToken) {
         // Find the list that starts right *after* the < or ( token.
@@ -295,6 +346,10 @@ function getArgumentOrParameterListAndIndex(node: Node, sourceFile: SourceFile):
 /**
  * Returns relevant information for the argument list and the current argument if we are
  * in the argument of an invocation; returns undefined otherwise.
+ * @param {Node} node - The node to check for argument information.
+ * @param {number} position - The position of the cursor in the source file.
+ * @param {SourceFile} sourceFile - The source file being edited.
+ * @returns {ArgumentListInfo | undefined} - Relevant information for the argument list and the current argument if we are in the argument of an invocation; returns undefined otherwise.
  */
 function getImmediatelyContainingArgumentInfo(node: Node, position: number, sourceFile: SourceFile): ArgumentListInfo | undefined {
     const { parent } = node;
@@ -392,6 +447,14 @@ function countBinaryExpressionParameters(b: BinaryExpression): number {
     return isBinaryExpression(b.left) ? countBinaryExpressionParameters(b.left) + 1 : 2;
 }
 
+/**
+ * Tries to retrieve information about a function's parameters based on its starting token, position, source file, and type checker.
+ * @param startingToken The starting token of the function.
+ * @param position The position of the function.
+ * @param sourceFile The source file containing the function.
+ * @param checker The type checker used to check the function's type.
+ * @returns An object containing information about the function's arguments, or undefined if the information cannot be retrieved.
+ */
 function tryGetParameterInfo(startingToken: Node, position: number, sourceFile: SourceFile, checker: TypeChecker): ArgumentListInfo | undefined {
     const node = getAdjustedNode(startingToken);
     if (node === undefined) return undefined;
@@ -413,6 +476,11 @@ function tryGetParameterInfo(startingToken: Node, position: number, sourceFile: 
     return { isTypeParameterList: false, invocation, argumentsSpan, argumentIndex, argumentCount };
 }
 
+/**
+ * Returns the adjusted node based on the provided node.
+ * @param {Node} node - The node to adjust.
+ * @returns {Node} - The adjusted node.
+ */
 function getAdjustedNode(node: Node) {
     switch (node.kind) {
         case SyntaxKind.OpenParenToken:
@@ -425,6 +493,14 @@ function getAdjustedNode(node: Node) {
 }
 
 interface ContextualSignatureLocationInfo { readonly contextualType: Type; readonly argumentIndex: number; readonly argumentCount: number; readonly argumentsSpan: TextSpan; }
+/**
+ * Retrieves contextual signature location information for a given node in a source file.
+ * @param node - The node to retrieve information for.
+ * @param sourceFile - The source file containing the node.
+ * @param position - The position of the node in the source file.
+ * @param checker - The type checker to use for retrieving contextual type information.
+ * @returns A {@link ContextualSignatureLocationInfo} object containing contextual type information, argument index, argument count, and argument span, or undefined if no contextual type information is available.
+ */
 function getContextualSignatureLocationInfo(node: Node, sourceFile: SourceFile, position: number, checker: TypeChecker): ContextualSignatureLocationInfo | undefined {
     const { parent } = node;
     switch (parent.kind) {
@@ -456,6 +532,12 @@ function chooseBetterSymbol(s: Symbol): Symbol {
         : s;
 }
 
+/**
+ * Returns the index of a given node in a list of arguments. The list can include commas and nodes without commas. The function counts forward until it hits the given node, only incrementing the index if it isn't a comma.
+ * @param {Node} argumentsList - The list of arguments to search through.
+ * @param {Node} node - The node to find the index of.
+ * @returns {number} - The index of the given node in the list of arguments.
+ */
 function getArgumentIndex(argumentsList: Node, node: Node) {
     // The list we got back can include commas.  In the presence of errors it may
     // also just have nodes without commas.  For example "Foo(a b c)" will have 3
@@ -481,6 +563,16 @@ function getArgumentIndex(argumentsList: Node, node: Node) {
     return argumentIndex;
 }
 
+/**
+ * Calculates the number of arguments in a given Node list.
+ *
+ * @param {Node} argumentsList - The list of arguments to count.
+ * @param {boolean} ignoreTrailingComma - Whether or not to ignore a trailing comma in the list.
+ * @returns {number} - The number of non-comma children in the list, with an additional count if the last child is a comma and ignoreTrailingComma is false.
+ *
+ * @remarks
+ * This function is designed to handle subtleties in counting arguments in a list, such as the case where the last child is a comma. In such cases, the argument count is increased by one to compensate.
+ */
 function getArgumentCount(argumentsList: Node, ignoreTrailingComma: boolean) {
     // The argument count for a list is normally the number of non-comma children it has.
     // For example, if you have "Foo(a,b)" then there will be three children of the arg
@@ -504,6 +596,14 @@ function getArgumentCount(argumentsList: Node, ignoreTrailingComma: boolean) {
 
 // spanIndex is either the index for a given template span.
 // This does not give appropriate results for a NoSubstitutionTemplateLiteral
+/**
+ * Returns the index of the argument corresponding to a given template piece.
+ * @param {number} spanIndex - The index of the template piece.
+ * @param {Node} node - The node containing the template literal.
+ * @param {number} position - The position of the template piece.
+ * @param {SourceFile} sourceFile - The source file containing the template literal.
+ * @returns {number} - The index of the argument corresponding to the given template piece.
+ */
 function getArgumentIndexForTemplatePiece(spanIndex: number, node: Node, position: number, sourceFile: SourceFile): number {
     // Because the TemplateStringsArray is the first argument, we have to offset each substitution expression by 1.
     // There are three cases we can encounter:
@@ -543,6 +643,13 @@ function getArgumentListInfoForTemplate(tagExpression: TaggedTemplateExpression,
     };
 }
 
+/**
+ * Returns the applicable span for the given arguments list and source file.
+ * The applicable span includes trivia on both sides of the arguments list.
+ * @param {Node} argumentsList - The arguments list node.
+ * @param {SourceFile} sourceFile - The source file containing the arguments list.
+ * @returns {TextSpan} The applicable span.
+ */
 function getApplicableSpanForArguments(argumentsList: Node, sourceFile: SourceFile): TextSpan {
     // We use full start and skip trivia on the end because we want to include trivia on
     // both sides. For example,
@@ -557,6 +664,13 @@ function getApplicableSpanForArguments(argumentsList: Node, sourceFile: SourceFi
     return createTextSpan(applicableSpanStart, applicableSpanEnd - applicableSpanStart);
 }
 
+/**
+ * Returns the applicable TextSpan for a given TaggedTemplateExpression and SourceFile.
+ * @param taggedTemplate - The TaggedTemplateExpression to get the applicable span for.
+ * @param sourceFile - The SourceFile containing the TaggedTemplateExpression.
+ * @returns The applicable TextSpan.
+ * @remarks Adjusts the end position for the case where the template does not have a tail to include trivia leading up to the next token in case the user is about to type in a TemplateMiddle or TemplateTail.
+ */
 function getApplicableSpanForTaggedTemplate(taggedTemplate: TaggedTemplateExpression, sourceFile: SourceFile): TextSpan {
     const template = taggedTemplate.template;
     const applicableSpanStart = template.getStart();
@@ -663,6 +777,17 @@ function createSignatureHelpItems(
     return help;
 }
 
+/**
+ * Creates signature help items for a given symbol and argument list information.
+ * @param symbol - The symbol for which to create signature help items.
+ * @param argumentCount - The number of arguments in the argument list.
+ * @param argumentsSpan - The span of the applicable arguments.
+ * @param invocation - The invocation of the symbol.
+ * @param argumentIndex - The index of the current argument being typed.
+ * @param sourceFile - The source file in which the symbol is defined.
+ * @param checker - The type checker to use.
+ * @returns An object containing the signature help items, applicable span, selected item index, argument index, and argument count.
+ */
 function createTypeHelpItems(
     symbol: Symbol,
     { argumentCount, argumentsSpan: applicableSpan, invocation, argumentIndex }: ArgumentListInfo,
@@ -689,6 +814,16 @@ function getTypeHelpItem(symbol: Symbol, typeParameters: readonly TypeParameter[
 
 const separatorDisplayParts: SymbolDisplayPart[] = [punctuationPart(SyntaxKind.CommaToken), spacePart()];
 
+/**
+ * Returns an array of SignatureHelpItem objects based on the provided parameters.
+ * @param candidateSignature - A Signature object representing the signature to be used.
+ * @param callTargetDisplayParts - An array of SymbolDisplayPart objects representing the display parts of the call target.
+ * @param isTypeParameterList - A boolean indicating whether the type parameter list is being used.
+ * @param checker - A TypeChecker object used to check types.
+ * @param enclosingDeclaration - A Node object representing the enclosing declaration.
+ * @param sourceFile - A SourceFile object representing the source file.
+ * @returns An array of SignatureHelpItem objects.
+ */
 function getSignatureHelpItem(candidateSignature: Signature, callTargetDisplayParts: readonly SymbolDisplayPart[], isTypeParameterList: boolean, checker: TypeChecker, enclosingDeclaration: Node, sourceFile: SourceFile): SignatureHelpItem[] {
     const infos = (isTypeParameterList ? itemInfoForTypeParameters : itemInfoForParameters)(candidateSignature, checker, enclosingDeclaration, sourceFile);
     return map(infos, ({ isVariadic, parameters, prefix, suffix }) => {
@@ -716,6 +851,14 @@ function returnTypeToDisplayParts(candidateSignature: Signature, enclosingDeclar
 
 interface SignatureHelpItemInfo { readonly isVariadic: boolean; readonly parameters: SignatureHelpParameter[]; readonly prefix: readonly SymbolDisplayPart[]; readonly suffix: readonly SymbolDisplayPart[]; }
 
+/**
+ * Returns an array of SignatureHelpItemInfo objects for the given candidateSignature, checker, enclosingDeclaration, and sourceFile.
+ * @param candidateSignature The candidate signature to get item info for.
+ * @param checker The TypeChecker instance to use.
+ * @param enclosingDeclaration The enclosing declaration of the signature.
+ * @param sourceFile The source file containing the signature.
+ * @returns An array of SignatureHelpItemInfo objects.
+ */
 function itemInfoForTypeParameters(candidateSignature: Signature, checker: TypeChecker, enclosingDeclaration: Node, sourceFile: SourceFile): SignatureHelpItemInfo[] {
     const typeParameters = (candidateSignature.target || candidateSignature).typeParameters;
     const printer = createPrinterWithRemoveComments();
@@ -731,6 +874,14 @@ function itemInfoForTypeParameters(candidateSignature: Signature, checker: TypeC
     });
 }
 
+/**
+ * Returns an array of SignatureHelpItemInfo objects for the given candidateSignature, checker, enclosingDeclaration, and sourceFile parameters.
+ * @param candidateSignature The signature to get information for.
+ * @param checker The TypeChecker instance to use.
+ * @param enclosingDeclaration The enclosing declaration of the signature.
+ * @param sourceFile The source file containing the signature.
+ * @returns An array of SignatureHelpItemInfo objects.
+ */
 function itemInfoForParameters(candidateSignature: Signature, checker: TypeChecker, enclosingDeclaration: Node, sourceFile: SourceFile): SignatureHelpItemInfo[] {
     const printer = createPrinterWithRemoveComments();
     const typeParameterParts = mapToDisplayParts(writer => {

@@ -396,6 +396,16 @@ function getActionsForMissingMemberDeclaration(context: CodeFixContext, info: Ty
         createActionsForAddMissingMemberInTypeScriptFile(context, info);
 }
 
+/**
+ * Creates a code fix action for adding a missing member in a JavaScript file.
+ * @param context - The code fix context.
+ * @param TypeLikeDeclarationInfo - An object containing information about the type declaration.
+ * @param TypeLikeDeclarationInfo.parentDeclaration - The parent declaration.
+ * @param TypeLikeDeclarationInfo.declSourceFile - The declaration source file.
+ * @param TypeLikeDeclarationInfo.modifierFlags - The modifier flags.
+ * @param TypeLikeDeclarationInfo.token - The token.
+ * @returns A code fix action or undefined.
+ */
 function createActionForAddMissingMemberInJavascriptFile(context: CodeFixContext, { parentDeclaration, declSourceFile, modifierFlags, token }: TypeLikeDeclarationInfo): CodeFixAction | undefined {
     if (isInterfaceDeclaration(parentDeclaration) || isTypeLiteralNode(parentDeclaration)) {
         return undefined;
@@ -412,6 +422,15 @@ function createActionForAddMissingMemberInJavascriptFile(context: CodeFixContext
     return createCodeFixAction(fixMissingMember, changes, [diagnostic, token.text], fixMissingMember, Diagnostics.Add_all_missing_members);
 }
 
+/**
+ * Adds a missing member to a class declaration in a TypeScript file.
+ * @param changeTracker - The text changes tracker.
+ * @param sourceFile - The source file containing the class declaration.
+ * @param classDeclaration - The class declaration to add the member to.
+ * @param token - The identifier or private identifier of the member to add.
+ * @param makeStatic - Whether the member should be static or not.
+ * @returns void.
+ */
 function addMissingMemberInJs(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, classDeclaration: ClassLikeDeclaration, token: Identifier | PrivateIdentifier, makeStatic: boolean): void {
     const tokenName = token.text;
     if (makeStatic) {
@@ -452,6 +471,15 @@ function initializePropertyToUndefined(obj: Expression, propertyName: string) {
     return factory.createExpressionStatement(factory.createAssignment(factory.createPropertyAccessExpression(obj, propertyName), createUndefined()));
 }
 
+/**
+ * Creates code fix actions for adding a missing member in a TypeScript file.
+ * @param context The code fix context.
+ * @param parentDeclaration The parent declaration.
+ * @param declSourceFile The declaration source file.
+ * @param modifierFlags The modifier flags.
+ * @param token The token.
+ * @returns An array of code fix actions or undefined.
+ */
 function createActionsForAddMissingMemberInTypeScriptFile(context: CodeFixContext, { parentDeclaration, declSourceFile, modifierFlags, token }: TypeLikeDeclarationInfo): CodeFixAction[] | undefined {
     const memberName = token.text;
     const isStatic = modifierFlags & ModifierFlags.Static;
@@ -471,6 +499,13 @@ function createActionsForAddMissingMemberInTypeScriptFile(context: CodeFixContex
     return actions;
 }
 
+/**
+ * Returns a TypeNode based on the given TypeChecker, node, and token.
+ * @param {TypeChecker} checker - The TypeChecker object.
+ * @param {ClassLikeDeclaration | InterfaceDeclaration | TypeLiteralNode} node - The node to get the TypeNode from.
+ * @param {Node} token - The token to use for contextual typing.
+ * @returns {TypeNode} - The resulting TypeNode.
+ */
 function getTypeNode(checker: TypeChecker, node: ClassLikeDeclaration | InterfaceDeclaration | TypeLiteralNode, token: Node) {
     let typeNode: TypeNode | undefined;
     if (token.parent.parent.kind === SyntaxKind.BinaryExpression) {
@@ -486,6 +521,16 @@ function getTypeNode(checker: TypeChecker, node: ClassLikeDeclaration | Interfac
     return typeNode || factory.createKeywordTypeNode(SyntaxKind.AnyKeyword);
 }
 
+/**
+ * Adds a property declaration to a class, interface, or type literal node.
+ * @param changeTracker - The text changes change tracker.
+ * @param sourceFile - The source file containing the node.
+ * @param node - The class, interface, or type literal node to add the property to.
+ * @param tokenName - The name of the property.
+ * @param typeNode - The type of the property.
+ * @param modifierFlags - The modifier flags for the property.
+ * @returns void
+ */
 function addPropertyDeclaration(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, node: ClassLikeDeclaration | InterfaceDeclaration | TypeLiteralNode, tokenName: string, typeNode: TypeNode, modifierFlags: ModifierFlags): void {
     const modifiers = modifierFlags ? factory.createNodeArray(factory.createModifiersFromModifierFlags(modifierFlags)) : undefined;
 
@@ -512,6 +557,15 @@ function getNodeToInsertPropertyAfter(node: ClassLikeDeclaration | InterfaceDecl
     return res;
 }
 
+/**
+ * Creates a code fix action to add an index signature for a property.
+ * @param context - The code fix context.
+ * @param sourceFile - The source file.
+ * @param node - The class, interface, or type literal node.
+ * @param tokenName - The name of the token.
+ * @param typeNode - The type node.
+ * @returns The code fix action.
+ */
 function createAddIndexSignatureAction(context: CodeFixContext, sourceFile: SourceFile, node: ClassLikeDeclaration | InterfaceDeclaration | TypeLiteralNode, tokenName: string, typeNode: TypeNode): CodeFixAction {
     // Index signatures cannot have the static modifier.
     const stringTypeNode = factory.createKeywordTypeNode(SyntaxKind.StringKeyword);
@@ -532,6 +586,12 @@ function createAddIndexSignatureAction(context: CodeFixContext, sourceFile: Sour
     return createCodeFixActionWithoutFixAll(fixMissingMember, changes, [Diagnostics.Add_index_signature_for_property_0, tokenName]);
 }
 
+/**
+ * Returns an array of CodeFixAction objects or undefined. The function takes in two parameters:
+ * @param {CodeFixContext} context - The context object for the code fix.
+ * @param {TypeLikeDeclarationInfo} info - The TypeLikeDeclarationInfo object containing information about the missing method declaration.
+ * @returns {CodeFixAction[] | undefined} - An array of CodeFixAction objects or undefined.
+ */
 function getActionsForMissingMethodDeclaration(context: CodeFixContext, info: TypeLikeDeclarationInfo): CodeFixAction[] | undefined {
     const { parentDeclaration, declSourceFile, modifierFlags, token, call } = info;
     if (call === undefined) {
@@ -547,6 +607,19 @@ function getActionsForMissingMethodDeclaration(context: CodeFixContext, info: Ty
     return actions;
 }
 
+/**
+ * Adds a method declaration to a class, interface, or type literal node.
+ *
+ * @param {CodeFixContextBase} context - The context object for the code fix.
+ * @param {textChanges.ChangeTracker} changes - The change tracker for making edits to the source file.
+ * @param {CallExpression} callExpression - The call expression for the method being added.
+ * @param {Identifier | PrivateIdentifier} name - The name of the method being added.
+ * @param {ModifierFlags} modifierFlags - The modifier flags for the method being added.
+ * @param {ClassLikeDeclaration | InterfaceDeclaration | TypeLiteralNode} parentDeclaration - The parent declaration for the method being added.
+ * @param {SourceFile} sourceFile - The source file for the method being added.
+ *
+ * @returns {void}
+ */
 function addMethodDeclaration(
     context: CodeFixContextBase,
     changes: textChanges.ChangeTracker,
@@ -569,6 +642,17 @@ function addMethodDeclaration(
     importAdder.writeFixes(changes);
 }
 
+/**
+ * Adds a new enum member declaration to the parent enum declaration.
+ *
+ * @param changes - The text changes object.
+ * @param checker - The type checker object.
+ * @param enumInfo - An object containing information about the parent enum declaration, including the token and parent declaration.
+ * @returns void
+ *
+ * @remarks
+ * This function creates an initializer for a literal enum that has a string initializer. The value of the initializer is a string literal that is equal to the name of the enum member. Numeric enums or empty enums will not create an initializer.
+ */
 function addEnumMemberDeclaration(changes: textChanges.ChangeTracker, checker: TypeChecker, { token, parentDeclaration }: EnumInfo) {
     /**
      * create initializer only literal enum that has string initializer.
@@ -592,6 +676,12 @@ function addEnumMemberDeclaration(changes: textChanges.ChangeTracker, checker: T
     });
 }
 
+/**
+ * Creates a function declaration from either a call expression or a signature.
+ * @param changes - The text changes to apply the fix.
+ * @param context - The code fix context.
+ * @param info - The function or signature information.
+ */
 function addFunctionDeclaration(changes: textChanges.ChangeTracker, context: CodeFixContextBase, info: FunctionInfo | SignatureInfo) {
     const quotePreference = getQuotePreference(context.sourceFile, context.preferences);
     const importAdder = createImportAdder(context.sourceFile, context.program, context.preferences, context.host);
@@ -608,6 +698,12 @@ function addFunctionDeclaration(changes: textChanges.ChangeTracker, context: Cod
     importAdder.writeFixes(changes);
 }
 
+/**
+ * Adds JSX attributes to a parent declaration.
+ * @param changes - The text changes tracker.
+ * @param context - The code fix context.
+ * @param info - The JSX attributes information.
+ */
 function addJsxAttributes(changes: textChanges.ChangeTracker, context: CodeFixContextBase, info: JsxAttributesInfo) {
     const importAdder = createImportAdder(context.sourceFile, context.program, context.preferences, context.host);
     const quotePreference = getQuotePreference(context.sourceFile, context.preferences);
@@ -628,6 +724,12 @@ function addJsxAttributes(changes: textChanges.ChangeTracker, context: CodeFixCo
     importAdder.writeFixes(changes);
 }
 
+/**
+ * Adds properties to an object literal.
+ * @param changes - The text changes to be made.
+ * @param context - The code fix context.
+ * @param info - The object literal information.
+ */
 function addObjectLiteralProperties(changes: textChanges.ChangeTracker, context: CodeFixContextBase, info: ObjectLiteralInfo) {
     const importAdder = createImportAdder(context.sourceFile, context.program, context.preferences, context.host);
     const quotePreference = getQuotePreference(context.sourceFile, context.preferences);
@@ -646,6 +748,16 @@ function addObjectLiteralProperties(changes: textChanges.ChangeTracker, context:
     importAdder.writeFixes(changes);
 }
 
+/**
+ * Tries to get a value from a given type and returns an expression.
+ * @param {CodeFixContextBase} context - The context for the code fix.
+ * @param {TypeChecker} checker - The type checker.
+ * @param {ImportAdder} importAdder - The import adder.
+ * @param {QuotePreference} quotePreference - The quote preference.
+ * @param {Type} type - The type to get the value from.
+ * @param {Node | undefined} enclosingDeclaration - The enclosing declaration.
+ * @returns {Expression} The expression representing the value of the given type.
+ */
 function tryGetValueFromType(context: CodeFixContextBase, checker: TypeChecker, importAdder: ImportAdder, quotePreference: QuotePreference, type: Type, enclosingDeclaration: Node | undefined): Expression {
     if (type.flags & TypeFlags.AnyOrUnknown) {
         return createUndefined();
@@ -728,6 +840,13 @@ function isObjectLiteralType(type: Type) {
         ((getObjectFlags(type) & ObjectFlags.ObjectLiteral) || (type.symbol && tryCast(singleOrUndefined(type.symbol.declarations), isTypeLiteralNode)));
 }
 
+/**
+ * Returns an array of unmatched attributes between a JSX opening element and its contextual type.
+ * @param {TypeChecker} checker - The type checker to use.
+ * @param {ScriptTarget} target - The script target to use.
+ * @param {JsxOpeningLikeElement} source - The JSX opening element to check.
+ * @returns {Array} - An array of unmatched attributes.
+ */
 function getUnmatchedAttributes(checker: TypeChecker, target: ScriptTarget, source: JsxOpeningLikeElement) {
     const attrsType = checker.getContextualType(source.attributes);
     if (attrsType === undefined) return emptyArray;

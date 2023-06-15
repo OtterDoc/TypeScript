@@ -37,6 +37,12 @@ function getNamedTupleMember(sourceFile: SourceFile, pos: number) {
     const token = getTokenAtPosition(sourceFile, pos);
     return findAncestor(token, t => t.kind === SyntaxKind.NamedTupleMember) as NamedTupleMember | undefined;
 }
+/**
+ * Updates a named tuple member with optional and rest type information.
+ * @param changes - The text changes object.
+ * @param sourceFile - The source file containing the named tuple member.
+ * @param namedTupleMember - The named tuple member to update.
+ */
 function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, namedTupleMember?: NamedTupleMember) {
     if (!namedTupleMember) {
         return;

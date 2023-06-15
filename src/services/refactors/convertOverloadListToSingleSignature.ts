@@ -179,6 +179,12 @@ function getRefactorEditsToConvertOverloadsToOneSignature(context: RefactorConte
         return setEmitFlags(factory.createTupleTypeNode(members), some(members, m => !!length(getSyntheticLeadingComments(m))) ? EmitFlags.None : EmitFlags.SingleLine);
     }
 
+    /**
+     * Converts a ParameterDeclaration to a NamedTupleMember.
+     * @param {ParameterDeclaration} p - The parameter declaration to convert.
+     * @returns {NamedTupleMember} - The resulting NamedTupleMember.
+     * @remarks - This function sets a synthetic leading comment on the resulting NamedTupleMember if a documentation comment is present on the parameter declaration.
+     */
     function convertParameterToNamedTupleMember(p: ParameterDeclaration): NamedTupleMember {
         Debug.assert(isIdentifier(p.name)); // This is checked during refactoring applicability checking
         const result = setTextRange(factory.createNamedTupleMember(
@@ -208,6 +214,11 @@ ${newComment.split("\n").map(c => ` * ${c}`).join("\n")}
 
 }
 
+/**
+ * Checks if a given Node is a convertable signature declaration.
+ * @param {Node} d - The Node to check.
+ * @returns {boolean} - True if the Node is a MethodSignature, MethodDeclaration, CallSignatureDeclaration, ConstructorDeclaration, ConstructSignatureDeclaration, or FunctionDeclaration.
+ */
 function isConvertableSignatureDeclaration(d: Node): d is MethodSignature | MethodDeclaration | CallSignatureDeclaration | ConstructorDeclaration | ConstructSignatureDeclaration | FunctionDeclaration {
     switch (d.kind) {
         case SyntaxKind.MethodSignature:
@@ -221,6 +232,13 @@ function isConvertableSignatureDeclaration(d: Node): d is MethodSignature | Meth
     return false;
 }
 
+/**
+ * Retrieves a list of overload signatures that can be converted to a specific signature at a given position.
+ * @param {SourceFile} file - The source file to search in.
+ * @param {number} startPosition - The position to search for.
+ * @param {Program} program - The program to use for type checking.
+ * @returns {(MethodSignature | MethodDeclaration | CallSignatureDeclaration | ConstructorDeclaration | ConstructSignatureDeclaration | FunctionDeclaration)[] | undefined} - A list of overload signatures that can be converted to a specific signature at the given position, or undefined if none are found.
+ */
 function getConvertableOverloadListAtPosition(file: SourceFile, startPosition: number, program: Program) {
     const node = getTokenAtPosition(file, startPosition);
     const containingDecl = findAncestor(node, isConvertableSignatureDeclaration);

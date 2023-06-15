@@ -208,7 +208,14 @@ export interface ConfigurableEnd {
     trailingTriviaOption?: TrailingTriviaOption;
 }
 
-/** @internal */
+/**
+ * An enumeration of options for handling leading trivia in a TypeScript node.
+ * @remarks
+ * - `Exclude`: Exclude all leading trivia (use `getStart()`).
+ * - `IncludeAll`: Include leading trivia and, if there are no line breaks between the node and the previous token, include all trivia between the node and the previous token.
+ * - `JSDoc`: Include attached JSDoc comments.
+ * - `StartLine`: Only delete trivia on the same line as `getStart()`. Used to avoid deleting leading comments.
+ */
 export enum LeadingTriviaOption {
     /** Exclude all leading trivia (use getStart()) */
     Exclude,
@@ -242,6 +249,12 @@ function skipWhitespacesAndLineBreaks(text: string, start: number) {
     return skipTrivia(text, start, /*stopAfterLineBreak*/ false, /*stopAtComments*/ true);
 }
 
+/**
+ * Determines if there are any comments before a line break in a given string.
+ * @param {string} text - The string to check for comments.
+ * @param {number} start - The starting index to check from.
+ * @returns {boolean} - True if there are comments before a line break, false otherwise.
+ */
 function hasCommentsBeforeLineBreak(text: string, start: number) {
     let i = start;
     while (i < text.length) {
@@ -277,7 +290,13 @@ const useNonAdjustedPositions: ConfigurableStartEnd = {
     trailingTriviaOption: TrailingTriviaOption.Exclude,
 };
 
-/** @internal */
+/**
+ * Options for inserting a new node into a source file.
+ * @property {string} [prefix] - Text to be inserted before the new node.
+ * @property {string} [suffix] - Text to be inserted after the new node.
+ * @property {number} [indentation] - Text of inserted node will be formatted with this indentation, otherwise indentation will be inferred from the old node.
+ * @property {number} [delta] - Text of inserted node will be formatted with this delta, otherwise delta will be inferred from the new node kind.
+ */
 export interface InsertNodeOptions {
     /**
      * Text to be inserted before the new node
@@ -350,6 +369,14 @@ function getAdjustedRange(sourceFile: SourceFile, startNode: Node, endNode: Node
     return { pos: getAdjustedStartPosition(sourceFile, startNode, options), end: getAdjustedEndPosition(sourceFile, endNode, options) };
 }
 
+/**
+ * Returns the adjusted start position of a given node in a source file based on configurable options.
+ * @param {SourceFile} sourceFile - The source file containing the node.
+ * @param {Node} node - The node to get the adjusted start position for.
+ * @param {ConfigurableStartEnd} options - The configurable options for adjusting the start position.
+ * @param {boolean} [hasTrailingComment=false] - Whether or not the node has a trailing comment.
+ * @returns {number} The adjusted start position of the node.
+ */
 function getAdjustedStartPosition(sourceFile: SourceFile, node: Node, options: ConfigurableStartEnd, hasTrailingComment = false) {
     const { leadingTriviaOption } = options;
     if (leadingTriviaOption === LeadingTriviaOption.Exclude) {
@@ -403,7 +430,14 @@ function getAdjustedStartPosition(sourceFile: SourceFile, node: Node, options: C
     return getStartPositionOfLine(getLineOfLocalPosition(sourceFile, adjustedStartPosition), sourceFile);
 }
 
-/** Return the end position of a multiline comment of it is on another line; otherwise returns `undefined`; */
+/**
+ * Returns the end position of a multiline trailing comment if it is on another line; otherwise returns `undefined`.
+ * @param sourceFile - The source file containing the node.
+ * @param node - The node to get the end position of the trailing comment for.
+ * @param options - The configurable options for getting the end position of the trailing comment.
+ * @param options.trailingTriviaOption - The option for including or excluding trailing trivia.
+ * @returns The end position of the trailing comment if it is a multiline comment that extends to the next lines; otherwise `undefined`.
+ */
 function getEndPositionOfMultilineTrailingComment(sourceFile: SourceFile, node: Node, options: ConfigurableEnd): number | undefined {
     const { end } = node;
     const { trailingTriviaOption } = options;
@@ -434,6 +468,13 @@ function getEndPositionOfMultilineTrailingComment(sourceFile: SourceFile, node: 
     return undefined;
 }
 
+/**
+ * Calculates the adjusted end position of a given node in a source file based on the provided options.
+ * @param {SourceFile} sourceFile - The source file containing the node.
+ * @param {Node} node - The node to calculate the adjusted end position for.
+ * @param {ConfigurableEnd} options - The options to use for the calculation.
+ * @returns {number} - The adjusted end position of the node.
+ */
 function getAdjustedEndPosition(sourceFile: SourceFile, node: Node, options: ConfigurableEnd): number {
     const { end } = node;
     const { trailingTriviaOption } = options;
@@ -506,6 +547,11 @@ export class ChangeTracker {
     /** Public for tests only. Other callers should use `ChangeTracker.with`. */
     constructor(private readonly newLineCharacter: string, private readonly formatContext: formatting.FormatContext) {}
 
+    /**
+     * Adds a new set of changes to the internal list of changes.
+     * @param {SourceFile} sourceFile - The source file to which the changes apply.
+     * @param {FileTextChanges} change - The changes to apply to the source file.
+     */
     public pushRaw(sourceFile: SourceFile, change: FileTextChanges) {
         Debug.assertEqual(sourceFile.fileName, change.fileName);
         for (const c of change.textChanges) {
@@ -531,6 +577,14 @@ export class ChangeTracker {
         this.deleteRange(sourceFile, getAdjustedRange(sourceFile, node, node, options));
     }
 
+    /**
+     * Deletes multiple nodes from a source file.
+     * @param {SourceFile} sourceFile - The source file to delete nodes from.
+     * @param {readonly Node[]} nodes - The nodes to delete.
+     * @param {ConfigurableStartEnd} [options={ leadingTriviaOption: LeadingTriviaOption.IncludeAll }] - The options for adjusting the start and end positions of the nodes.
+     * @param {boolean} hasTrailingComment - Whether the nodes have a trailing comment.
+     * @returns {void}
+     */
     public deleteNodes(sourceFile: SourceFile, nodes: readonly Node[], options: ConfigurableStartEnd = { leadingTriviaOption: LeadingTriviaOption.IncludeAll }, hasTrailingComment: boolean): void {
         // When deleting multiple nodes we need to track if the end position is including multiline trailing comments.
         for (const node of nodes) {
@@ -617,6 +671,12 @@ export class ChangeTracker {
         this.insertAtTopOfFile(sourceFile, newNodes, blankLineBetween);
     }
 
+    /**
+     * Inserts a statement or an array of statements at the top of a SourceFile.
+     * @param {SourceFile} sourceFile - The SourceFile to insert the statement(s) into.
+     * @param {Statement | readonly Statement[]} insert - The statement(s) to insert.
+     * @param {boolean} blankLineBetween - Whether to add a blank line between the inserted statement(s) and the existing code.
+     */
     private insertAtTopOfFile(sourceFile: SourceFile, insert: Statement | readonly Statement[], blankLineBetween: boolean): void {
         const pos = getInsertionPositionAtSourceFileTop(sourceFile);
         const options = {
@@ -638,6 +698,14 @@ export class ChangeTracker {
         this.insertAtEndOfFile(sourceFile, newNodes, blankLineBetween);
     }
 
+    /**
+     * Inserts an array of statements at the end of a source file.
+     *
+     * @param {SourceFile} sourceFile - The source file to insert the statements into.
+     * @param {readonly Statement[]} insert - The array of statements to insert.
+     * @param {boolean} blankLineBetween - Whether or not to include a blank line between the inserted statements and the existing code.
+     * @returns {void}
+     */
     private insertAtEndOfFile(
         sourceFile: SourceFile,
         insert: readonly Statement[],
@@ -679,6 +747,14 @@ export class ChangeTracker {
         return this.insertModifierAt(sourceFile, before.getStart(sourceFile), modifier, { suffix: " " });
     }
 
+    /**
+     * Inserts a comment before a specified line and position in a source file.
+     *
+     * @param sourceFile - The source file to insert the comment into.
+     * @param lineNumber - The line number to insert the comment before.
+     * @param position - The position to insert the comment before.
+     * @param commentText - The text of the comment to insert.
+     */
     public insertCommentBeforeLine(sourceFile: SourceFile, lineNumber: number, position: number, commentText: string): void {
         const lineStartPosition = getStartPositionOfLine(lineNumber, sourceFile);
         const startPosition = getFirstNonSpaceCharacterPosition(sourceFile.text, lineStartPosition);
@@ -693,6 +769,16 @@ export class ChangeTracker {
         this.insertText(sourceFile, token.getStart(sourceFile), text);
     }
 
+    /**
+     * Inserts a JSDoc comment before a given node in a source file.
+     *
+     * @param sourceFile - The source file to insert the comment into.
+     * @param node - The node to insert the comment before.
+     * @param tag - The JSDoc tag to insert.
+     * @returns void
+     *
+     * @remarks This method deletes any existing JSDoc comments on the node before inserting the new one.
+     */
     public insertJsdocCommentBefore(sourceFile: SourceFile, node: HasJSDoc, tag: JSDoc): void {
         const fnStart = node.getStart(sourceFile);
         if (node.jsDoc) {
@@ -742,7 +828,14 @@ export class ChangeTracker {
         this.replaceRangeWithText(sourceFile, createRange(pos), text);
     }
 
-    /** Prefer this over replacing a node with another that has a type annotation, as it avoids reformatting the other parts of the node. */
+    /**
+     * Inserts a type annotation for a given node in a source file.
+     *
+     * @param sourceFile - The source file containing the node.
+     * @param node - The node to insert the type annotation for.
+     * @param type - The type node to insert.
+     * @returns True if the type annotation was successfully inserted, false otherwise.
+     */
     public tryInsertTypeAnnotation(sourceFile: SourceFile, node: TypeAnnotatable, type: TypeNode): boolean {
         let endNode: Node | undefined;
         if (isFunctionLike(node)) {
@@ -774,6 +867,13 @@ export class ChangeTracker {
         this.insertNodesAt(sourceFile, start, typeParameters, { prefix: "<", suffix: ">", joiner: ", " });
     }
 
+    /**
+     * Returns the options for inserting a node before another node.
+     * @param before The node before which the new node will be inserted.
+     * @param inserted The node to be inserted.
+     * @param blankLineBetween Whether to add a blank line between the nodes.
+     * @returns The options for inserting the node, including a suffix to be added after the new node.
+     */
     private getOptionsForInsertNodeBefore(before: Node, inserted: Node, blankLineBetween: boolean): InsertNodeOptions {
         if (isStatement(before) || isClassElement(before)) {
             return { suffix: blankLineBetween ? this.newLineCharacter + this.newLineCharacter : this.newLineCharacter };
@@ -851,6 +951,9 @@ export class ChangeTracker {
     /**
      * Tries to guess the indentation from the existing members of a class/interface/object. All members must be on
      * new lines and must share the same indentation.
+     * @param {SourceFile} sourceFile - The source file of the class/interface/object.
+     * @param {ClassLikeDeclaration | InterfaceDeclaration | ObjectLiteralExpression | TypeLiteralNode} node - The node to guess indentation from.
+     * @returns {number | undefined} - The guessed indentation or undefined if unable to guess.
      */
     private guessIndentationFromExistingMembers(sourceFile: SourceFile, node: ClassLikeDeclaration | InterfaceDeclaration | ObjectLiteralExpression | TypeLiteralNode) {
         let indentation: number | undefined;
@@ -880,6 +983,23 @@ export class ChangeTracker {
             + (this.formatContext.options.indentSize ?? 4);
     }
 
+    /**
+     * Returns an object with options for inserting a node at the start of a file.
+     * @param {SourceFile} sourceFile - The source file to insert the node into.
+     * @param {ClassLikeDeclaration | InterfaceDeclaration | ObjectLiteralExpression | TypeLiteralNode} node - The node to insert.
+     * @param {number} indentation - The number of spaces to indent the node.
+     * @returns {InsertNodeOptions} - An object with options for inserting the node.
+     * @remarks
+     * Rules:
+     * - Always insert leading newline.
+     * - For object literals:
+     * - Add a trailing comma if there are existing members in the node, or the source file is not a JSON file
+     * (because trailing commas are generally illegal in a JSON file).
+     * - Add a leading comma if the source file is not a JSON file, there are existing insertions,
+     * and the node is empty (because we didn't add a trailing comma per the previous rule).
+     * - Only insert a trailing newline if body is single-line and there are no other insertions for the node.
+     * NOTE: This is handled in `finishClassesWithNodesInsertedAtStart`.
+     */
     private getInsertNodeAtStartInsertOptions(sourceFile: SourceFile, node: ClassLikeDeclaration | InterfaceDeclaration | ObjectLiteralExpression | TypeLiteralNode, indentation: number): InsertNodeOptions {
         // Rules:
         // - Always insert leading newline.
@@ -922,6 +1042,13 @@ export class ChangeTracker {
         this.insertNodesAt(sourceFile, endPosition, newNodes, this.getInsertNodeAfterOptions(sourceFile, after));
     }
 
+    /**
+     * Inserts a new node after a specified node in a given source file.
+     * @param sourceFile The source file to insert the new node into.
+     * @param after The node to insert the new node after.
+     * @param newNode The new node to insert.
+     * @returns The adjusted end position of the inserted node.
+     */
     private insertNodeAfterWorker(sourceFile: SourceFile, after: Node, newNode: Node): number {
         if (needSemicolonBetween(after, newNode)) {
             // check if previous statement ends with semicolon
@@ -942,6 +1069,12 @@ export class ChangeTracker {
         };
     }
 
+    /**
+     * Returns an InsertNodeOptions object based on the kind of node passed as argument.
+     * @param {Node} node - The node to get the options for.
+     * @returns {InsertNodeOptions} - The options object with properties prefix and/or suffix.
+     * @remarks - If the node kind is not handled, it will be added to the switch statement.
+     */
     private getInsertNodeAfterOptionsWorker(node: Node): InsertNodeOptions {
         switch (node.kind) {
             case SyntaxKind.ClassDeclaration:
@@ -968,6 +1101,13 @@ export class ChangeTracker {
         }
     }
 
+    /**
+     * Inserts a name into a given FunctionExpression, ClassExpression or ArrowFunction node in a SourceFile.
+     * @param sourceFile The SourceFile containing the node to modify.
+     * @param node The node to modify.
+     * @param name The name to insert.
+     * @returns void
+     */
     public insertName(sourceFile: SourceFile, node: FunctionExpression | ClassExpression | ArrowFunction, name: string): void {
         Debug.assert(!node.name);
         if (node.kind === SyntaxKind.ArrowFunction) {
@@ -1001,6 +1141,13 @@ export class ChangeTracker {
         this.insertText(sourceFile, node.getStart(sourceFile), "export ");
     }
 
+    /**
+     * Inserts an import specifier at a specified index in a named imports list.
+     * @param {SourceFile} sourceFile - The source file containing the named imports list.
+     * @param {ImportSpecifier} importSpecifier - The import specifier to insert.
+     * @param {NamedImports} namedImports - The named imports list to insert into.
+     * @param {number} index - The index to insert the import specifier at.
+     */
     public insertImportSpecifierAtIndex(sourceFile: SourceFile, importSpecifier: ImportSpecifier, namedImports: NamedImports, index: number) {
         const prevSpecifier = namedImports.elements[index - 1];
         if (prevSpecifier) {
@@ -1016,9 +1163,17 @@ export class ChangeTracker {
     }
 
     /**
-     * This function should be used to insert nodes in lists when nodes don't carry separators as the part of the node range,
-     * i.e. arguments in arguments lists, parameters in parameter lists etc.
-     * Note that separators are part of the node in statements and class elements.
+     * Inserts a node into a list after a specified node. This function should be used for lists where nodes do not carry separators as part of their range, such as arguments in argument lists or parameters in parameter lists. Note that separators are part of the node in statements and class elements.
+     *
+     * @param sourceFile The source file containing the list.
+     * @param after The node after which to insert the new node.
+     * @param newNode The new node to insert.
+     * @param containingList The list containing the node. Defaults to the list obtained from the SmartIndenter utility.
+     *
+     * @remarks
+     * If the node is not a list element, an error will be thrown and the function will return without making any changes. If the list has only one element, it will be formatted as a multiline if the node has a comment in its trailing trivia, or as a single line otherwise. If the list has more than one element, the separator will be picked from the list and the list will be treated as a multiline if the lines of the after element and the element that precedes it are different. If there are comments before the line break, the containing list will always be treated as a multiline.
+     *
+     * @returns void
      */
     public insertNodeInListAfter(sourceFile: SourceFile, after: Node, newNode: Node, containingList = formatting.SmartIndenter.getContainingList(after, sourceFile)): void {
         if (!containingList) {
@@ -1111,6 +1266,11 @@ export class ChangeTracker {
         this.replaceRange(sourceFile, rangeOfNode(expression), factory.createParenthesizedExpression(expression));
     }
 
+    /**
+     * Removes whitespace inside the braces of classes with no members and a single line declaration, and inserts a new line character after the closing brace.
+     * @private
+     * @returns {void}
+     */
     private finishClassesWithNodesInsertedAtStart(): void {
         this.classesWithNodesInsertedAtStart.forEach(({ node, sourceFile }) => {
             const [openBraceEnd, closeBraceEnd] = getClassOrObjectBraceEnds(node, sourceFile);
@@ -1128,6 +1288,11 @@ export class ChangeTracker {
         });
     }
 
+    /**
+     * Deletes declarations from the source file and updates the AST accordingly.
+     * @private
+     * @returns {void}
+     */
     private finishDeleteDeclarations(): void {
         const deletedNodesInLists = new Set<Node>(); // Stores nodes in lists that we already deleted. Used to avoid deleting `, ` twice in `a, b`.
         for (const { sourceFile, node } of this.deletedNodes) {
@@ -1154,10 +1319,10 @@ export class ChangeTracker {
     }
 
     /**
+     * Returns an array of FileTextChanges based on the changes made to the source file.
      * Note: after calling this, the TextChanges object must be discarded!
-     * @param validate only for tests
-     *    The reason we must validate as part of this method is that `getNonFormattedText` changes the node's positions,
-     *    so we can only call this once and can't get the non-formatted text separately.
+     * @param validate - Optional parameter for testing purposes. If provided, the non-formatted text will be validated before returning the changes.
+     * @returns An array of FileTextChanges representing the changes made to the source file.
      */
     public getChanges(validate?: ValidateNonFormattedText): FileTextChanges[] {
         this.finishDeleteDeclarations();
@@ -1176,6 +1341,11 @@ export class ChangeTracker {
     }
 }
 
+/**
+ * Updates the JSDoc host of a given parent node. If the parent node is not an arrow function, it returns the parent node.
+ * @param {HasJSDoc} parent - The parent node to update.
+ * @returns {HasJSDoc} - The updated JSDoc host.
+ */
 function updateJSDocHost(parent: HasJSDoc): HasJSDoc {
     if (parent.kind !== SyntaxKind.ArrowFunction) {
         return parent;
@@ -1187,6 +1357,12 @@ function updateJSDocHost(parent: HasJSDoc): HasJSDoc {
     return jsDocNode;
 }
 
+/**
+ * Merges two JSDoc tags of the same kind (parameter, return, or type) into a single tag.
+ * @param oldTag - The original JSDoc tag to merge with.
+ * @param newTag - The new JSDoc tag to merge with.
+ * @returns Either a merged JSDoc tag or undefined if the tags are of different kinds or have different names.
+ */
 function tryMergeJsdocTags(oldTag: JSDocTag, newTag: JSDocTag): JSDocTag | undefined {
     if (oldTag.kind !== newTag.kind) {
         return undefined;
@@ -1211,6 +1387,14 @@ function startPositionToDeleteNodeInList(sourceFile: SourceFile, node: Node): nu
     return skipTrivia(sourceFile.text, getAdjustedStartPosition(sourceFile, node, { leadingTriviaOption: LeadingTriviaOption.IncludeAll }), /*stopAfterLineBreak*/ false, /*stopAtComments*/ true);
 }
 
+/**
+ * Calculates the end position to delete a node in a list.
+ * @param {SourceFile} sourceFile - The source file containing the node.
+ * @param {Node} node - The node to delete.
+ * @param {Node | undefined} prevNode - The previous node in the list.
+ * @param {Node} nextNode - The next node in the list.
+ * @returns {number} - The end position to delete the node.
+ */
 function endPositionToDeleteNodeInList(sourceFile: SourceFile, node: Node, prevNode: Node | undefined, nextNode: Node): number {
     const end = startPositionToDeleteNodeInList(sourceFile, nextNode);
     if (prevNode === undefined || positionsAreOnSameLine(getAdjustedEndPosition(sourceFile, node, {}), end, sourceFile)) {
@@ -1245,6 +1429,14 @@ function getMembersOrProperties(node: ClassLikeDeclaration | InterfaceDeclaratio
 export type ValidateNonFormattedText = (node: Node, text: string) => void;
 
 namespace changesToText {
+    /**
+     * Returns an array of FileTextChanges based on the provided array of Changes. Each FileTextChange represents a set of changes to be made to a single file. The changes are grouped by file path and sorted by start position. Overlapping changes are not allowed, except possibly at end points. Redundant changes are filtered out.
+     * @param changes An array of Changes to be made.
+     * @param newLineCharacter The new line character to use in the modified file.
+     * @param formatContext The formatting context to use when computing the new text.
+     * @param validate An optional function to validate non-formatted text.
+     * @returns An array of FileTextChanges representing the changes to be made to each file.
+     */
     export function getTextChangesFromChanges(changes: readonly Change[], newLineCharacter: string, formatContext: formatting.FormatContext, validate: ValidateNonFormattedText | undefined): FileTextChanges[] {
         return mapDefined(group(changes, c => c.sourceFile.path), changesInFile => {
             const sourceFile = changesInFile[0].sourceFile;
@@ -1288,6 +1480,16 @@ namespace changesToText {
         return applyChanges(nonFormattedText, changes) + newLineCharacter;
     }
 
+    /**
+     * Computes the new text based on the provided change object, target source file, source file, new line character, format context, and validation function.
+     * @param {Change} change - The change object containing information about the change to be made.
+     * @param {SourceFile} targetSourceFile - The target source file where the change will be made.
+     * @param {SourceFile} sourceFile - The source file where the change is being made from.
+     * @param {string} newLineCharacter - The new line character to be used in the new text.
+     * @param {formatting.FormatContext} formatContext - The format context to be used in formatting the new text.
+     * @param {ValidateNonFormattedText | undefined} validate - The validation function to be used in validating the new text.
+     * @returns {string} The computed new text.
+     */
     function computeNewText(change: Change, targetSourceFile: SourceFile, sourceFile: SourceFile, newLineCharacter: string, formatContext: formatting.FormatContext, validate: ValidateNonFormattedText | undefined): string {
         if (change.kind === ChangeKind.Remove) {
             return "";
@@ -1308,7 +1510,19 @@ namespace changesToText {
                 ? "" : options.suffix);
     }
 
-    /** Note: this may mutate `nodeIn`. */
+    /**
+     * Formats the text of a given node with specified options.
+     * Note: this may mutate `nodeIn`.
+     * @param nodeIn - The node to format.
+     * @param targetSourceFile - The source file containing the node to format.
+     * @param sourceFile - The source file containing the node to format.
+     * @param pos - The position of the node to format.
+     * @param options - The options for formatting the node.
+     * @param newLineCharacter - The character to use for new lines.
+     * @param formatContext - The context for formatting the node.
+     * @param validate - A function to validate the non-formatted text.
+     * @returns The formatted text of the node.
+     */
     function getFormattedTextOfNode(nodeIn: Node, targetSourceFile: SourceFile, sourceFile: SourceFile, pos: number, { indentation, prefix, delta }: InsertNodeOptions, newLineCharacter: string, formatContext: formatting.FormatContext, validate: ValidateNonFormattedText | undefined): string {
         const { node, text } = getNonformattedText(nodeIn, targetSourceFile, newLineCharacter);
         if (validate) validate(node, text);
@@ -1331,7 +1545,13 @@ namespace changesToText {
         return applyChanges(text, changes);
     }
 
-    /** Note: output node may be mutated input node. */
+    /**
+     * Returns the non-formatted text of a given node.
+     * @param node The node to retrieve the text from.
+     * @param sourceFile The source file of the node.
+     * @param newLineCharacter The new line character to use.
+     * @returns An object containing the non-formatted text and the original node.
+     */
     export function getNonformattedText(node: Node, sourceFile: SourceFile | undefined, newLineCharacter: string): { text: string, node: Node } {
         const writer = createWriter(newLineCharacter);
         const newLine = getNewLineKind(newLineCharacter);
@@ -1376,6 +1596,15 @@ export function assignPositionsToNode(node: Node): Node {
     return newNode;
 }
 
+/**
+ * Assigns positions to a given array of nodes based on a visitor function, test function, start and count values.
+ * @param nodes - The array of nodes to assign positions to.
+ * @param visitor - The visitor function to use.
+ * @param test - Optional. A function to test each node against.
+ * @param start - Optional. The starting position to assign.
+ * @param count - Optional. The number of nodes to assign positions to.
+ * @returns The updated array of nodes with positions assigned.
+ */
 function assignPositionsToNodeArray(
     nodes: NodeArray<Node> | undefined,
     visitor: Visitor,
@@ -1397,7 +1626,11 @@ function assignPositionsToNodeArray(
 /** @internal */
 export interface TextChangesWriter extends EmitTextWriter, PrintHandlers {}
 
-/** @internal */
+/**
+ * Creates a TextChangesWriter object with various methods for writing text, comments, keywords, operators, punctuation, parameters, properties, spaces, string literals, symbols, and literals. The object also has methods for increasing and decreasing indentation, getting and clearing text, and checking for trailing comments and whitespace.
+ * @param {string} newLine - The newline character to use.
+ * @returns {TextChangesWriter} A TextChangesWriter object.
+ */
 export function createWriter(newLine: string): TextChangesWriter {
     let lastNonTriviaPosition = 0;
 
@@ -1433,6 +1666,11 @@ export function createWriter(newLine: string): TextChangesWriter {
         }
     };
 
+    /**
+     * Sets the position of the last non-trivia character in the given string.
+     * @param {string} s - The string to set the position for.
+     * @param {boolean} force - Whether to force the position to be set even if the string is trivia.
+     */
     function setLastNonTriviaPosition(s: string, force: boolean) {
         if (force || !isTrivia(s)) {
             lastNonTriviaPosition = writer.getTextPos();
@@ -1563,6 +1801,11 @@ export function createWriter(newLine: string): TextChangesWriter {
     };
 }
 
+/**
+ * Returns the position at which to insert new code at the top of a given SourceFile.
+ * @param {SourceFile} sourceFile - The SourceFile to insert code into.
+ * @returns {number} - The position at which to insert new code.
+ */
 function getInsertionPositionAtSourceFileTop(sourceFile: SourceFile): number {
     let lastPrologue: PrologueDirective | undefined;
     for (const node of sourceFile.statements) {
@@ -1631,6 +1874,11 @@ function getInsertionPositionAtSourceFileTop(sourceFile: SourceFile): number {
     }
     return position;
 
+    /**
+     * Advances the position past any line break characters in the text.
+     * @returns {void}
+     * @remarks This function modifies the global variable 'position'.
+     */
     function advancePastLineBreak() {
         if (position < text.length) {
             const charCode = text.charCodeAt(position);
@@ -1746,6 +1994,14 @@ namespace deleteDeclaration {
         }
     }
 
+    /**
+     * Deletes the default import from an import statement if it exists.
+     * @param changes - The ChangeTracker object used to track changes.
+     * @param sourceFile - The SourceFile object representing the source file.
+     * @param importClause - The ImportClause object representing the import clause.
+     * If the namedBindings property is null, the whole import is deleted.
+     * If the namedBindings property is not null, the default import is deleted if it exists.
+     */
     function deleteDefaultImport(changes: ChangeTracker, sourceFile: SourceFile, importClause: ImportClause): void {
         if (!importClause.namedBindings) {
             // Delete the whole import
@@ -1783,6 +2039,14 @@ namespace deleteDeclaration {
         }
     }
 
+    /**
+     * Deletes a variable declaration node from a source file and makes appropriate changes to the AST.
+     * @param changes - The ChangeTracker object used to track changes to the source file.
+     * @param deletedNodesInLists - A Set of nodes that have already been deleted from lists.
+     * @param sourceFile - The SourceFile object representing the source file being modified.
+     * @param node - The VariableDeclaration node to be deleted.
+     * @returns void
+     */
     function deleteVariableDeclaration(changes: ChangeTracker, deletedNodesInLists: Set<Node>, sourceFile: SourceFile, node: VariableDeclaration): void {
         const { parent } = node;
 
@@ -1830,6 +2094,15 @@ export function deleteNode(changes: ChangeTracker, sourceFile: SourceFile, node:
     changes.deleteRange(sourceFile, { pos: startPosition, end: endPosition });
 }
 
+/**
+ * Deletes a node from a list in a source file and updates the change tracker accordingly.
+ * @param {ChangeTracker} changes - The change tracker to update.
+ * @param {Set<Node>} deletedNodesInLists - A set of nodes that have already been deleted from lists.
+ * @param {SourceFile} sourceFile - The source file containing the list to delete from.
+ * @param {Node} node - The node to delete from the list.
+ * @returns {void}
+ * @remarks We will only delete a comma *after* a node. This will leave a trailing comma if we delete the last node. That's handled in the end by `finishTrailingCommaAfterDeletingNodesInList`.
+ */
 function deleteNodeInList(changes: ChangeTracker, deletedNodesInLists: Set<Node>, sourceFile: SourceFile, node: Node): void {
     const containingList = Debug.checkDefined(formatting.SmartIndenter.getContainingList(node, sourceFile));
     const index = indexOfNode(containingList, node);

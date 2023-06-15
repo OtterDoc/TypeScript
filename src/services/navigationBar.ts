@@ -162,7 +162,13 @@ interface NavigationBarNode {
     indent: number; // # of parents
 }
 
-/** @internal */
+/**
+ * Retrieves the navigation bar items for a given source file.
+ * @param {SourceFile} sourceFile - The source file to retrieve navigation bar items for.
+ * @param {CancellationToken} cancellationToken - The cancellation token.
+ * @returns {NavigationBarItem[]} An array of navigation bar items.
+ * @remarks This function is intended for internal use only.
+ */
 export function getNavigationBarItems(sourceFile: SourceFile, cancellationToken: CancellationToken): NavigationBarItem[] {
     curCancellationToken = cancellationToken;
     curSourceFile = sourceFile;
@@ -174,7 +180,13 @@ export function getNavigationBarItems(sourceFile: SourceFile, cancellationToken:
     }
 }
 
-/** @internal */
+/**
+ * Retrieves the navigation tree for a given source file.
+ * @param sourceFile - The source file to retrieve the navigation tree for.
+ * @param cancellationToken - The cancellation token.
+ * @returns The navigation tree.
+ * @remarks This function is marked as internal and should not be used outside of the TypeScript compiler.
+ */
 export function getNavigationTree(sourceFile: SourceFile, cancellationToken: CancellationToken): NavigationTree {
     curCancellationToken = cancellationToken;
     curSourceFile = sourceFile;
@@ -211,6 +223,11 @@ function pushChild(parent: NavigationBarNode, child: NavigationBarNode): void {
     }
 }
 
+/**
+ * Returns the root NavigationBarNode for the provided SourceFile.
+ * @param {SourceFile} sourceFile - The SourceFile to create the NavigationBarNode from.
+ * @returns {NavigationBarNode} - The root NavigationBarNode.
+ */
 function rootNavigationBarNode(sourceFile: SourceFile): NavigationBarNode {
     Debug.assert(!parentsStack.length);
     const root: NavigationBarNode = { node: sourceFile, name: undefined, additionalNodes: undefined, parent: undefined, children: undefined, indent: 0 };
@@ -227,6 +244,12 @@ function addLeafNode(node: Node, name?: DeclarationName): void {
     pushChild(parent, emptyNavigationBarNode(node, name));
 }
 
+/**
+ * Creates a NavigationBarNode object.
+ * @param node - The node to be included in the NavigationBarNode.
+ * @param name - The name of the DeclarationName.
+ * @returns A NavigationBarNode object.
+ */
 function emptyNavigationBarNode(node: Node, name?: DeclarationName): NavigationBarNode {
     return {
         node,
@@ -247,6 +270,12 @@ function addTrackedEs5Class(name: string) {
 function endNestedNodes(depth: number): void {
     for (let i = 0; i < depth; i++) endNode();
 }
+/**
+ * Starts nested nodes for a given target node and entity name.
+ * @param {Node} targetNode - The target node to start nested nodes for.
+ * @param {BindableStaticNameExpression} entityName - The entity name to start nested nodes for.
+ * @returns {[number, PropertyNameLiteral]} - A tuple containing the length of the names array minus one and the first name in the names array.
+ */
 function startNestedNodes(targetNode: Node, entityName: BindableStaticNameExpression) {
     const names: PropertyNameLiteral[] = [];
     while (!isPropertyNameLiteral(entityName)) {
@@ -265,7 +294,9 @@ function startNestedNodes(targetNode: Node, entityName: BindableStaticNameExpres
 }
 
 /**
- * Add a new level of NavigationBarNodes.
+ * Adds a new level of NavigationBarNodes.
+ * @param node - The node to add to the NavigationBar.
+ * @param name - Optional name for the NavigationBarNode.
  * This pushes to the stack, so you must call `endNode` when you are done adding to this node.
  */
 function startNode(node: Node, name?: DeclarationName): void {
@@ -295,6 +326,11 @@ function addNodeWithRecursiveChild(node: Node, child: Node | undefined, name?: D
     endNode();
 }
 
+/**
+ * Adds a node with a recursive initializer.
+ * @param node - The node to add.
+ * @returns void
+ */
 function addNodeWithRecursiveInitializer(node: VariableDeclaration | PropertyAssignment | BindingElement | PropertyDeclaration): void {
     if (node.initializer && isFunctionOrClassExpression(node.initializer)) {
         startNode(node);
@@ -577,7 +613,12 @@ function addChildrenRecursively(node: Node | undefined): void {
     }
 }
 
-/** Merge declarations of the same kind. */
+/**
+ * Merge declarations of the same kind.
+ * @param children - An array of NavigationBarNode objects.
+ * @param node - A NavigationBarNode object.
+ * @remarks Anonymous items are never merged.
+ */
 function mergeChildren(children: NavigationBarNode[], node: NavigationBarNode): void {
     const nameToItems = new Map<string, NavigationBarNode | NavigationBarNode[]>();
     filterMutate(children, (child, index) => {
@@ -625,6 +666,14 @@ const isEs5ClassMember: Record<AssignmentDeclarationKind, boolean> = {
     [AssignmentDeclarationKind.Prototype]: true,
     [AssignmentDeclarationKind.ThisProperty]: false,
 };
+/**
+ * Merges two NavigationBarNodes representing ES5 classes if possible.
+ * @param a - The first NavigationBarNode to merge.
+ * @param b - The second NavigationBarNode to merge.
+ * @param bIndex - The index of the second NavigationBarNode in its parent's children array.
+ * @param parent - The parent NavigationBarNode of the two nodes being merged.
+ * @returns Returns true if the nodes were merged, false otherwise.
+ */
 function tryMergeEs5Class(a: NavigationBarNode, b: NavigationBarNode, bIndex: number, parent: NavigationBarNode): boolean | undefined {
     function isPossibleConstructor(node: Node) {
         return isFunctionExpression(node) || isFunctionDeclaration(node) || isVariableDeclaration(node);
@@ -715,6 +764,14 @@ function tryMergeEs5Class(a: NavigationBarNode, b: NavigationBarNode, bIndex: nu
     return bAssignmentDeclarationKind === AssignmentDeclarationKind.None ? false : true;
 }
 
+/**
+ * Attempts to merge two NavigationBarNodes.
+ * @param {NavigationBarNode} a - The first NavigationBarNode to merge.
+ * @param {NavigationBarNode} b - The second NavigationBarNode to merge.
+ * @param {number} bIndex - The index of the second NavigationBarNode.
+ * @param {NavigationBarNode} parent - The parent NavigationBarNode.
+ * @returns {boolean} - Returns true if the merge was successful, false otherwise.
+ */
 function tryMerge(a: NavigationBarNode, b: NavigationBarNode, bIndex: number, parent: NavigationBarNode): boolean {
     // const v = false as boolean;
     if (tryMergeEs5Class(a, b, bIndex, parent)) {
@@ -727,7 +784,13 @@ function tryMerge(a: NavigationBarNode, b: NavigationBarNode, bIndex: number, pa
     return false;
 }
 
-/** a and b have the same name, but they may not be mergeable. */
+/**
+ * Determines whether two nodes should be merged based on their kind and parent.
+ * @param a - The first node to compare.
+ * @param b - The second node to compare.
+ * @param parent - The parent node of both a and b.
+ * @returns A boolean indicating whether the nodes should be merged.
+ */
 function shouldReallyMerge(a: Node, b: Node, parent: NavigationBarNode): boolean {
     if (a.kind !== b.kind || a.parent !== b.parent && !(isOwnChild(a, parent) && isOwnChild(b, parent))) {
         return false;
@@ -766,7 +829,12 @@ function areSameModule(a: ModuleDeclaration, b: ModuleDeclaration): boolean {
     return a.body.kind === b.body.kind && (a.body.kind !== SyntaxKind.ModuleDeclaration || areSameModule(a.body as ModuleDeclaration, b.body as ModuleDeclaration));
 }
 
-/** Merge source into target. Source should be thrown away after this is called. */
+/**
+ * Merge source into target.
+ * @param target - The target NavigationBarNode object to merge into.
+ * @param source - The source NavigationBarNode object to merge from.
+ * @remarks Source should be thrown away after this is called.
+ */
 function merge(target: NavigationBarNode, source: NavigationBarNode): void {
     target.additionalNodes = target.additionalNodes || [];
     target.additionalNodes.push(source.node);
@@ -792,9 +860,9 @@ function compareChildren(child1: NavigationBarNode, child2: NavigationBarNode) {
 }
 
 /**
- * This differs from getItemName because this is just used for sorting.
- * We only sort nodes by name that have a more-or-less "direct" name, as opposed to `new()` and the like.
- * So `new()` can still come before an `aardvark` method.
+ * Returns the name of a given node if it is a direct name, used for sorting purposes.
+ * @param {Node} node - The node to get the name of.
+ * @returns {string | undefined} - The name of the node, or undefined if it is not a direct name.
  */
 function tryGetName(node: Node): string | undefined {
     if (node.kind === SyntaxKind.ModuleDeclaration) {
@@ -816,6 +884,12 @@ function tryGetName(node: Node): string | undefined {
     }
 }
 
+/**
+ * Returns the name of an item based on the provided node and name.
+ * @param {Node} node - The node to get the name from.
+ * @param {Node | undefined} name - The name of the node.
+ * @returns {string} The name of the item.
+ */
 function getItemName(node: Node, name: Node | undefined): string {
     if (node.kind === SyntaxKind.ModuleDeclaration) {
         return cleanText(getModuleName(node as ModuleDeclaration));
@@ -864,7 +938,11 @@ function getItemName(node: Node, name: Node | undefined): string {
     }
 }
 
-/** Flattens the NavNode tree to a list of items to appear in the primary navbar menu. */
+/**
+ * Flattens the NavNode tree to a list of items to appear in the primary navbar menu.
+ * @param root - The root node of the NavNode tree.
+ * @returns An array of NavigationBarNode objects to appear in the primary navbar menu.
+ */
 function primaryNavBarMenuItems(root: NavigationBarNode): NavigationBarNode[] {
     // The primary (middle) navbar menu displays the general code navigation hierarchy, similar to the navtree.
     // The secondary (right) navbar menu displays the child items of whichever primary item is selected.
@@ -929,6 +1007,11 @@ function primaryNavBarMenuItems(root: NavigationBarNode): NavigationBarNode[] {
     }
 }
 
+/**
+ * Converts a NavigationBarNode to a NavigationTree object.
+ * @param {NavigationBarNode} n - The NavigationBarNode to convert.
+ * @returns {NavigationTree} - The converted NavigationTree object.
+ */
 function convertToTree(n: NavigationBarNode): NavigationTree {
     return {
         text: getItemName(n.node, n.name),
@@ -940,6 +1023,11 @@ function convertToTree(n: NavigationBarNode): NavigationTree {
     };
 }
 
+/**
+ * Converts a NavigationBarNode to a NavigationBarItem for use in a primary navigation bar menu item.
+ * @param {NavigationBarNode} n - The NavigationBarNode to convert.
+ * @returns {NavigationBarItem} The converted NavigationBarItem.
+ */
 function convertToPrimaryNavBarMenuItem(n: NavigationBarNode): NavigationBarItem {
     return {
         text: getItemName(n.node, n.name),
@@ -952,6 +1040,11 @@ function convertToPrimaryNavBarMenuItem(n: NavigationBarNode): NavigationBarItem
         grayed: false
     };
 
+    /**
+     * Converts a NavigationBarNode to a NavigationBarItem.
+     * @param {NavigationBarNode} n - The NavigationBarNode to convert.
+     * @returns {NavigationBarItem} - The converted NavigationBarItem.
+     */
     function convertToSecondaryNavBarMenuItem(n: NavigationBarNode): NavigationBarItem {
         return {
             text: getItemName(n.node, n.name),
@@ -1018,6 +1111,12 @@ function getModifiers(node: Node): string {
     return getNodeModifiers(node);
 }
 
+/**
+ * Returns the name of a function or class based on its node. If the node has a name, it returns the cleaned text of the name. If it is a variable declaration, it returns the cleaned text of the variable name. If it is of the form "<expr> = function(){...}", it returns the text from the left-hand side. If it is a property assignment, it returns the property name. If it is a default export, it returns "default". If it is a class, it returns "<class>". If it is a call expression, it returns the cleaned text of the called expression name and its arguments as a callback function. Otherwise, it returns "<function>".
+ *
+ * @param node The node to get the name from.
+ * @returns The name of the function or class.
+ */
 function getFunctionOrClassName(node: FunctionExpression | FunctionDeclaration | ArrowFunction | ClassLikeDeclaration): string {
     const { parent } = node;
     if (node.name && getFullWidth(node.name) > 0) {
@@ -1059,6 +1158,11 @@ function getFunctionOrClassName(node: FunctionExpression | FunctionDeclaration |
 }
 
 // See also 'tryGetPropertyAccessOrIdentifierToString'
+/**
+ * Returns the name of the called expression if it is an identifier or a property access expression.
+ * @param {Expression} expr - The expression to get the name of.
+ * @returns {string | undefined} - The name of the called expression or undefined if it cannot be determined.
+ */
 function getCalledExpressionName(expr: Expression): string | undefined {
     if (isIdentifier(expr)) {
         return expr.text;
@@ -1073,6 +1177,11 @@ function getCalledExpressionName(expr: Expression): string | undefined {
     }
 }
 
+/**
+ * Determines if a given Node is an ArrowFunction, FunctionExpression, or ClassExpression.
+ * @param node The Node to check.
+ * @returns A boolean indicating whether the Node is a function or class expression.
+ */
 function isFunctionOrClassExpression(node: Node): node is ArrowFunction | FunctionExpression | ClassExpression {
     switch (node.kind) {
         case SyntaxKind.ArrowFunction:
@@ -1084,6 +1193,11 @@ function isFunctionOrClassExpression(node: Node): node is ArrowFunction | Functi
     }
 }
 
+/**
+ * Cleans the input text by truncating it to a maximum amount of characters and removing ECMAScript line terminators and trailing `\` from each line.
+ * @param {string} text - The input text to be cleaned.
+ * @returns {string} - The cleaned text.
+ */
 function cleanText(text: string): string {
     // Truncate to maximum amount of characters as we don't want to do a big replace operation.
     text = text.length > maxLength ? text.substring(0, maxLength) + "..." : text;

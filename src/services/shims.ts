@@ -90,6 +90,18 @@ let debugObjectHost: { CollectGarbage(): void } = (function (this: any) { // esl
 // We need to use 'null' to interface with the managed side.
 /* eslint-disable local/no-in-operator */
 
+/**
+ * Interface for discovering typings information.
+ * @interface
+ * @property {string[]} fileNames - The file names that belong to the same project.
+ * @property {string} projectRootPath - The path to the project root directory.
+ * @property {string} safeListPath - The path used to retrieve the safe list.
+ * @property {Map<string, JsTyping.CachedTyping>} packageNameToTypingLocation - The map of package names to their cached typing locations and installed versions.
+ * @property {TypeAcquisition} typeAcquisition - Used to customize the type acquisition process.
+ * @property {CompilerOptions} compilerOptions - Used as a source for typing inference.
+ * @property {readonly string[]} unresolvedImports - List of unresolved module ids from imports.
+ * @property {ReadonlyMap<string, MapLike<string>>} typesRegistry - The map of available typings in npm to maps of TS versions to their latest supported versions.
+ */
 interface DiscoverTypingsInfo {
     fileNames: string[];                            // The file names that belong to the same project.
     projectRootPath: string;                        // The path to the project root directory
@@ -101,7 +113,10 @@ interface DiscoverTypingsInfo {
     typesRegistry: ReadonlyMap<string, MapLike<string>>;    // The map of available typings in npm to maps of TS versions to their latest supported versions
 }
 
-/** @internal */
+/**
+ * Represents a script snapshot in the TypeScript language service.
+ * @internal
+ */
 export interface ScriptSnapshotShim {
     /** Gets a portion of the script snapshot specified by [start, end). */
     getText(start: number, end: number): string;
@@ -131,7 +146,17 @@ export interface Logger {
 /**
  * Public interface of the host of a language service shim instance.
  *
- * @internal
+ * @remarks
+ * This interface extends the Logger interface and provides methods for retrieving compilation settings, script file names, script versions, script snapshots, localized diagnostic messages, and more. It also includes optional methods for getting script kind, new line, project version, and case sensitivity of file names. Additionally, it provides methods for reading directories and files, checking file and directory existence, and getting module and type reference directive resolutions for a file.
+ *
+ * @see {@link Logger}
+ * @see {@link ScriptKind}
+ * @see {@link ScriptSnapshotShim}
+ * @see {@link HostCancellationToken}
+ * @see {@link LanguageServiceShim}
+ *
+ * @public
+ * @interface
  */
 export interface LanguageServiceShimHost extends Logger {
     getCompilationSettings(): string;
@@ -161,9 +186,39 @@ export interface LanguageServiceShimHost extends Logger {
 }
 
 /**
- * Public interface of the core-services host instance used in managed side
+ * Public interface for the CoreServicesShimHost.
+ * Extends the Logger interface.
  *
- * @internal
+ * @param {string} directoryName - The name of the directory to check for existence.
+ * @returns {boolean} - True if the directory exists, false otherwise.
+ *
+ * @param {string} fileName - The name of the file to check for existence.
+ * @returns {boolean} - True if the file exists, false otherwise.
+ *
+ * @returns {string} - The current working directory.
+ *
+ * @param {string} path - The path to the directory to get the list of subdirectories from.
+ * @returns {string[]} - An array of subdirectory names.
+ *
+ * @param {string} rootDir - The root directory to start the search from.
+ * @param {string} extension - The file extension to search for.
+ * @param {string} basePaths - The base paths to search in.
+ * @param {string} excludeEx - A JSON-encoded string[] containing the paths to exclude when enumerating the directory.
+ * @param {string} includeFileEx - The file extension to include in the search.
+ * @param {string} includeDirEx - The directory extension to include in the search.
+ * @param {number} depth - The maximum depth to search.
+ * @returns {string} - A JSON-encoded value of the type: string[].
+ *
+ * @param {string} fileName - The name of the file to read.
+ * @returns {string | undefined} - The contents of the file, or undefined if the file does not exist.
+ *
+ * @param {string} path - The path to resolve.
+ * @returns {string} - The resolved path.
+ *
+ * @param {string} s - The string to trace.
+ * @returns {void}
+ *
+ * @returns {boolean} - True if the file system is case-sensitive, false otherwise.
  */
 export interface CoreServicesShimHost extends Logger {
     directoryExists(directoryName: string): boolean;
@@ -390,6 +445,15 @@ function logInternalError(logger: Logger, err: Error) {
     }
 }
 
+/**
+ * Adapter class that implements the IScriptSnapshot interface. Wraps a ScriptSnapshotShim object.
+ * @class
+ * @implements {IScriptSnapshot}
+ * @param {ScriptSnapshotShim} scriptSnapshotShim - The ScriptSnapshotShim object to wrap.
+ * @remarks
+ * This class provides an adapter for the ScriptSnapshotShim object to be used as an IScriptSnapshot.
+ * It implements all the necessary methods of the IScriptSnapshot interface.
+ */
 class ScriptSnapshotShimAdapter implements IScriptSnapshot {
     constructor(private scriptSnapshotShim: ScriptSnapshotShim) {
     }
@@ -402,6 +466,11 @@ class ScriptSnapshotShimAdapter implements IScriptSnapshot {
         return this.scriptSnapshotShim.getLength();
     }
 
+    /**
+     * Retrieves the range of text changes between the current script snapshot and the provided old snapshot.
+     * @param {IScriptSnapshot} oldSnapshot - The old snapshot to compare against.
+     * @returns {TextChangeRange | undefined} - The range of text changes between the two snapshots, or undefined if there are no changes.
+     */
     public getChangeRange(oldSnapshot: IScriptSnapshot): TextChangeRange | undefined {
         const oldSnapshotShim = oldSnapshot as ScriptSnapshotShimAdapter;
         const encoded = this.scriptSnapshotShim.getChangeRange(oldSnapshotShim.scriptSnapshotShim);
@@ -425,7 +494,12 @@ class ScriptSnapshotShimAdapter implements IScriptSnapshot {
     }
 }
 
-/** @internal */
+/**
+ * Adapter class that implements the LanguageServiceHost interface for use with a LanguageServiceShim.
+ * @class
+ * @implements LanguageServiceHost
+ * @remarks This class should not be used directly, but rather through a LanguageServiceShim.
+ */
 export class LanguageServiceShimHostAdapter implements LanguageServiceHost {
     private loggingEnabled = false;
     private tracingEnabled = false;
@@ -493,6 +567,11 @@ export class LanguageServiceShimHostAdapter implements LanguageServiceHost {
         return this.shimHost.useCaseSensitiveFileNames ? this.shimHost.useCaseSensitiveFileNames() : false;
     }
 
+    /**
+     * Retrieves the compilation settings from the LanguageServiceShimHostAdapter instance.
+     * @returns {CompilerOptions} The compiler options object.
+     * @remarks This method sets the allowNonTsExtensions property to true to allow the language service to handle all files.
+     */
     public getCompilationSettings(): CompilerOptions {
         const settingsJson = this.shimHost.getCompilationSettings();
         // eslint-disable-next-line no-null/no-null
@@ -528,6 +607,10 @@ export class LanguageServiceShimHostAdapter implements LanguageServiceHost {
         return this.shimHost.getScriptVersion(fileName);
     }
 
+    /**
+     * Retrieves localized diagnostic messages from the shim host and returns them as a parsed JSON object.
+     * @returns {Object | null} Returns the parsed JSON object containing the diagnostic messages, or null if the JSON is invalid or empty.
+     */
     public getLocalizedDiagnosticMessages() {
         /* eslint-disable no-null/no-null */
         const diagnosticMessagesJson = this.shimHost.getLocalizedDiagnosticMessages();
@@ -562,6 +645,15 @@ export class LanguageServiceShimHostAdapter implements LanguageServiceHost {
         return this.shimHost.getDefaultLibFileName(JSON.stringify(options));
     }
 
+    /**
+     * Reads the contents of a directory at the specified path.
+     * @param path - The path of the directory to read.
+     * @param extensions - Optional array of file extensions to filter by.
+     * @param exclude - Optional array of glob patterns to exclude from the search.
+     * @param include - Optional array of glob patterns to include in the search.
+     * @param depth - Optional depth of subdirectories to search.
+     * @returns An array of strings representing the files and directories in the specified directory.
+     */
     public readDirectory(path: string, extensions?: readonly string[], exclude?: string[], include?: string[], depth?: number): string[] {
         const pattern = getFileMatcherPatterns(path, exclude, include,
             this.shimHost.useCaseSensitiveFileNames!(), this.shimHost.getCurrentDirectory()); // TODO: GH#18217
@@ -585,7 +677,12 @@ export class LanguageServiceShimHostAdapter implements LanguageServiceHost {
     }
 }
 
-/** @internal */
+/**
+ * Class representing a CoreServicesShimHostAdapter.
+ * @implements {ParseConfigHost}
+ * @implements {ModuleResolutionHost}
+ * @implements {JsTyping.TypingResolutionHost}
+ */
 export class CoreServicesShimHostAdapter implements ParseConfigHost, ModuleResolutionHost, JsTyping.TypingResolutionHost {
 
     public directoryExists: (directoryName: string) => boolean;
@@ -608,6 +705,15 @@ export class CoreServicesShimHostAdapter implements ParseConfigHost, ModuleResol
         }
     }
 
+    /**
+     * Reads a directory and returns an array of strings representing the file paths that match the specified criteria.
+     * @param rootDir The root directory to start the search from.
+     * @param extensions An array of file extensions to include in the search.
+     * @param exclude An array of glob patterns to exclude from the search.
+     * @param include An array of glob patterns to include in the search.
+     * @param depth The maximum depth of subdirectories to search. Optional.
+     * @returns An array of strings representing the file paths that match the specified criteria.
+     */
     public readDirectory(rootDir: string, extensions: readonly string[], exclude: readonly string[], include: readonly string[], depth?: number): string[] {
         const pattern = getFileMatcherPatterns(rootDir, exclude, include,
             this.shimHost.useCaseSensitiveFileNames!(), this.shimHost.getCurrentDirectory()); // TODO: GH#18217
@@ -635,6 +741,14 @@ export class CoreServicesShimHostAdapter implements ParseConfigHost, ModuleResol
     }
 }
 
+/**
+ * Executes a given function and logs its performance if specified.
+ * @param logger - The logger to use for logging.
+ * @param actionDescription - The description of the action being performed.
+ * @param action - The function to execute.
+ * @param logPerformance - Whether or not to log the performance of the function.
+ * @returns The result of the executed function.
+ */
 function simpleForwardCall(logger: Logger, actionDescription: string, action: () => unknown, logPerformance: boolean): unknown {
     let start: number | undefined;
     if (logPerformance) {
@@ -663,6 +777,16 @@ function forwardJSONCall(logger: Logger, actionDescription: string, action: () =
     return forwardCall(logger, actionDescription, /*returnJson*/ true, action, logPerformance) as string;
 }
 
+/**
+ * Executes a given action and logs performance metrics and errors if necessary.
+ * @typeparam T - The type of the result of the action.
+ * @param logger - The logger to use for logging errors and performance metrics.
+ * @param actionDescription - A description of the action being performed.
+ * @param returnJson - A flag indicating whether to return the result as a JSON string.
+ * @param action - The action to execute.
+ * @param logPerformance - A flag indicating whether to log performance metrics.
+ * @returns The result of the action, or a stringified JSON object containing an error or cancellation message.
+ */
 function forwardCall<T>(logger: Logger, actionDescription: string, returnJson: boolean, action: () => T, logPerformance: boolean): T | string {
     try {
         const result = simpleForwardCall(logger, actionDescription, action, logPerformance);
@@ -703,6 +827,12 @@ export function realizeDiagnostics(diagnostics: readonly Diagnostic[], newLine: 
     return diagnostics.map(d => realizeDiagnostic(d, newLine));
 }
 
+/**
+ * Converts a Diagnostic object into a RealizedDiagnostic object.
+ * @param {Diagnostic} diagnostic - The Diagnostic object to be converted.
+ * @param {string} newLine - The newline character to be used in the message text.
+ * @returns {RealizedDiagnostic} - The converted RealizedDiagnostic object.
+ */
 function realizeDiagnostic(diagnostic: Diagnostic, newLine: string): RealizedDiagnostic {
     return {
         message: flattenDiagnosticMessageText(diagnostic.messageText, newLine),
@@ -733,8 +863,10 @@ class LanguageServiceShimObject extends ShimBase implements LanguageServiceShim 
     /// DISPOSE
 
     /**
-     * Ensure (almost) deterministic release of internal Javascript resources when
-     * some external native objects holds onto us (e.g. Com/Interop).
+     * Disposes of internal Javascript resources to ensure (almost) deterministic release when external native objects hold onto the class instance.
+     * @param dummy - A dummy object to satisfy the override signature.
+     * @returns void
+     * @remarks This method sets the languageService and logger properties to null and forces a garbage collection if debugObjectHost.CollectGarbage is available.
      */
     public override dispose(dummy: {}): void {
         this.logger.log("dispose()");
@@ -1014,6 +1146,13 @@ class LanguageServiceShimObject extends ShimBase implements LanguageServiceShim 
         );
     }
 
+    /**
+     * Retrieves document highlights for a given file and position.
+     * @param fileName - The name of the file to retrieve highlights for.
+     * @param position - The position within the file to retrieve highlights for.
+     * @param filesToSearch - A string containing a JSON array of file names to search for highlights in.
+     * @returns A string representing the results of the document highlights call.
+     */
     public getDocumentHighlights(fileName: string, position: number, filesToSearch: string): string {
         return this.forwardJSONCall(
             `getDocumentHighlights('${fileName}', ${position})`,
@@ -1221,6 +1360,13 @@ class ClassifierShimObject extends ShimBase implements ClassifierShim {
     }
 
     /// COLORIZATION
+    /**
+     * Returns the classifications for a given line of text.
+     * @param {string} text - The text to classify.
+     * @param {EndOfLineState} lexState - The end of line state.
+     * @param {boolean} [classifyKeywordsInGenerics=false] - Whether or not to classify keywords in generics.
+     * @returns {string} The classifications for the given line of text.
+     */
     public getClassificationsForLine(text: string, lexState: EndOfLineState, classifyKeywordsInGenerics = false): string {
         const classification = this.classifier.getClassificationsForLine(text, lexState, classifyKeywordsInGenerics);
         let result = "";
@@ -1262,6 +1408,13 @@ class CoreServicesShimObject extends ShimBase implements CoreServicesShim {
         });
     }
 
+    /**
+     * Resolves a type reference directive.
+     * @param {string} fileName - The name of the file containing the type reference directive.
+     * @param {string} typeReferenceDirective - The type reference directive to resolve.
+     * @param {string} compilerOptionsJson - The JSON string representing the compiler options.
+     * @returns {string} - The resolved file name.
+     */
     public resolveTypeReferenceDirective(fileName: string, typeReferenceDirective: string, compilerOptionsJson: string): string {
         return this.forwardJSONCall(`resolveTypeReferenceDirective(${fileName})`, () => {
             const compilerOptions = JSON.parse(compilerOptionsJson) as CompilerOptions;
@@ -1301,6 +1454,11 @@ class CoreServicesShimObject extends ShimBase implements CoreServicesShim {
         );
     }
 
+    /**
+     * Converts an array of FileReference objects to an array of ShimsFileReference objects.
+     * @param refs - An array of FileReference objects.
+     * @returns An array of ShimsFileReference objects or undefined if refs is falsy.
+     */
     private convertFileReferences(refs: FileReference[]): ShimsFileReference[] | undefined {
         if (!refs) {
             return undefined;
@@ -1316,6 +1474,12 @@ class CoreServicesShimObject extends ShimBase implements CoreServicesShim {
         return result;
     }
 
+    /**
+     * Retrieves information about a TypeScript configuration file.
+     * @param fileName - The name of the configuration file.
+     * @param sourceTextSnapshot - The snapshot of the source text.
+     * @returns A JSON object containing the options, type acquisition, files, raw, and errors of the configuration file.
+     */
     public getTSConfigFileInfo(fileName: string, sourceTextSnapshot: IScriptSnapshot): string {
         return this.forwardJSONCall(
             `getTSConfigFileInfo('${fileName}')`,
@@ -1363,7 +1527,11 @@ class CoreServicesShimObject extends ShimBase implements CoreServicesShim {
     }
 }
 
-/** @internal */
+/**
+ * Class representing a factory for creating TypeScript services shims.
+ * @implements {ShimFactory}
+ * @internal
+ */
 export class TypeScriptServicesFactory implements ShimFactory {
     private _shims: Shim[] = [];
     private documentRegistry: DocumentRegistry | undefined;
@@ -1375,6 +1543,11 @@ export class TypeScriptServicesFactory implements ShimFactory {
         return servicesVersion;
     }
 
+    /**
+     * Creates a LanguageServiceShim object.
+     * @param {LanguageServiceShimHost} host - The host object for the LanguageServiceShim.
+     * @returns {LanguageServiceShim} - The LanguageServiceShim object.
+     */
     public createLanguageServiceShim(host: LanguageServiceShimHost): LanguageServiceShim {
         try {
             if (this.documentRegistry === undefined) {
@@ -1400,6 +1573,12 @@ export class TypeScriptServicesFactory implements ShimFactory {
         }
     }
 
+    /**
+     * Creates a CoreServicesShim object using the provided CoreServicesShimHost.
+     * @param {CoreServicesShimHost} host - The host to use for the CoreServicesShim.
+     * @returns {CoreServicesShim} - The created CoreServicesShim object.
+     * @remarks - If an error occurs during creation, it will be logged and re-thrown.
+     */
     public createCoreServicesShim(host: CoreServicesShimHost): CoreServicesShim {
         try {
             const adapter = new CoreServicesShimHostAdapter(host);
@@ -1421,6 +1600,11 @@ export class TypeScriptServicesFactory implements ShimFactory {
         this._shims.push(shim);
     }
 
+    /**
+     * Removes a shim from the list of registered shims.
+     * @param {Shim} shim - The shim to unregister.
+     * @throws {Error} Invalid operation if the shim is not found in the list.
+     */
     public unregisterShim(shim: Shim): void {
         for (let i = 0; i < this._shims.length; i++) {
             if (this._shims[i] === shim) {

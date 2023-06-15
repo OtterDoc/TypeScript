@@ -52,6 +52,11 @@ registerRefactor(refactorName, {
     getAvailableActions: getRefactorActionsToConvertToTemplateString
 });
 
+/**
+ * Returns an array of applicable refactor actions to convert a binary expression to a template string.
+ * @param {RefactorContext} context - The context object containing information about the file and start position.
+ * @returns {readonly ApplicableRefactorInfo[]} - An array of applicable refactor actions.
+ */
 function getRefactorActionsToConvertToTemplateString(context: RefactorContext): readonly ApplicableRefactorInfo[] {
     const { file, startPosition } = context;
     const node = getNodeOrParentOfParentheses(file, startPosition);
@@ -71,6 +76,12 @@ function getRefactorActionsToConvertToTemplateString(context: RefactorContext): 
     return emptyArray;
 }
 
+/**
+ * Returns the node or parent of parentheses for a given source file and start position.
+ * @param {SourceFile} file - The source file to search in.
+ * @param {number} startPosition - The start position to search from.
+ * @returns {Node} - The node or parent of parentheses.
+ */
 function getNodeOrParentOfParentheses(file: SourceFile, startPosition: number) {
     const node = getTokenAtPosition(file, startPosition);
     const nestedBinary = getParentBinaryExpression(node);
@@ -86,6 +97,12 @@ function getNodeOrParentOfParentheses(file: SourceFile, startPosition: number) {
     return node;
 }
 
+/**
+ * Returns RefactorEditInfo object or undefined after converting a node to a template string.
+ * @param {RefactorContext} context - The context object.
+ * @param {string} actionName - The name of the action.
+ * @returns {RefactorEditInfo|undefined} - RefactorEditInfo object or undefined.
+ */
 function getRefactorEditsToConvertToTemplateString(context: RefactorContext, actionName: string): RefactorEditInfo | undefined {
     const { file, startPosition } = context;
     const node = getNodeOrParentOfParentheses(file, startPosition);
@@ -98,6 +115,12 @@ function getRefactorEditsToConvertToTemplateString(context: RefactorContext, act
     }
 }
 
+/**
+ * Returns the edits necessary to convert a binary expression to a template literal.
+ * @param {RefactorContext} context - The context for the refactoring.
+ * @param {Node} node - The node to refactor.
+ * @returns {textChanges.ChangeTracker} - The changes necessary to convert the binary expression to a template literal.
+ */
 function getEditsForToTemplateLiteral(context: RefactorContext, node: Node) {
     const maybeBinary = getParentBinaryExpression(node);
     const file = context.file;

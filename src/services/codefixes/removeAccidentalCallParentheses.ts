@@ -16,6 +16,11 @@ const errorCodes = [
 ];
 registerCodeFix({
     errorCodes,
+    /**
+     * Finds the call expression in the given context and removes the parentheses around it.
+     * @param {ts.TransformationContext} context - The transformation context.
+     * @returns {ts.CodeFixAction[] | undefined} An array of code fix actions or undefined if no call expression is found.
+     */
     getCodeActions(context) {
         const callExpression = findAncestor(getTokenAtPosition(context.sourceFile, context.span.start), isCallExpression);
         if (!callExpression) {

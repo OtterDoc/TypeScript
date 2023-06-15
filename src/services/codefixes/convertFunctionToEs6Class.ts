@@ -153,6 +153,13 @@ function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, po
 
         return memberElements;
 
+        /**
+         * Determines if a given target and source should be converted based on their types.
+         * @param _target - The target to check for conversion.
+         * @param source - The source to check for conversion.
+         * @returns {boolean} - True if the target and source should be converted, false otherwise.
+         * @remarks - Right now only function expressions, get/set accessors, and methods can be converted. Other values like normal value fields ({a: 1}) should not be transformed. This can be updated once ES public class properties are available.
+         */
         function shouldConvertDeclaration(_target: AccessExpression | ObjectLiteralExpression, source: Expression) {
             // Right now the only thing we can convert are function expressions, get/set accessors and methods
             // other values like normal value fields ({a: 1}) shouldn't get transformed.
@@ -174,6 +181,13 @@ function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, po
             }
         }
 
+        /**
+         * Converts a symbol to a class element and adds it to the members array.
+         * @param {Symbol} symbol - The symbol to convert.
+         * @param {Modifier[] | undefined} modifiers - The modifiers to apply to the converted element.
+         * @param {ClassElement[]} members - The array to add the converted element to.
+         * @returns {void}
+         */
         function createClassElement(symbol: Symbol, modifiers: Modifier[] | undefined, members: ClassElement[]): void {
             // Right now the only thing we can convert are function expressions, which are marked as methods
             // or { x: y } type prototype assignments, which are marked as ObjectLiteral
@@ -261,6 +275,13 @@ function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, po
                 return;
             }
 
+            /**
+             * Creates an arrow function expression member for a class.
+             * @param members - An array of ClassElement objects.
+             * @param arrowFunction - The arrow function to be converted to a method.
+             * @param name - The name of the method.
+             * @returns void
+             */
             function createArrowFunctionExpressionMember(members: ClassElement[], arrowFunction: ArrowFunction, name: PropertyName) {
                 const arrowFunctionBody = arrowFunction.body;
                 let bodyBlock: Block;
@@ -282,6 +303,11 @@ function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, po
         }
     }
 
+    /**
+     * Creates a ClassDeclaration from a VariableDeclaration node.
+     * @param node - The VariableDeclaration node to create the class from.
+     * @returns The created ClassDeclaration or undefined if the node is not valid.
+     */
     function createClassFromVariableDeclaration(node: VariableDeclaration): ClassDeclaration | undefined {
         const initializer = node.initializer;
         if (!initializer || !isFunctionExpression(initializer) || !isIdentifier(node.name)) {
@@ -300,6 +326,11 @@ function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, po
         return cls;
     }
 
+    /**
+     * Creates a ClassDeclaration from a FunctionDeclaration or FunctionExpression node.
+     * @param node The node to create the class from.
+     * @returns The created ClassDeclaration.
+     */
     function createClassFromFunction(node: FunctionDeclaration | FunctionExpression): ClassDeclaration {
         const memberElements = createClassElementsFromSymbol(ctorSymbol);
         if (node.body) {
@@ -324,6 +355,13 @@ function isConstructorAssignment(x: ObjectLiteralElementLike | PropertyAccessExp
     return false;
 }
 
+/**
+ * Tries to get the property name from an AccessExpression node.
+ * @param {AccessExpression} node - The AccessExpression node to get the property name from.
+ * @param {CompilerOptions} compilerOptions - The compiler options to use.
+ * @param {QuotePreference} quotePreference - The quote preference to use.
+ * @returns {PropertyName | undefined} The property name if found, otherwise undefined.
+ */
 function tryGetPropertyName(node: AccessExpression, compilerOptions: CompilerOptions, quotePreference: QuotePreference): PropertyName | undefined {
     if (isPropertyAccessExpression(node)) {
         return node.name;

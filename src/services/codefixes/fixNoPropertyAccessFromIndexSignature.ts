@@ -36,6 +36,14 @@ registerCodeFix({
         codeFixAll(context, errorCodes, (changes, diag) => doChange(changes, diag.file, getPropertyAccessExpression(diag.file, diag.start), context.preferences))
 });
 
+/**
+ * Replaces a PropertyAccessExpression node with a new ElementAccessExpression or ElementAccessChain node in a given SourceFile using a given ChangeTracker, based on the provided UserPreferences for quote preference.
+ * @param changes - The ChangeTracker to use for making the replacement.
+ * @param sourceFile - The SourceFile containing the node to replace.
+ * @param node - The PropertyAccessExpression node to replace.
+ * @param preferences - The UserPreferences to use for determining quote preference.
+ * @remarks - This function does not return anything, it only modifies the provided ChangeTracker.
+ */
 function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, node: PropertyAccessExpression, preferences: UserPreferences): void {
     const quotePreference = getQuotePreference(sourceFile, preferences);
     const argumentsExpression = factory.createStringLiteral(node.name.text, quotePreference === QuotePreference.Single);

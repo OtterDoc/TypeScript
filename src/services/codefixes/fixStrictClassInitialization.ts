@@ -83,6 +83,12 @@ interface Info {
     isJs: boolean;
 }
 
+/**
+ * Retrieves information about a token at a given position in a source file.
+ * @param {SourceFile} sourceFile - The source file to retrieve information from.
+ * @param {number} pos - The position of the token to retrieve information about.
+ * @returns {Info|undefined} - An object containing information about the token, or undefined if no information is available.
+ */
 function getInfo(sourceFile: SourceFile, pos: number): Info | undefined {
     const token = getTokenAtPosition(sourceFile, pos);
     if (isIdentifier(token) && isPropertyDeclaration(token.parent)) {
@@ -100,6 +106,13 @@ function getActionForAddMissingDefiniteAssignmentAssertion(context: CodeFixConte
     return createCodeFixAction(fixName, changes, [Diagnostics.Add_definite_assignment_assertion_to_property_0, info.prop.getText()], fixIdAddDefiniteAssignmentAssertions, Diagnostics.Add_definite_assignment_assertions_to_all_uninitialized_properties);
 }
 
+/**
+ * Adds a definite assignment assertion to a PropertyDeclaration node.
+ * @param changeTracker - The ChangeTracker object used to track changes.
+ * @param propertyDeclarationSourceFile - The SourceFile object containing the PropertyDeclaration node.
+ * @param propertyDeclaration - The PropertyDeclaration node to add the assertion to.
+ * @remarks This function suppresses leading and trailing trivia before updating the PropertyDeclaration node with an ExclamationToken to indicate definite assignment.
+ */
 function addDefiniteAssignmentAssertion(changeTracker: textChanges.ChangeTracker, propertyDeclarationSourceFile: SourceFile, propertyDeclaration: PropertyDeclaration): void {
     suppressLeadingAndTrailingTrivia(propertyDeclaration);
     const property = factory.updatePropertyDeclaration(
@@ -118,6 +131,13 @@ function getActionForAddMissingUndefinedType(context: CodeFixContext, info: Info
     return createCodeFixAction(fixName, changes, [Diagnostics.Add_undefined_type_to_property_0, info.prop.name.getText()], fixIdAddUndefinedType, Diagnostics.Add_undefined_type_to_all_uninitialized_properties);
 }
 
+/**
+ * Adds an undefined type to a given type node. If the type is a union type, it concatenates the undefined type to the existing types. If the type is not a union type, it creates a new union type with the given type and undefined type. If the info object is for a JavaScript file, it adds a JSDoc type tag to the property with the union type. Otherwise, it replaces the existing type node with the new union type node.
+ * @param {textChanges.ChangeTracker} changeTracker - The change tracker object.
+ * @param {SourceFile} sourceFile - The source file object.
+ * @param {Info} info - The info object containing the type and property information.
+ * @returns {void}
+ */
 function addUndefinedType(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, info: Info): void {
     const undefinedTypeNode = factory.createKeywordTypeNode(SyntaxKind.UndefinedKeyword);
     const types = isUnionTypeNode(info.type) ? info.type.types.concat(undefinedTypeNode) : [info.type, undefinedTypeNode];
@@ -130,6 +150,12 @@ function addUndefinedType(changeTracker: textChanges.ChangeTracker, sourceFile: 
     }
 }
 
+/**
+ * Returns a CodeFixAction or undefined based on the provided CodeFixContext and Info objects.
+ * @param {CodeFixContext} context - The CodeFixContext object.
+ * @param {Info} info - The Info object.
+ * @returns {CodeFixAction | undefined} - Returns a CodeFixAction or undefined.
+ */
 function getActionForAddMissingInitializer(context: CodeFixContext, info: Info): CodeFixAction | undefined {
     if (info.isJs) return undefined;
 
@@ -141,6 +167,13 @@ function getActionForAddMissingInitializer(context: CodeFixContext, info: Info):
     return createCodeFixAction(fixName, changes, [Diagnostics.Add_initializer_to_property_0, info.prop.name.getText()], fixIdAddInitializer, Diagnostics.Add_initializers_to_all_uninitialized_properties);
 }
 
+/**
+ * Updates a property declaration with a new initializer and replaces it in the source file.
+ * @param changeTracker - The change tracker to use for replacing the node.
+ * @param propertyDeclarationSourceFile - The source file containing the property declaration.
+ * @param propertyDeclaration - The property declaration to update.
+ * @param initializer - The new initializer expression to assign to the property.
+ */
 function addInitializer(changeTracker: textChanges.ChangeTracker, propertyDeclarationSourceFile: SourceFile, propertyDeclaration: PropertyDeclaration, initializer: Expression): void {
     suppressLeadingAndTrailingTrivia(propertyDeclaration);
     const property = factory.updatePropertyDeclaration(
@@ -158,6 +191,12 @@ function getInitializer(checker: TypeChecker, propertyDeclaration: PropertyDecla
     return getDefaultValueFromType(checker, checker.getTypeFromTypeNode(propertyDeclaration.type!)); // TODO: GH#18217
 }
 
+/**
+ * Returns the default value of a given type as an Expression or undefined if the type has no default value.
+ * @param {TypeChecker} checker - The TypeChecker instance to use.
+ * @param {Type} type - The type to get the default value for.
+ * @returns {Expression|undefined} - The default value as an Expression or undefined if the type has no default value.
+ */
 function getDefaultValueFromType(checker: TypeChecker, type: Type): Expression | undefined {
     if (type.flags & TypeFlags.BooleanLiteral) {
         return (type === checker.getFalseType() || type === checker.getFalseType(/*fresh*/ true)) ? factory.createFalse() : factory.createTrue();

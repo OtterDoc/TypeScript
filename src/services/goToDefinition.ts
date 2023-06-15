@@ -276,6 +276,12 @@ function symbolMatchesSignature(s: Symbol, calledDeclaration: SignatureDeclarati
 //      }
 //      function Foo(arg: Props) {}
 //      Foo( { pr/*1*/op1: 10, prop2: true })
+/**
+ * Retrieves the definition of an object literal element using the provided TypeChecker and Node.
+ * @param {TypeChecker} typeChecker - The TypeChecker to use for retrieving the definition.
+ * @param {Node} node - The Node representing the object literal element.
+ * @returns {Array} - An array of definitions for the object literal element.
+ */
 function getDefinitionFromObjectLiteralElement(typeChecker: TypeChecker, node: Node) {
     const element = getContainingObjectLiteralElement(node);
     if (element) {
@@ -288,6 +294,12 @@ function getDefinitionFromObjectLiteralElement(typeChecker: TypeChecker, node: N
     return emptyArray;
 }
 
+/**
+ * Retrieves the definition of an overridden member in a class hierarchy.
+ * @param {TypeChecker} typeChecker - The TypeChecker object.
+ * @param {Node} node - The node to retrieve the definition from.
+ * @returns {any} The definition of the overridden member.
+ */
 function getDefinitionFromOverriddenMember(typeChecker: TypeChecker, node: Node) {
     const classElement = findAncestor(node, isClassElement);
     if (!(classElement && classElement.name)) return;
@@ -395,6 +407,14 @@ function shouldUnwrapFirstTypeArgumentTypeDefinitionFromAlias(typeChecker: TypeC
     return !!globalType && globalType === type.aliasSymbol;
 }
 
+/**
+ * Returns an array of DefinitionInfo objects for the first type argument of a given Type.
+ * @param {TypeChecker} typeChecker - The TypeChecker instance to use.
+ * @param {Type} type - The Type to get the first type argument definitions from.
+ * @param {Node} node - The Node to use for context.
+ * @param {boolean | undefined} failedAliasResolution - Whether alias resolution has failed.
+ * @returns {readonly DefinitionInfo[]} An array of DefinitionInfo objects for the first type argument.
+ */
 function getFirstTypeArgumentDefinitions(typeChecker: TypeChecker, type: Type, node: Node, failedAliasResolution: boolean | undefined): readonly DefinitionInfo[] {
     if (!!(getObjectFlags(type) & ObjectFlags.Reference) && shouldUnwrapFirstTypeArgumentTypeDefinitionFromTypeReference(typeChecker, type as TypeReference)) {
         return definitionFromType(typeChecker.getTypeArguments(type as TypeReference)[0], typeChecker, node, failedAliasResolution);
@@ -419,7 +439,14 @@ function getFirstTypeArgumentDefinitions(typeChecker: TypeChecker, type: Type, n
 }
 
 /// Goto type
-/** @internal */
+/**
+ * Retrieves the type definition at a given position in a source file.
+ * @param {TypeChecker} typeChecker - The type checker to use.
+ * @param {SourceFile} sourceFile - The source file to retrieve the type definition from.
+ * @param {number} position - The position in the source file to retrieve the type definition from.
+ * @returns {readonly DefinitionInfo[] | undefined} - The type definition at the given position, or undefined if none exists.
+ * @remarks This function is intended for internal use only.
+ */
 export function getTypeDefinitionAtPosition(typeChecker: TypeChecker, sourceFile: SourceFile, position: number): readonly DefinitionInfo[] | undefined {
     const node = getTouchingPropertyName(sourceFile, position);
     if (node === sourceFile) {
@@ -451,6 +478,13 @@ function definitionFromType(type: Type, checker: TypeChecker, node: Node, failed
         t.symbol && getDefinitionFromSymbol(checker, t.symbol, node, failedAliasResolution));
 }
 
+/**
+ * Tries to get the return type of a function.
+ * @param symbol - The symbol of the function.
+ * @param type - The type of the function.
+ * @param checker - The type checker.
+ * @returns The return type of the function, or undefined if it cannot be determined.
+ */
 function tryGetReturnTypeOfFunction(symbol: Symbol, type: Type, checker: TypeChecker): Type | undefined {
     // If the type is just a function's inferred type,
     // go-to-type should go to the return type instead, since go-to-definition takes you to the function anyway.
@@ -463,7 +497,14 @@ function tryGetReturnTypeOfFunction(symbol: Symbol, type: Type, checker: TypeChe
     return undefined;
 }
 
-/** @internal */
+/**
+ * Retrieves the definition and bound span of a program, source file, and position.
+ * @param {Program} program - The program to retrieve the definition and bound span from.
+ * @param {SourceFile} sourceFile - The source file to retrieve the definition and bound span from.
+ * @param {number} position - The position to retrieve the definition and bound span from.
+ * @returns {DefinitionInfoAndBoundSpan | undefined} - The definition and bound span, or undefined if none found.
+ * @remarks This function is intended for internal use only.
+ */
 export function getDefinitionAndBoundSpan(program: Program, sourceFile: SourceFile, position: number): DefinitionInfoAndBoundSpan | undefined {
     const definitions = getDefinitionAtPosition(program, sourceFile, position);
 
@@ -491,6 +532,13 @@ function getDefinitionInfoForIndexSignatures(node: Node, checker: TypeChecker): 
     return mapDefined(checker.getIndexInfosAtLocation(node), info => info.declaration && createDefinitionFromSignatureDeclaration(checker, info.declaration));
 }
 
+/**
+ * Retrieves the symbol for a given node using the provided TypeChecker.
+ * @param node - The node to retrieve the symbol for.
+ * @param checker - The TypeChecker to use for symbol retrieval.
+ * @param stopAtAlias - Whether to stop at an alias or retrieve the aliased symbol.
+ * @returns An object containing the retrieved symbol and a boolean indicating if alias resolution failed.
+ */
 function getSymbol(node: Node, checker: TypeChecker, stopAtAlias: boolean | undefined) {
     const symbol = checker.getSymbolAtLocation(node);
     // If this is an alias, and the request came at the declaration location
@@ -515,6 +563,12 @@ function getSymbol(node: Node, checker: TypeChecker, stopAtAlias: boolean | unde
 //   (1) when the aliased symbol was declared in the location(parent).
 //   (2) when the aliased symbol is originating from an import.
 //
+/**
+ * Determines whether an identifier node should be skipped when generating an alias.
+ * @param {Node} node - The identifier node to check.
+ * @param {Node} declaration - The declaration node to compare against.
+ * @returns {boolean} - True if the identifier node should be skipped, false otherwise.
+ */
 function shouldSkipAlias(node: Node, declaration: Node): boolean {
     if (node.kind !== SyntaxKind.Identifier) {
         return false;
@@ -555,6 +609,14 @@ function isExpandoDeclaration(node: Declaration): boolean {
     return !!containingAssignment && getAssignmentDeclarationKind(containingAssignment) === AssignmentDeclarationKind.Property;
 }
 
+/**
+ * Returns an array of DefinitionInfo objects for a given symbol, node, and optional excludeDeclaration.
+ * @param {TypeChecker} typeChecker - The TypeChecker object.
+ * @param {Symbol} symbol - The symbol to get the definition from.
+ * @param {Node} node - The node to get the definition from.
+ * @param {boolean} [failedAliasResolution] - Optional parameter to exclude a specific declaration.
+ * @returns {DefinitionInfo[] | undefined} - An array of DefinitionInfo objects or undefined.
+ */
 function getDefinitionFromSymbol(typeChecker: TypeChecker, symbol: Symbol, node: Node, failedAliasResolution?: boolean, excludeDeclaration?: Node): DefinitionInfo[] | undefined {
     const filteredDeclarations = filter(symbol.declarations, d => d !== excludeDeclaration);
     const withoutExpandos = filter(filteredDeclarations, d => !isExpandoDeclaration(d));
@@ -576,6 +638,12 @@ function getDefinitionFromSymbol(typeChecker: TypeChecker, symbol: Symbol, node:
             : undefined;
     }
 
+    /**
+     * Returns an array of DefinitionInfo objects based on the provided signatureDeclarations and selectConstructors boolean.
+     * @param {readonly Declaration[] | undefined} signatureDeclarations - An array of Declaration objects or undefined.
+     * @param {boolean} selectConstructors - A boolean indicating whether to select constructor declarations or function-like declarations.
+     * @returns {DefinitionInfo[] | undefined} - An array of DefinitionInfo objects or undefined.
+     */
     function getSignatureDefinition(signatureDeclarations: readonly Declaration[] | undefined, selectConstructors: boolean): DefinitionInfo[] | undefined {
         if (!signatureDeclarations) {
             return undefined;
@@ -604,7 +672,18 @@ export function createDefinitionInfo(declaration: Declaration, checker: TypeChec
     return createDefinitionInfoFromName(checker, declaration, symbolKind, symbolName, containerName, unverified, failedAliasResolution);
 }
 
-/** Creates a DefinitionInfo directly from the name of a declaration. */
+/**
+ * Creates a DefinitionInfo object directly from the name of a declaration.
+ * @param checker - The TypeChecker object.
+ * @param declaration - The Declaration object.
+ * @param symbolKind - The ScriptElementKind of the symbol.
+ * @param symbolName - The name of the symbol.
+ * @param containerName - The name of the container.
+ * @param unverified - Optional boolean indicating if the definition is unverified.
+ * @param failedAliasResolution - Optional boolean indicating if alias resolution failed.
+ * @param textSpan - Optional TextSpan object.
+ * @returns A DefinitionInfo object.
+ */
 function createDefinitionInfoFromName(checker: TypeChecker, declaration: Declaration, symbolKind: ScriptElementKind, symbolName: string, containerName: string, unverified?: boolean, failedAliasResolution?: boolean, textSpan?: TextSpan): DefinitionInfo {
     const sourceFile = declaration.getSourceFile();
     if (!textSpan) {
@@ -630,6 +709,13 @@ function createDefinitionInfoFromName(checker: TypeChecker, declaration: Declara
     };
 }
 
+/**
+ * Determines if a declaration is visible based on its parent and modifiers.
+ * @param {TypeChecker} checker - The TypeChecker instance.
+ * @param {Declaration} declaration - The declaration to check visibility for.
+ * @returns {boolean} - True if the declaration is visible, false otherwise.
+ * @remarks - Variable initializers are visible if the variable is visible. Private/protected properties/methods are not visible. Public properties/methods are visible if their parents are visible.
+ */
 function isDefinitionVisible(checker: TypeChecker, declaration: Declaration): boolean {
     if (checker.isDeclarationVisible(declaration)) return true;
     if (!declaration.parent) return false;
@@ -670,6 +756,13 @@ export function findReferenceInPosition(refs: readonly FileReference[], pos: num
     return find(refs, ref => textRangeContainsPositionInclusive(ref, pos));
 }
 
+/**
+ * Retrieves definition information for a file reference.
+ * @param name - The name of the file reference.
+ * @param targetFileName - The name of the target file.
+ * @param unverified - Whether the file reference is unverified.
+ * @returns A DefinitionInfo object containing information about the file reference.
+ */
 function getDefinitionInfoForFileReference(name: string, targetFileName: string, unverified: boolean): DefinitionInfo {
     return {
         fileName: targetFileName,
@@ -696,6 +789,11 @@ function tryGetSignatureDeclaration(typeChecker: TypeChecker, node: Node): Signa
     return tryCast(signature && signature.declaration, (d): d is SignatureDeclaration => isFunctionLike(d) && !isFunctionTypeNode(d));
 }
 
+/**
+ * Determines if a given node is a constructor-like declaration.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is a constructor-like declaration, false otherwise.
+ */
 function isConstructorLike(node: Node): boolean {
     switch (node.kind) {
         case SyntaxKind.Constructor:

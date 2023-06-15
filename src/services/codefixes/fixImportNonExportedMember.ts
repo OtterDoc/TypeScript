@@ -55,6 +55,11 @@ registerCodeFix({
         const changes = textChanges.ChangeTracker.with(context, t => doChange(t, program, info));
         return [createCodeFixAction(fixId, changes, [Diagnostics.Export_0_from_module_1, info.exportName.node.text, info.moduleSpecifier], fixId, Diagnostics.Export_all_referenced_locals)];
     },
+    /**
+     * Returns a combined set of code actions for all specified error codes in the provided context.
+     * @param {TransformationContext} context - The transformation context.
+     * @returns {CombinedCodeActions} - The combined code actions.
+     */
     getAllCodeActions(context) {
         const { program } = context;
         return createCombinedCodeActions(textChanges.ChangeTracker.with(context, changes => {
@@ -111,6 +116,14 @@ interface Info {
     moduleSpecifier: string;
 }
 
+/**
+ * Retrieves information about an import statement at a given position in a source file.
+ * @param sourceFile - The source file to search in.
+ * @param pos - The position to search at.
+ * @param program - The program to use for resolving modules.
+ * @returns An object containing information about the import statement, or undefined if not found.
+ * @remarks This function only works for import statements that import from external modules, not for import statements that import from other files in the same project.
+ */
 function getInfo(sourceFile: SourceFile, pos: number, program: Program): Info | undefined {
     const token = getTokenAtPosition(sourceFile, pos);
     if (isIdentifier(token)) {
@@ -142,6 +155,16 @@ function getInfo(sourceFile: SourceFile, pos: number, program: Program): Info | 
     return undefined;
 }
 
+/**
+ * Updates or creates an export for a given module source file based on the provided information.
+ * @param changes - The text changes tracker to use for making modifications.
+ * @param program - The program instance to use for type checking.
+ * @param Info - An object containing information about the export to update or create.
+ * @param Info.exportName - The name of the export to update or create.
+ * @param Info.node - The node to update or create the export for.
+ * @param Info.moduleSourceFile - The module source file to update or create the export in.
+ * @returns void
+ */
 function doChange(changes: textChanges.ChangeTracker, program: Program, { exportName, node, moduleSourceFile }: Info) {
     const exportDeclaration = tryGetExportDeclaration(moduleSourceFile, exportName.isTypeOnly);
     if (exportDeclaration) {
@@ -155,6 +178,14 @@ function doChange(changes: textChanges.ChangeTracker, program: Program, { export
     }
 }
 
+/**
+ * Updates or creates an export declaration in a TypeScript source file based on the given module exports and node.
+ * @param changes - The text changes object used to track changes made to the source file.
+ * @param program - The TypeScript program object.
+ * @param sourceFile - The source file to modify.
+ * @param moduleExports - An array of export names.
+ * @param node - An optional export declaration node to update. If not provided, a new export declaration will be created.
+ */
 function doChanges(changes: textChanges.ChangeTracker, program: Program, sourceFile: SourceFile, moduleExports: ExportName[], node: ExportDeclaration | undefined) {
     if (length(moduleExports)) {
         if (node) {

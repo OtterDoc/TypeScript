@@ -52,6 +52,11 @@ registerCodeFix({
     },
 });
 
+/**
+ * Returns the type of the given expression.
+ * @param expr - A FunctionDeclaration, MethodDeclaration, FunctionExpression, or ArrowFunction.
+ * @returns The type of the expression, if it exists.
+ */
 function getReturnType(expr: FunctionDeclaration | MethodDeclaration | FunctionExpression | ArrowFunction) {
     if (expr.type) {
         return expr.type;
@@ -63,6 +68,15 @@ function getReturnType(expr: FunctionDeclaration | MethodDeclaration | FunctionE
     }
 }
 
+/**
+ * Returns an object containing the node to insert before and the return type of the containing function.
+ * @param sourceFile - The source file to search in.
+ * @param start - The position to start searching from.
+ * @returns An object with the following properties:
+ * - insertBefore: The node to insert before.
+ * - returnType: The return type of the containing function, if it exists.
+ * If the containing function cannot be found, returns undefined.
+ */
 function getNodes(sourceFile: SourceFile, start: number): { insertBefore: Node, returnType: TypeNode | undefined } | undefined {
     const token = getTokenAtPosition(sourceFile, start);
     const containingFunction = getContainingFunction(token);
@@ -93,6 +107,13 @@ function getNodes(sourceFile: SourceFile, start: number): { insertBefore: Node, 
     };
 }
 
+/**
+ * Modifies a given source file by inserting an "async" keyword before a specified node and wrapping the return type in a Promise if it is not already a Promise.
+ * @param changes - A text change tracker.
+ * @param sourceFile - The source file to modify.
+ * @param insertBefore - The node before which to insert the "async" keyword.
+ * @param returnType - The return type of the function, which will be wrapped in a Promise if it is not already a Promise.
+ */
 function doChange(
     changes: textChanges.ChangeTracker,
     sourceFile: SourceFile,

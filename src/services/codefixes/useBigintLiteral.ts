@@ -33,6 +33,12 @@ registerCodeFix({
     },
 });
 
+/**
+ * Converts a numeric literal to a BigInt literal and replaces it in the source file using the provided change tracker.
+ * @param changeTracker - The change tracker to use for replacing the node.
+ * @param sourceFile - The source file containing the numeric literal.
+ * @param span - The text span of the numeric literal.
+ */
 function makeChange(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, span: TextSpan) {
     const numericLiteral = tryCast(getTokenAtPosition(sourceFile, span.start), isNumericLiteral);
     if (!numericLiteral) {

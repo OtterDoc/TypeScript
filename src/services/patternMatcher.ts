@@ -38,7 +38,9 @@ export interface PatternMatch {
 // The pattern matcher maintains an internal cache of information as it is used.  Therefore,
 // you should not keep it around forever and should get and release the matcher appropriately
 // once you no longer need it.
-/** @internal */
+/**
+ * Interface for a pattern matcher used to match a candidate against a search pattern.
+ */
 export interface PatternMatcher {
     // Used to match a candidate against the last segment of a possibly dotted pattern.  This
     // is useful as a quick check to prevent having to compute a container before calling
@@ -85,6 +87,14 @@ interface Segment {
 // Information about a chunk of text from the pattern.  The chunk is a piece of text, with
 // cached information about the character spans within in.  Character spans are used for
 // camel case matching.
+/**
+ * Represents a chunk of text that could occur in a symbol name.
+ * @interface
+ * @property {string} text - The text of the chunk.
+ * @property {string} textLowerCase - The text of a chunk in lower case.
+ * @property {boolean} isLowerCase - Whether or not this chunk is entirely lowercase.
+ * @property {TextSpan[]} characterSpans - The spans in this text chunk that we think are of interest and should be matched independently.
+ */
 interface TextChunk {
     // The text of the chunk.  This should be a contiguous sequence of character that could
     // occur in a symbol name.
@@ -112,7 +122,16 @@ function createPatternMatch(kind: PatternMatchKind, isCaseSensitive: boolean): P
     };
 }
 
-/** @internal */
+/**
+ * Creates a pattern matcher for a given string pattern.
+ *
+ * @param pattern - The string pattern to create a matcher for.
+ *
+ * @returns A PatternMatcher object or undefined if the pattern is invalid.
+ *
+ * @remarks
+ * We cache the information we compute about the candidate for the life of this pattern matcher so we don't have to compute it multiple times.
+ */
 export function createPatternMatcher(pattern: string): PatternMatcher | undefined {
     // We'll often see the same candidate string many times when searching (For example, when
     // we see the name of a module that is used everywhere, or the name of an overload).  As
@@ -131,6 +150,14 @@ export function createPatternMatcher(pattern: string): PatternMatcher | undefine
     };
 }
 
+/**
+ * Returns a PatternMatch object if the candidate string matches the dot-separated pattern formed by the segments array, and undefined otherwise. Uses the stringToWordSpans map to match segments against candidate strings.
+ * @param candidateContainers An array of strings representing the containers of the candidate string.
+ * @param candidate The string to match against the pattern.
+ * @param dotSeparatedSegments An array of Segment objects representing the dot-separated pattern to match against.
+ * @param stringToWordSpans A Map object with string keys and TextSpan array values, used to match segments against candidate strings.
+ * @returns A PatternMatch object if the candidate string matches the pattern, and undefined otherwise.
+ */
 function getFullMatch(candidateContainers: readonly string[], candidate: string, dotSeparatedSegments: readonly Segment[], stringToWordSpans: Map<string, TextSpan[]>): PatternMatch | undefined {
     // First, check that the last part of the dot separated pattern matches the name of the
     // candidate.  If not, then there's no point in proceeding and doing the more
@@ -165,6 +192,13 @@ function getWordSpans(word: string, stringToWordSpans: Map<string, TextSpan[]>):
     return spans;
 }
 
+/**
+ * Matches a text chunk against a candidate string and returns a PatternMatch if there is a match.
+ * @param candidate - The string to match against.
+ * @param chunk - The text chunk to match.
+ * @param stringToWordSpans - A map of string to TextSpan[].
+ * @returns A PatternMatch if there is a match, otherwise undefined.
+ */
 function matchTextChunk(candidate: string, chunk: TextChunk, stringToWordSpans: Map<string, TextSpan[]>): PatternMatch | undefined {
     const index = indexOfIgnoringCase(candidate, chunk.textLowerCase);
     if (index === 0) {
@@ -217,6 +251,13 @@ function matchTextChunk(candidate: string, chunk: TextChunk, stringToWordSpans: 
     }
 }
 
+/**
+ * Matches a segment of a pattern against a candidate string.
+ * @param candidate - The string to match against.
+ * @param segment - The segment of the pattern to match.
+ * @param stringToWordSpans - A map of string to TextSpan[].
+ * @returns A PatternMatch object if the segment matches the candidate, undefined otherwise.
+ */
 function matchSegment(candidate: string, segment: Segment, stringToWordSpans: Map<string, TextSpan[]>): PatternMatch | undefined {
     // First check if the segment matches as is.  This is also useful if the segment contains
     // characters we would normally strip when splitting into parts that we also may want to
@@ -386,6 +427,11 @@ function isUpperCaseLetter(ch: number) {
     return str === str.toUpperCase();
 }
 
+/**
+ * Determines if a given number represents a lowercase letter.
+ * @param ch - The number to check.
+ * @returns {boolean} - True if the number represents a lowercase letter, false otherwise.
+ */
 function isLowerCaseLetter(ch: number) {
     // Fast check for the ascii range.
     if (ch >= CharacterCodes.a && ch <= CharacterCodes.z) {
@@ -404,6 +450,12 @@ function isLowerCaseLetter(ch: number) {
 }
 
 // Assumes 'value' is already lowercase.
+/**
+ * Returns the index of the first occurrence of a substring within a string, ignoring case.
+ * @param {string} str - The string to search within.
+ * @param {string} value - The substring to search for.
+ * @returns {number} - The index of the first occurrence of the substring, or -1 if not found.
+ */
 function indexOfIgnoringCase(str: string, value: string): number {
     const n = str.length - value.length;
     for (let start = 0; start <= n; start++) {
@@ -415,6 +467,14 @@ function indexOfIgnoringCase(str: string, value: string): number {
     return -1;
 }
 
+/**
+ * Converts a given character code to its lowercase equivalent.
+ *
+ * @param ch - The character code to convert.
+ * @returns The lowercase equivalent of the character code.
+ *
+ * @remarks This function only supports ASCII characters. For non-ASCII characters, the result may not be accurate.
+ */
 function toLowerCase(ch: number): number {
     // Fast convert for the ascii range.
     if (ch >= CharacterCodes.A && ch <= CharacterCodes.Z) {
@@ -439,6 +499,11 @@ function isWordChar(ch: number) {
     return isUpperCaseLetter(ch) || isLowerCaseLetter(ch) || isDigit(ch) || ch === CharacterCodes._ || ch === CharacterCodes.$;
 }
 
+/**
+ * Breaks a given pattern string into an array of TextChunk objects.
+ * @param {string} pattern - The pattern string to be broken down.
+ * @returns {TextChunk[]} An array of TextChunk objects.
+ */
 function breakPatternIntoTextChunks(pattern: string): TextChunk[] {
     const result: TextChunk[] = [];
     let wordStart = 0;
@@ -487,6 +552,12 @@ export function breakIntoWordSpans(identifier: string): TextSpan[] {
     return breakIntoSpans(identifier, /*word*/ true);
 }
 
+/**
+ * Returns an array of TextSpan objects representing the spans of text in the given identifier string.
+ * @param {string} identifier - The identifier string to break into spans.
+ * @param {boolean} word - Whether to treat the identifier as a word or not.
+ * @returns {TextSpan[]} An array of TextSpan objects representing the spans of text in the given identifier string.
+ */
 function breakIntoSpans(identifier: string, word: boolean): TextSpan[] {
     const result: TextSpan[] = [];
 
@@ -519,6 +590,11 @@ function breakIntoSpans(identifier: string, word: boolean): TextSpan[] {
     return result;
 }
 
+/**
+ * Determines whether a given character code corresponds to a punctuation character.
+ * @param ch - The character code to check.
+ * @returns {boolean} - True if the character is punctuation, false otherwise.
+ */
 function charIsPunctuation(ch: number) {
     switch (ch) {
         case CharacterCodes.exclamation:
@@ -554,6 +630,17 @@ function isAllPunctuation(identifier: string, start: number, end: number): boole
     return every(identifier, ch => charIsPunctuation(ch) && ch !== CharacterCodes._, start, end);
 }
 
+/**
+ * Determines if a transition from an uppercase letter to a lowercase letter should result in a split of the identifier.
+ *
+ * @param {string} identifier - The identifier being checked for a transition from upper to lower case.
+ * @param {number} index - The index of the current character being checked.
+ * @param {number} wordStart - The index of the first character in the current word being checked.
+ * @returns {boolean} - True if the transition should result in a split, false otherwise.
+ *
+ * @remarks
+ * This function supports transitions from upper to lower case letters in identifiers, but only if all the letters preceding the transition are uppercase. For example, "IDisposable" would be split into "I" and "Disposable", but "Foo" would not be split into "F" and "oo". Note that this function may not split names like "HELLOthere", but such names are not typically found in .Net programs.
+ */
 function transitionFromUpperToLower(identifier: string, index: number, wordStart: number): boolean {
     // Cases this supports:
     // 1) IDisposable -> I, Disposable
@@ -576,6 +663,13 @@ function transitionFromUpperToLower(identifier: string, index: number, wordStart
         && every(identifier, isUpperCaseLetter, wordStart, index);
 }
 
+/**
+ * Determines if a transition from a lower case letter to an upper case letter is needed based on the given parameters.
+ * @param identifier - The string to check for a transition.
+ * @param word - A boolean indicating whether the transition should be based on words or characters.
+ * @param index - The index of the current character being checked.
+ * @returns A boolean indicating whether a transition is needed.
+ */
 function transitionFromLowerToUpper(identifier: string, word: boolean, index: number): boolean {
     const lastIsUpper = isUpperCaseLetter(identifier.charCodeAt(index - 1));
     const currentIsUpper = isUpperCaseLetter(identifier.charCodeAt(index));

@@ -26,6 +26,13 @@ registerCodeFix({
     getAllCodeActions: context => codeFixAll(context, errorCodes, (changes, diag) => makeChange(changes, diag.file, diag.start)),
 });
 
+/**
+ * Replaces a parameter name with a new one in a given function declaration.
+ * @param {textChanges.ChangeTracker} changeTracker - The change tracker for recording the changes made.
+ * @param {SourceFile} sourceFile - The source file containing the function declaration.
+ * @param {number} pos - The position of the parameter to be replaced.
+ * @remarks This function assumes that the parameter to be replaced is a valid parameter and does not already have a name.
+ */
 function makeChange(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, pos: number) {
     const token = getTokenAtPosition(sourceFile, pos);
     const param = token.parent;

@@ -46,7 +46,11 @@ function createCodeFixActionWorker(fixName: string, description: string, changes
     return { fixName, description, changes, fixId, fixAllDescription, commands: command ? [command] : undefined };
 }
 
-/** @internal */
+/**
+ * Registers a code fix for a given error code and fix ID.
+ * @param reg - The CodeFixRegistration object containing the error code and fix ID.
+ * @remarks This function is marked as internal and should not be used outside of the module.
+ */
 export function registerCodeFix(reg: CodeFixRegistration) {
     for (const error of reg.errorCodes) {
         errorCodeToFixesArray = undefined;
@@ -66,6 +70,12 @@ export function getSupportedErrorCodes(): readonly string[] {
     return errorCodeToFixesArray ??= arrayFrom(errorCodeToFixes.keys());
 }
 
+/**
+ * Returns a function that removes the fixId property from a CodeFixAction object if fixAll is unavailable.
+ * @param {CodeFixRegistration} registration - The registration object containing errorCodes.
+ * @param {Diagnostic[]} diagnostics - The array of diagnostics to check for fixability.
+ * @returns {Function} A function that takes a CodeFixAction object and returns a modified version if fixAll is available, otherwise returns the original object without the fixId property.
+ */
 function removeFixIdIfFixAllUnavailable(registration: CodeFixRegistration, diagnostics: Diagnostic[]) {
     const { errorCodes } = registration;
     let maybeFixableDiagnostics = 0;

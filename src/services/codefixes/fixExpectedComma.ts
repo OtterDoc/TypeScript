@@ -21,6 +21,11 @@ const errorCodes = [expectedErrorCode];
 
 registerCodeFix({
     errorCodes,
+    /**
+     * Retrieves code actions for a given context.
+     * @param {Context} context - The context object containing information about the source file and error code.
+     * @returns {CodeFixAction[] | undefined} - An array of code fix actions or undefined if no information is found.
+     */
     getCodeActions(context) {
         const { sourceFile } = context;
         const info = getInfo(sourceFile, context.span.start, context.errorCode);

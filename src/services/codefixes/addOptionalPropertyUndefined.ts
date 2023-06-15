@@ -54,6 +54,13 @@ registerCodeFix({
     fixIds: [addOptionalPropertyUndefined],
 });
 
+/**
+ * Returns an array of Symbol objects representing the exact optional properties of a given target.
+ * @param {SourceFile} file - The source file to analyze.
+ * @param {TextSpan} span - The text span to analyze.
+ * @param {TypeChecker} checker - The type checker to use for analysis.
+ * @returns {Symbol[]} An array of Symbol objects representing the exact optional properties of the target.
+ */
 function getPropertiesToAdd(file: SourceFile, span: TextSpan, checker: TypeChecker): Symbol[] {
     const sourceTarget = getSourceTarget(getFixableErrorSpanExpression(file, span), checker);
     if (!sourceTarget) {
@@ -76,8 +83,10 @@ function shouldUseParentTypeOfProperty(sourceNode: Node, targetNode: Node, check
 }
 
 /**
- * Find the source and target of the incorrect assignment.
- * The call is recursive for property assignments.
+ * Finds the source and target of the incorrect assignment.
+ * @param errorNode The node where the error occurred.
+ * @param checker The TypeChecker instance.
+ * @returns An object with the source and target nodes of the incorrect assignment, or undefined if not found.
  */
 function getSourceTarget(errorNode: Node | undefined, checker: TypeChecker): { source: Node, target: Node } | undefined {
     if (!errorNode) {
@@ -113,6 +122,11 @@ function getSourceTarget(errorNode: Node | undefined, checker: TypeChecker): { s
     return undefined;
 }
 
+/**
+ * Adds "undefined" to the type of an optional property in a given list of Symbol objects.
+ * @param changes - The ChangeTracker object to track changes made to the source file.
+ * @param toAdd - The list of Symbol objects to add "undefined" to their optional properties.
+ */
 function addUndefinedToOptionalProperty(changes: textChanges.ChangeTracker, toAdd: Symbol[]) {
     for (const add of toAdd) {
         const d = add.valueDeclaration;

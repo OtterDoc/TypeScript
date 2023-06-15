@@ -32,6 +32,12 @@ import {
 
 const fixName = "invalidImportSyntax";
 
+/**
+ * Returns an array of CodeFixAction objects for a given ImportDeclaration node.
+ * @param context - The CodeFixContext object.
+ * @param node - The ImportDeclaration node.
+ * @returns An array of CodeFixAction objects.
+ */
 function getCodeFixesForImportDeclaration(context: CodeFixContext, node: ImportDeclaration): CodeFixAction[] {
     const sourceFile = getSourceFileOfNode(node);
     const namespace = getNamespaceDeclarationNode(node) as NamespaceImport;
@@ -67,6 +73,11 @@ registerCodeFix({
     getCodeActions: getActionsForUsageOfInvalidImport
 });
 
+/**
+ * Returns an array of CodeFixAction objects for resolving invalid import usage.
+ * @param {CodeFixContext} context - The context object for the code fix.
+ * @returns {CodeFixAction[] | undefined} - An array of CodeFixAction objects or undefined if no actions are found.
+ */
 function getActionsForUsageOfInvalidImport(context: CodeFixContext): CodeFixAction[] | undefined {
     const sourceFile = context.sourceFile;
     const targetKind = Diagnostics.This_expression_is_not_callable.code === context.errorCode ? SyntaxKind.CallExpression : SyntaxKind.NewExpression;
@@ -105,6 +116,12 @@ function getActionsForInvalidImportLocation(context: CodeFixContext): CodeFixAct
     return getImportCodeFixesForExpression(context, node);
 }
 
+/**
+ * Retrieves code fix actions for an expression that has an originating import symbol.
+ * @param {CodeFixContext} context - The context for the code fix.
+ * @param {Node} expr - The expression to retrieve code fix actions for.
+ * @returns {CodeFixAction[] | undefined} An array of code fix actions or undefined if none are found.
+ */
 function getImportCodeFixesForExpression(context: CodeFixContext, expr: Node): CodeFixAction[] | undefined {
     const type = context.program.getTypeChecker().getTypeAtLocation(expr);
     if (!(type.symbol && isTransientSymbol(type.symbol) && type.symbol.links.originatingImport)) {

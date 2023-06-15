@@ -159,6 +159,11 @@ const errorCodes = [
 ];
 registerCodeFix({
     errorCodes,
+    /**
+     * Returns an array of code fix actions based on the provided context.
+     * @param {CodeFixContext} context - The context object containing information about the code fix.
+     * @returns {CodeFixAction[] | undefined} - An array of code fix actions or undefined if no name is found or changes are empty.
+     */
     getCodeActions(context) {
         const { sourceFile, program, span: { start }, errorCode, cancellationToken, host, preferences } = context;
 
@@ -181,6 +186,12 @@ registerCodeFix({
     },
 });
 
+/**
+ * Returns a DiagnosticMessage object based on the provided errorCode and token.
+ * @param {number} errorCode - The error code to be used in determining the appropriate DiagnosticMessage.
+ * @param {Node} token - The token to be used in determining the appropriate DiagnosticMessage.
+ * @returns {DiagnosticMessage} - The appropriate DiagnosticMessage object based on the provided errorCode and token.
+ */
 function getDiagnostic(errorCode: number, token: Node): DiagnosticMessage {
     switch (errorCode) {
         case Diagnostics.Parameter_0_implicitly_has_an_1_type.code:
@@ -196,7 +207,11 @@ function getDiagnostic(errorCode: number, token: Node): DiagnosticMessage {
     }
 }
 
-/** Map suggestion code to error code */
+/**
+ * Map suggestion diagnostic error code to a different error code.
+ * @param {number} errorCode - The error code to map.
+ * @returns {number} - The mapped error code.
+ */
 function mapSuggestionDiagnostic(errorCode: number) {
     switch (errorCode) {
         case Diagnostics.Variable_0_implicitly_has_type_1_in_some_locations_but_a_better_type_may_be_inferred_from_usage.code:
@@ -316,6 +331,16 @@ function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, to
     return declaration;
 }
 
+/**
+ * Annotates a variable declaration with its inferred type based on usage.
+ * @param changes - The text changes tracker.
+ * @param importAdder - The import adder.
+ * @param sourceFile - The source file containing the declaration.
+ * @param declaration - The variable declaration to annotate.
+ * @param program - The TypeScript program.
+ * @param host - The language service host.
+ * @param cancellationToken - The cancellation token.
+ */
 function annotateVariableDeclaration(
     changes: textChanges.ChangeTracker,
     importAdder: ImportAdder,
@@ -330,6 +355,17 @@ function annotateVariableDeclaration(
     }
 }
 
+/**
+ * Annotates the parameters of a function declaration with inferred types from usage.
+ * @param changes - The text changes to apply the annotations.
+ * @param importAdder - The import adder to use for adding necessary imports.
+ * @param sourceFile - The source file containing the function declaration.
+ * @param parameterDeclaration - The parameter declaration to annotate.
+ * @param containingFunction - The containing function declaration.
+ * @param program - The program to use for type inference.
+ * @param host - The language service host to use for type inference.
+ * @param cancellationToken - The cancellation token to use for type inference.
+ */
 function annotateParameters(
     changes: textChanges.ChangeTracker,
     importAdder: ImportAdder,
@@ -387,6 +423,17 @@ function annotateJSDocThis(changes: textChanges.ChangeTracker, sourceFile: Sourc
     ]);
 }
 
+/**
+ * Annotates a set accessor declaration with JSDoc comments or TypeScript annotations.
+ * @param changes - The text changes tracker.
+ * @param importAdder - The import adder.
+ * @param sourceFile - The source file containing the set accessor declaration.
+ * @param setAccessorDeclaration - The set accessor declaration to annotate.
+ * @param program - The TypeScript program.
+ * @param host - The language service host.
+ * @param cancellationToken - The cancellation token.
+ * @remarks This function infers the type of the set accessor declaration and its parameter from usage.
+ */
 function annotateSetAccessor(
     changes: textChanges.ChangeTracker,
     importAdder: ImportAdder,
@@ -430,6 +477,16 @@ function annotate(changes: textChanges.ChangeTracker, importAdder: ImportAdder, 
     }
 }
 
+/**
+ * Tries to replace the given TypeNode with an auto-imported reference, if possible.
+ * @param {TypeNode} typeNode - The TypeNode to replace.
+ * @param {textChanges.TypeAnnotatable} declaration - The declaration containing the TypeNode.
+ * @param {SourceFile} sourceFile - The SourceFile containing the declaration.
+ * @param {textChanges.ChangeTracker} changes - The ChangeTracker to use for making changes.
+ * @param {ImportAdder} importAdder - The ImportAdder to use for adding imports.
+ * @param {ScriptTarget} scriptTarget - The ScriptTarget to use for checking compatibility.
+ * @returns {boolean} - True if the replacement was successful, false otherwise.
+ */
 function tryReplaceImportTypeNodeWithAutoImport(
     typeNode: TypeNode,
     declaration: textChanges.TypeAnnotatable,
@@ -513,6 +570,14 @@ function inferTypeForParametersFromUsage(func: SignatureDeclaration, sourceFile:
         }));
 }
 
+/**
+ * Returns an array of Identifier references to the given containingFunction.
+ * @param containingFunction - The SignatureDeclaration of the function to search for references.
+ * @param sourceFile - The SourceFile containing the function.
+ * @param program - The Program instance.
+ * @param cancellationToken - The CancellationToken instance.
+ * @returns An array of Identifier references to the given containingFunction, or undefined if none are found.
+ */
 function getFunctionReferences(containingFunction: SignatureDeclaration, sourceFile: SourceFile, program: Program, cancellationToken: CancellationToken): readonly Identifier[] | undefined {
     let searchToken;
     switch (containingFunction.kind) {
@@ -572,6 +637,21 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         return_: Usage;
     }
 
+    /**
+     * Interface for tracking usage of a variable or property.
+     * @interface
+     * @property {boolean | undefined} isNumber - Indicates if the usage is a number.
+     * @property {boolean | undefined} isString - Indicates if the usage is a string.
+     * @property {boolean | undefined} isNumberOrString - Used ambiguously, eg x + ___ or object[___]; results in string | number if no other evidence exists.
+     * @property {Type[] | undefined} candidateTypes - Array of candidate types for the usage.
+     * @property {Map<__String, Usage> | undefined} properties - Map of properties and their usages.
+     * @property {CallUsage[] | undefined} calls - Array of call usages.
+     * @property {CallUsage[] | undefined} constructs - Array of construct usages.
+     * @property {Usage | undefined} numberIndex - Usage for number index.
+     * @property {Usage | undefined} stringIndex - Usage for string index.
+     * @property {Type[] | undefined} candidateThisTypes - Array of candidate this types.
+     * @property {Type[] | undefined} inferredTypes - Array of inferred types.
+     */
     interface Usage {
         isNumber: boolean | undefined;
         isString: boolean | undefined;
@@ -588,6 +668,10 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         inferredTypes: Type[] | undefined;
     }
 
+    /**
+     * Creates an empty Usage object.
+     * @returns {Usage} An object with properties for tracking usage of types and properties.
+     */
     function createEmptyUsage(): Usage {
         return {
             isNumber: undefined,
@@ -604,6 +688,11 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         };
     }
 
+    /**
+     * Combines an array of Usage objects into a single Usage object.
+     * @param {Usage[]} usages - The array of Usage objects to combine.
+     * @returns {Usage} - The combined Usage object.
+     */
     function combineUsages(usages: Usage[]): Usage {
         const combinedProperties = new Map<__String, Usage[]>();
         for (const u of usages) {
@@ -639,6 +728,11 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         return combineTypes(inferTypesFromReferencesSingle(references));
     }
 
+    /**
+     * Infers the type of parameters in a given signature declaration based on usage in the code.
+     * @param declaration - The signature declaration to infer parameter types for.
+     * @returns An array of ParameterInference objects or undefined if no references or parameters are found.
+     */
     function parameters(declaration: SignatureDeclaration): ParameterInference[] | undefined {
         if (references.length === 0 || !declaration.parameters) {
             return undefined;
@@ -700,6 +794,12 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         return inferTypes(usage);
     }
 
+    /**
+     * Infers the type of a given expression node and updates the usage object accordingly.
+     * @param {Expression} node - The expression node to infer the type from.
+     * @param {Usage} usage - The usage object to update with the inferred type information.
+     * @remarks This function uses a switch statement to determine the parent kind of the given node and calls the appropriate helper function to infer the type from that parent node. If the parent kind is not recognized, it falls back to inferring the type from the contextual type of the node.
+     */
     function calculateUsageOfNode(node: Expression, usage: Usage): void {
         while (isRightSideOfQualifiedNameOrPropertyAccess(node)) {
             node = node.parent as Expression;
@@ -769,6 +869,12 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         addCandidateType(usage, isCallExpression(node) ? checker.getVoidType() : checker.getAnyType());
     }
 
+    /**
+     * Infers the type of a variable from a prefix unary expression.
+     * @param node - The prefix unary expression node.
+     * @param usage - The usage of the variable.
+     * @remarks This function updates the usage object to indicate whether the variable is a number, a string or both.
+     */
     function inferTypeFromPrefixUnaryExpression(node: PrefixUnaryExpression, usage: Usage): void {
         switch (node.operator) {
             case SyntaxKind.PlusPlusToken:
@@ -787,6 +893,12 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         }
     }
 
+    /**
+     * Infers the type of a binary expression based on its parent operator token.
+     * @param node - The expression node to infer the type of.
+     * @param parent - The parent binary expression node.
+     * @param usage - An object representing the usage of the inferred type.
+     */
     function inferTypeFromBinaryExpression(node: Expression, parent: BinaryExpression, usage: Usage): void {
         switch (parent.operatorToken.kind) {
             // ExponentiationOperator
@@ -904,6 +1016,12 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         addCandidateType(usage, checker.getTypeAtLocation(parent.parent.parent.expression));
     }
 
+    /**
+     * Infers the type from a CallExpression or NewExpression and updates the usage object accordingly.
+     * @param parent - The CallExpression or NewExpression node.
+     * @param usage - The Usage object to update.
+     * @remarks This function populates the argumentTypes array of the call object with the types of the arguments passed to the parent node. It also calculates the usage of the parent node and updates the return_ property of the call object accordingly. Finally, it adds the call object to either the calls or constructs array of the usage object, depending on the kind of the parent node.
+     */
     function inferTypeFromCallExpression(parent: CallExpression | NewExpression, usage: Usage): void {
         const call: CallUsage = {
             argumentTypes: [],
@@ -935,6 +1053,13 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         usage.properties.set(name, propertyUsage);
     }
 
+    /**
+     * Infers the type from a property element expression.
+     * @param {ElementAccessExpression} parent - The parent element access expression.
+     * @param {Expression} node - The expression node to infer the type from.
+     * @param {Usage} usage - The usage object to update with the inferred type information.
+     * @returns {void}
+     */
     function inferTypeFromPropertyElementExpression(parent: ElementAccessExpression, node: Expression, usage: Usage): void {
         if (node === parent.argumentExpression) {
             usage.isNumberOrString = true;
@@ -969,6 +1094,12 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         low: (t: Type) => boolean;
     }
 
+    /**
+     * Removes low priority inferences from an array of Type objects based on a set of priorities.
+     * @param inferences - An array of Type objects to filter.
+     * @param priorities - An array of objects containing high and low priority functions.
+     * @returns An array of Type objects with low priority inferences removed.
+     */
     function removeLowPriorityInferences(inferences: readonly Type[], priorities: Priority[]): Type[] {
         const toRemove: ((t: Type) => boolean)[] = [];
         for (const i of inferences) {
@@ -986,6 +1117,11 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         return combineTypes(inferTypes(usage));
     }
 
+    /**
+     * Combines an array of Type objects into a single Type object based on a set of priority rules.
+     * @param inferences An array of Type objects to be combined.
+     * @returns The resulting combined Type object.
+     */
     function combineTypes(inferences: readonly Type[]): Type {
         if (!inferences.length) return checker.getAnyType();
 
@@ -1015,6 +1151,11 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         return checker.getWidenedType(checker.getUnionType(good.map(checker.getBaseTypeOfLiteralType), UnionReduction.Subtype));
     }
 
+    /**
+     * Combines an array of AnonymousType objects into a single AnonymousType object.
+     * @param {AnonymousType[]} anons - The array of AnonymousType objects to combine.
+     * @returns {AnonymousType} - The resulting combined AnonymousType object.
+     */
     function combineAnonymousTypes(anons: AnonymousType[]) {
         if (anons.length === 1) {
             return anons[0];
@@ -1060,6 +1201,11 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
             indexInfos);
     }
 
+    /**
+     * Infers the types of a given usage object.
+     * @param {Usage} usage - The usage object to infer types from.
+     * @returns {Type[]} An array of inferred types.
+     */
     function inferTypes(usage: Usage): Type[] {
         const types = [];
 
@@ -1097,6 +1243,11 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         return types;
     }
 
+    /**
+     * Infers the structural type of a given usage object.
+     * @param {Usage} usage - The usage object to infer the structural type from.
+     * @returns {Type} - The inferred anonymous type.
+     */
     function inferStructuralType(usage: Usage) {
         const members = new Map<__String, Symbol>();
         if (usage.properties) {
@@ -1121,6 +1272,12 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         return [];
     }
 
+    /**
+     * Checks if all properties of a given type are assignable to a given usage.
+     * @param {Type} type - The type to check.
+     * @param {Usage} usage - The usage to check against.
+     * @returns {boolean} - True if all properties are assignable, false otherwise.
+     */
     function allPropertiesAreAssignableToUsage(type: Type, usage: Usage) {
         if (!usage.properties) return false;
         return !forEachEntry(usage.properties, (propUsage, name) => {
@@ -1139,9 +1296,10 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
     }
 
     /**
-     * inference is limited to
-     * 1. generic types with a single parameter
-     * 2. inference to/from calls with a single signature
+     * Infers the instantiation of a generic type from its usage.
+     * @param {Type} type - The generic type to infer instantiation for.
+     * @param {Usage} usage - The usage of the generic type.
+     * @returns {Type} - The inferred instantiation of the generic type.
      */
     function inferInstantiationFromUsage(type: Type, usage: Usage) {
         if (!(getObjectFlags(type) & ObjectFlags.Reference) || !usage.properties) {
@@ -1160,6 +1318,13 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         return builtinConstructors[type.symbol.escapedName as string](combineTypes(types));
     }
 
+    /**
+     * Infers the type parameters of a generic type based on its usage and a type parameter.
+     * @param {Type} genericType - The generic type to infer the type parameters for.
+     * @param {Type} usageType - The usage type of the generic type.
+     * @param {Type} typeParameter - The type parameter to infer the type parameters for.
+     * @returns {readonly Type[]} An array of inferred type parameters.
+     */
     function inferTypeParameters(genericType: Type, usageType: Type, typeParameter: Type): readonly Type[] {
         if (genericType === typeParameter) {
             return [usageType];
@@ -1189,6 +1354,13 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         return [];
     }
 
+    /**
+     * Infers type parameters based on the signatures of a generic function and its usage.
+     * @param {Signature} genericSig - The signature of the generic function.
+     * @param {Signature} usageSig - The signature of the function's usage.
+     * @param {Type} typeParameter - The type parameter to infer.
+     * @returns {Array<Type>} - An array of inferred type parameters.
+     */
     function inferFromSignatures(genericSig: Signature, usageSig: Signature, typeParameter: Type) {
         const types = [];
         for (let i = 0; i < genericSig.parameters.length; i++) {
@@ -1217,6 +1389,11 @@ function inferTypeFromReferences(program: Program, references: readonly Identifi
         return checker.createAnonymousType(/*symbol*/ undefined, createSymbolTable(), [getSignatureFromCalls(calls)], emptyArray, emptyArray);
     }
 
+    /**
+     * Returns a Signature object based on an array of CallUsage objects.
+     * @param calls - An array of CallUsage objects.
+     * @returns A Signature object.
+     */
     function getSignatureFromCalls(calls: CallUsage[]): Signature {
         const parameters: Symbol[] = [];
         const length = Math.max(...calls.map(c => c.argumentTypes.length));

@@ -77,7 +77,15 @@ export const enum ExportKind {
     UMD,
 }
 
-/** @internal */
+/**
+ * Interface for symbol export information.
+ * @readonly symbol - The symbol being exported.
+ * @readonly moduleSymbol - The symbol of the module exporting the symbol.
+ * @param {string | undefined} moduleFileName - Set if `moduleSymbol` is an external module, not an ambient module.
+ * @param {ExportKind} exportKind - The kind of export.
+ * @param {SymbolFlags} targetFlags - The flags of the target.
+ * @param {boolean} isFromPackageJson - True if export was only found via the package.json AutoImportProvider (for telemetry).
+ */
 export interface SymbolExportInfo {
     readonly symbol: Symbol;
     readonly moduleSymbol: Symbol;
@@ -89,6 +97,23 @@ export interface SymbolExportInfo {
     isFromPackageJson: boolean;
 }
 
+/**
+ * Represents information about a cached symbol export.
+ * @interface
+ * @property {number} id - Used to rehydrate `symbol` and `moduleSymbol` when transient.
+ * @property {string} symbolName - The name of the symbol.
+ * @property {string | undefined} capitalizedSymbolName - The capitalized name of the symbol, if available.
+ * @property {__String} symbolTableKey - The key of the symbol in the symbol table.
+ * @property {string} moduleName - The name of the module.
+ * @property {SourceFile | undefined} moduleFile - The source file of the module, if available.
+ * @property {string | undefined} packageName - The name of the package, if available.
+ * @property {Symbol | undefined} symbol - The symbol, if available.
+ * @property {Symbol | undefined} moduleSymbol - The module symbol, if available.
+ * @property {string | undefined} moduleFileName - The name of the module file, if available.
+ * @property {ExportKind} exportKind - The export kind.
+ * @property {SymbolFlags} targetFlags - The target flags.
+ * @property {boolean} isFromPackageJson - Whether the export is from package.json.
+ */
 interface CachedSymbolExportInfo {
     // Used to rehydrate `symbol` and `moduleSymbol` when transient
     id: number;
@@ -108,7 +133,10 @@ interface CachedSymbolExportInfo {
     isFromPackageJson: boolean;
 }
 
-/** @internal */
+/**
+ * Represents a map of export information.
+ * @internal
+ */
 export interface ExportInfoMap {
     isUsableByFile(importingFile: Path): boolean;
     clear(): void;
@@ -271,6 +299,11 @@ export function createCacheableExportInfoMap(host: CacheableExportInfoMapHost): 
     }
     return cache;
 
+    /**
+     * Rehydrates cached symbol export information.
+     * @param {CachedSymbolExportInfo} info - The cached symbol export information to rehydrate.
+     * @returns {SymbolExportInfo} - The rehydrated symbol export information.
+     */
     function rehydrateCachedInfo(info: CachedSymbolExportInfo): SymbolExportInfo {
         if (info.symbol && info.moduleSymbol) return info as SymbolExportInfo;
         const { id, exportKind, targetFlags, isFromPackageJson, moduleFileName } = info;
@@ -322,6 +355,12 @@ export function createCacheableExportInfoMap(host: CacheableExportInfoMapHost): 
         return !file.commonJsModuleIndicator && !file.externalModuleIndicator && !file.moduleAugmentations && !file.ambientModuleNames;
     }
 
+    /**
+     * Compares the ambient module declarations of two SourceFiles and returns true if they are equal.
+     * @param {SourceFile} oldSourceFile - The old SourceFile to compare.
+     * @param {SourceFile} newSourceFile - The new SourceFile to compare.
+     * @returns {boolean} - True if the ambient module declarations are equal, false otherwise.
+     */
     function ambientModuleDeclarationsAreEqual(oldSourceFile: SourceFile, newSourceFile: SourceFile) {
         if (!arrayIsEqualTo(oldSourceFile.ambientModuleNames, newSourceFile.ambientModuleNames)) {
             return false;
@@ -348,7 +387,17 @@ export function createCacheableExportInfoMap(host: CacheableExportInfoMapHost): 
     }
 }
 
-/** @internal */
+/**
+ * Determines if a file is importable.
+ * @param program - The TypeScript program.
+ * @param from - The source file to import from.
+ * @param to - The source file to import to.
+ * @param preferences - The user preferences.
+ * @param packageJsonFilter - The package JSON import filter.
+ * @param moduleSpecifierResolutionHost - The module specifier resolution host.
+ * @param moduleSpecifierCache - The module specifier cache.
+ * @returns A boolean indicating if the file is importable.
+ */
 export function isImportableFile(
     program: Program,
     from: SourceFile,
@@ -402,7 +451,15 @@ function isImportablePath(fromPath: string, toPath: string, getCanonicalFileName
         || (!!globalCachePath && startsWith(getCanonicalFileName(globalCachePath), toNodeModulesParent));
 }
 
-/** @internal */
+/**
+ * Iterates over each external module that can be imported from and invokes a callback function for each one.
+ * @param program - The TypeScript program.
+ * @param host - The language service host.
+ * @param preferences - The user preferences.
+ * @param useAutoImportProvider - A boolean indicating whether to use the auto import provider.
+ * @param cb - The callback function to invoke for each external module.
+ * @remarks This function is intended for internal use only.
+ */
 export function forEachExternalModuleToImportFrom(
     program: Program,
     host: LanguageServiceHost,
@@ -450,7 +507,15 @@ function forEachExternalModule(checker: TypeChecker, allSourceFiles: readonly So
     }
 }
 
-/** @internal */
+/**
+ * Retrieves the export information map for a given source file.
+ * @param importingFile - The source file to retrieve the export information map for.
+ * @param host - The language service host.
+ * @param program - The program to retrieve the export information map for.
+ * @param preferences - The user preferences.
+ * @param cancellationToken - The cancellation token, if any.
+ * @returns The export information map.
+ */
 export function getExportInfoMap(importingFile: SourceFile, host: LanguageServiceHost, program: Program, preferences: UserPreferences, cancellationToken: CancellationToken | undefined): ExportInfoMap {
     const start = timestamp();
     // Pulling the AutoImportProvider project will trigger its updateGraph if pending,
@@ -535,7 +600,13 @@ function getDefaultLikeExportWorker(moduleSymbol: Symbol, checker: TypeChecker):
     if (defaultExport) return { symbol: defaultExport, exportKind: ExportKind.Default };
 }
 
-/** @internal */
+/**
+ * Retrieves information about the default export of a module.
+ * @param defaultExport - The symbol representing the default export.
+ * @param checker - The type checker for the program.
+ * @param compilerOptions - The compiler options for the program.
+ * @returns An object containing the resolved symbol and name of the default export, or undefined if not found.
+ */
 export function getDefaultExportInfoWorker(defaultExport: Symbol, checker: TypeChecker, compilerOptions: CompilerOptions): { readonly resolvedSymbol: Symbol, readonly name: string } | undefined {
     const localSymbol = getLocalSymbolForExportDefault(defaultExport);
     if (localSymbol) return { resolvedSymbol: localSymbol, name: localSymbol.name };
@@ -561,6 +632,11 @@ export function getDefaultExportInfoWorker(defaultExport: Symbol, checker: TypeC
     return { resolvedSymbol: defaultExport, name: getNameForExportedSymbol(defaultExport, compilerOptions.target) };
 }
 
+/**
+ * Returns the name of the default export symbol, if it exists, from the provided Symbol object.
+ * @param {Symbol} symbol - The Symbol object to search for the default export.
+ * @returns {string | undefined} - The name of the default export symbol, if found, or undefined.
+ */
 function getNameForExportDefault(symbol: Symbol): string | undefined {
     return symbol.declarations && firstDefined(symbol.declarations, declaration => {
         if (isExportAssignment(declaration)) {

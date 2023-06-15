@@ -171,6 +171,10 @@ const kindPrecedence = {
     [ScriptElementKind.scriptElement]: 1,
     [ScriptElementKind.externalModuleName]: 2,
 };
+/**
+ * Creates a NameAndKindSet object with methods to add, check if a value exists, and retrieve values.
+ * @returns {NameAndKindSet} An object with methods add, has, and values.
+ */
 function createNameAndKindSet(): NameAndKindSet {
     const map = new Map<string, NameAndKind>();
     function add(value: NameAndKind) {
@@ -186,7 +190,19 @@ function createNameAndKindSet(): NameAndKindSet {
     };
 }
 
-/** @internal */
+/**
+ * Retrieves completion suggestions for string literals or triple-slash reference comments.
+ * @param sourceFile - The source file being edited.
+ * @param position - The position of the cursor in the source file.
+ * @param contextToken - The token preceding the cursor position.
+ * @param options - Compiler options.
+ * @param host - Language service host.
+ * @param program - The program being edited.
+ * @param log - The logger used for logging.
+ * @param preferences - User preferences.
+ * @param includeSymbol - Whether to include symbols in the completion suggestions.
+ * @returns The completion suggestions for the string literal or triple-slash reference comment, if any.
+ */
 export function getStringLiteralCompletions(
     sourceFile: SourceFile,
     position: number,
@@ -208,6 +224,20 @@ export function getStringLiteralCompletions(
     }
 }
 
+/**
+ * Converts string literal completions to completion info.
+ * @param completion The string literal completion to convert.
+ * @param contextToken The context token for the completion.
+ * @param sourceFile The source file for the completion.
+ * @param host The language service host.
+ * @param program The program.
+ * @param log The log.
+ * @param options The compiler options.
+ * @param preferences The user preferences.
+ * @param position The position of the completion.
+ * @param includeSymbol Whether to include the symbol in the completion.
+ * @returns The completion info.
+ */
 function convertStringLiteralCompletions(
     completion: StringLiteralCompletion | undefined,
     contextToken: StringLiteralLike,
@@ -282,6 +312,16 @@ export function getStringLiteralCompletionDetails(name: string, sourceFile: Sour
     return completions && stringLiteralCompletionDetails(name, contextToken, completions, sourceFile, checker, cancellationToken);
 }
 
+/**
+ * Returns completion entry details for a string literal based on its kind.
+ * @param {string} name - The name of the string literal.
+ * @param {Node} location - The location of the string literal.
+ * @param {StringLiteralCompletion} completion - The completion object.
+ * @param {SourceFile} sourceFile - The source file containing the string literal.
+ * @param {TypeChecker} checker - The type checker.
+ * @param {CancellationToken} cancellationToken - The cancellation token.
+ * @returns {CompletionEntryDetails | undefined} - The completion entry details or undefined if not found.
+ */
 function stringLiteralCompletionDetails(name: string, location: Node, completion: StringLiteralCompletion, sourceFile: SourceFile, checker: TypeChecker, cancellationToken: CancellationToken): CompletionEntryDetails | undefined {
     switch (completion.kind) {
         case StringLiteralCompletionKind.Paths: {
@@ -306,6 +346,11 @@ function convertPathCompletions(pathCompletions: readonly PathCompletion[]): Com
         ({ name, kind, kindModifiers: kindModifiersFromExtension(extension), sortText: SortText.LocationPriority, replacementSpan: span }));
     return { isGlobalCompletion, isMemberCompletion: false, isNewIdentifierLocation, entries };
 }
+/**
+ * Returns the appropriate ScriptElementKindModifier based on the provided extension.
+ * @param {Extension | undefined} extension - The file extension to determine the kind modifier for.
+ * @returns {ScriptElementKindModifier} - The appropriate kind modifier for the provided extension.
+ */
 function kindModifiersFromExtension(extension: Extension | undefined): ScriptElementKindModifier {
     switch (extension) {
         case Extension.Dts: return ScriptElementKindModifier.dtsModifier;
@@ -415,6 +460,11 @@ function getStringLiteralCompletionEntries(sourceFile: SourceFile, node: StringL
             return fromContextualType() || fromContextualType(ContextFlags.None);
     }
 
+    /**
+     * Returns a StringLiteralCompletionsFromTypes or StringLiteralCompletionsFromProperties object, or undefined.
+     * @param {Node} grandParent The grandparent node of the current position.
+     * @returns {StringLiteralCompletionsFromTypes | StringLiteralCompletionsFromProperties | undefined} The completion object or undefined.
+     */
     function fromUnionableLiteralType(grandParent: Node): StringLiteralCompletionsFromTypes | StringLiteralCompletionsFromProperties | undefined {
         switch (grandParent.kind) {
             case SyntaxKind.ExpressionWithTypeArguments:
@@ -464,6 +514,11 @@ function getStringLiteralCompletionEntries(sourceFile: SourceFile, node: StringL
     }
 }
 
+/**
+ * Returns the parent node of a given node by walking up the chain of parentheses.
+ * @param {Node} node - The node to start walking up from.
+ * @returns {Node} - The parent node of the given node.
+ */
 function walkUpParentheses(node: Node) {
     switch (node.kind) {
         case SyntaxKind.ParenthesizedType:
@@ -480,6 +535,15 @@ function getAlreadyUsedTypesInStringLiteralUnion(union: UnionTypeNode, current: 
         type !== current && isLiteralTypeNode(type) && isStringLiteral(type.literal) ? type.literal.text : undefined);
 }
 
+/**
+ * Returns a StringLiteralCompletionsFromTypes object or undefined.
+ * @param call - A CallLikeExpression object.
+ * @param arg - A StringLiteralLike object.
+ * @param argumentInfo - An ArgumentInfoForCompletions object.
+ * @param checker - A TypeChecker object.
+ * @param checkMode - A CheckMode object. Default is IsForStringLiteralArgumentCompletions.
+ * @returns A StringLiteralCompletionsFromTypes object or undefined.
+ */
 function getStringLiteralCompletionsFromSignature(call: CallLikeExpression, arg: StringLiteralLike, argumentInfo: SignatureHelp.ArgumentInfoForCompletions, checker: TypeChecker, checkMode = CheckMode.IsForStringLiteralArgumentCompletions): StringLiteralCompletionsFromTypes | undefined {
     let isNewIdentifier = false;
     const uniques = new Map<string, true>();
@@ -509,6 +573,12 @@ function stringLiteralCompletionsFromProperties(type: Type | undefined): StringL
     };
 }
 
+/**
+ * Generates string literal completions for an object literal expression.
+ * @param {TypeChecker} checker - The type checker.
+ * @param {ObjectLiteralExpression} objectLiteralExpression - The object literal expression.
+ * @returns {StringLiteralCompletionsFromProperties | undefined} - The string literal completions from properties or undefined if there is no contextual type.
+ */
 function stringLiteralCompletionsForObjectLiteral(checker: TypeChecker, objectLiteralExpression: ObjectLiteralExpression): StringLiteralCompletionsFromProperties | undefined {
     const contextualType = checker.getContextualType(objectLiteralExpression);
     if (!contextualType) return undefined;
@@ -562,6 +632,16 @@ function getStringLiteralCompletionsFromModuleNames(sourceFile: SourceFile, node
     return addReplacementSpans(node.text, node.getStart(sourceFile) + 1, getStringLiteralCompletionsFromModuleNamesWorker(sourceFile, node, compilerOptions, host, typeChecker, preferences));
 }
 
+/**
+ * Retrieves completion entries for string literal module names.
+ * @param sourceFile - The source file containing the literal expression.
+ * @param node - The literal expression node.
+ * @param compilerOptions - The compiler options.
+ * @param host - The language service host.
+ * @param typeChecker - The type checker.
+ * @param preferences - The user preferences.
+ * @returns An array of name and kind objects.
+ */
 function getStringLiteralCompletionsFromModuleNamesWorker(sourceFile: SourceFile, node: LiteralExpression, compilerOptions: CompilerOptions, host: LanguageServiceHost, typeChecker: TypeChecker, preferences: UserPreferences): readonly NameAndKind[] {
     const literalValue = normalizeSlashes(node.text);
     const mode = isStringLiteralLike(node) ? getModeForUsageLocation(sourceFile, node) : undefined;
@@ -602,6 +682,13 @@ function getCompletionEntriesForRelativeModules(literalValue: string, scriptDire
     }
 }
 
+/**
+ * Returns an array of supported file extensions for module resolution.
+ * @param {CompilerOptions} compilerOptions - The compiler options object.
+ * @param {TypeChecker} [typeChecker] - The optional type checker object.
+ * @returns {readonly string[][]} An array of supported file extensions.
+ * @remarks This function checks for file extensions from ambient modules declarations and includes them in the returned array.
+ */
 function getSupportedExtensionsForModuleResolution(compilerOptions: CompilerOptions, typeChecker?: TypeChecker): readonly string[][] {
     /** file extensions from ambient modules declarations e.g. *.css */
     const ambientModulesExtensions = !typeChecker ? [] : mapDefined(typeChecker.getAmbientModules(),
@@ -620,8 +707,12 @@ function getSupportedExtensionsForModuleResolution(compilerOptions: CompilerOpti
 }
 
 /**
- * Takes a script path and returns paths for all potential folders that could be merged with its
- * containing folder via the "rootDirs" compiler option
+ * Takes an array of root directories, a base path, a script directory, and a boolean indicating whether to ignore case sensitivity, and returns an array of potential folders that could be merged with the containing folder via the "rootDirs" compiler option.
+ * @param {string[]} rootDirs - An array of root directories.
+ * @param {string} basePath - The base path.
+ * @param {string} scriptDirectory - The script directory.
+ * @param {boolean} ignoreCase - Whether to ignore case sensitivity.
+ * @returns {readonly string[]} An array of potential folders that could be merged with the containing folder.
  */
 function getBaseDirectoriesFromRootDirs(rootDirs: string[], basePath: string, scriptDirectory: string, ignoreCase: boolean): readonly string[] {
     // Make all paths absolute/normalized if they are not already
@@ -738,6 +829,13 @@ function getCompletionEntriesForDirectoryFragment(
     return result;
 }
 
+/**
+ * Returns the filename with its extension based on the given name, compiler options, and extension options.
+ * @param name - The name of the file.
+ * @param compilerOptions - The compiler options.
+ * @param extensionOptions - The extension options.
+ * @returns An object containing the name and extension of the file.
+ */
 function getFilenameWithExtensionOption(name: string, compilerOptions: CompilerOptions, extensionOptions: ExtensionOptions): { name: string, extension: Extension | undefined } {
     const nonJsResult = moduleSpecifiers.tryGetRealFileNameForNonJsDeclarationFileName(name);
     if (nonJsResult) {
@@ -1070,6 +1168,13 @@ function removeLeadingDirectorySeparator(path: string): string {
     return path[0] === directorySeparator ? path.slice(1) : path;
 }
 
+/**
+ * Retrieves an array of ambient module completions based on a given fragment, fragment directory, and type checker.
+ * @param {string} fragment - The fragment to search for.
+ * @param {string | undefined} fragmentDirectory - The directory of the fragment, if applicable.
+ * @param {TypeChecker} checker - The type checker to use for retrieving ambient modules.
+ * @returns {readonly string[]} An array of ambient module completions.
+ */
 function getAmbientModuleCompletions(fragment: string, fragmentDirectory: string | undefined, checker: TypeChecker): readonly string[] {
     // Get modules that the type checker picked up
     const ambientModules = checker.getAmbientModules().map(sym => stripQuotes(sym.name));
@@ -1085,6 +1190,14 @@ function getAmbientModuleCompletions(fragment: string, fragmentDirectory: string
     return nonRelativeModuleNames;
 }
 
+/**
+ * Retrieves completion suggestions for triple-slash reference directives in a source file.
+ * @param sourceFile - The source file to retrieve completion suggestions from.
+ * @param position - The position in the source file to retrieve completion suggestions at.
+ * @param compilerOptions - The compiler options for the source file.
+ * @param host - The language service host for the source file.
+ * @returns An array of completion suggestions for the triple-slash reference directive, or undefined if none are found.
+ */
 function getTripleSlashReferenceCompletion(sourceFile: SourceFile, position: number, compilerOptions: CompilerOptions, host: LanguageServiceHost): readonly PathCompletion[] | undefined {
     const token = getTokenAtPosition(sourceFile, position);
     const commentRanges = getLeadingCommentRanges(sourceFile.text, token.pos);
@@ -1124,6 +1237,10 @@ function getCompletionEntriesFromTypings(host: LanguageServiceHost, options: Com
 
     return result;
 
+    /**
+     * Retrieves completion entries from directories.
+     * @param {string} directory - The directory to retrieve completion entries from.
+     */
     function getCompletionEntriesFromDirectories(directory: string): void {
         if (!tryDirectoryExists(host, directory)) return;
 
@@ -1148,6 +1265,12 @@ function getCompletionEntriesFromTypings(host: LanguageServiceHost, options: Com
     }
 }
 
+/**
+ * Returns an array of string values representing the node modules visible to the script.
+ * @param {LanguageServiceHost} host - The LanguageServiceHost object.
+ * @param {string} scriptPath - The path of the script.
+ * @returns {readonly string[]} - An array of string values representing the node modules visible to the script.
+ */
 function enumerateNodeModulesVisibleToScript(host: LanguageServiceHost, scriptPath: string): readonly string[] {
     if (!host.readFile || !host.fileExists) return emptyArray;
 

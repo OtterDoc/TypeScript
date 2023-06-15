@@ -146,6 +146,12 @@ export function getSmartSelectionRange(pos: number, sourceFile: SourceFile): Sel
 
     return selectionRange;
 
+    /**
+     * Updates the selection range with the provided start and end positions.
+     * @param {number} start - The starting position of the selection range.
+     * @param {number} end - The ending position of the selection range.
+     * @remarks Skips empty ranges and ranges that are identical to the parent or don't contain the original position.
+     */
     function pushSelectionRange(start: number, end: number): void {
         // Skip empty ranges
         if (start !== end) {
@@ -173,13 +179,11 @@ export function getSmartSelectionRange(pos: number, sourceFile: SourceFile): Sel
 }
 
 /**
- * Like `ts.positionBelongsToNode`, except positions immediately after nodes
- * count too, unless that position belongs to the next node. In effect, makes
- * selections able to snap to preceding tokens when the cursor is on the tail
- * end of them with only whitespace ahead.
+ * Determines whether a given position should snap to a node in a source file, taking into account positions immediately after nodes.
  * @param sourceFile The source file containing the nodes.
  * @param pos The position to check.
  * @param node The candidate node to snap to.
+ * @returns A boolean indicating whether the position should snap to the node.
  */
 function positionShouldSnapToNode(sourceFile: SourceFile, pos: number, node: Node) {
     // Can't use 'ts.positionBelongsToNode()' here because it cleverly accounts
@@ -275,6 +279,10 @@ function getSelectionChildren(node: Node): readonly Node[] {
 /**
  * Groups sibling nodes together into their own SyntaxList if they
  * a) are adjacent, AND b) match a predicate function.
+ *
+ * @param {Node[]} children - An array of nodes to group.
+ * @param {(child: Node) => boolean} groupOn - A predicate function to determine if nodes should be grouped together.
+ * @returns {Node[]} An array of nodes with grouped SyntaxLists.
  */
 function groupChildren(children: Node[], groupOn: (child: Node) => boolean): Node[] {
     const result: Node[] = [];

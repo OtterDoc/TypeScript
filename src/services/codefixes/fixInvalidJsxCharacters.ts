@@ -23,6 +23,12 @@ const errorCodes = [
 registerCodeFix({
     errorCodes,
     fixIds: [fixIdExpression, fixIdHtmlEntity],
+    /**
+     * Returns an array of CodeFixActions for the provided context.
+     * @param {CodeFixContext} context - The context object containing sourceFile, preferences, and span properties.
+     * @returns {CodeFixAction[]} An array of CodeFixActions.
+     * @remarks This method uses the doChange function to create two separate text changes, one for changing invalid characters to an expression container and one for changing invalid characters to an HTML entity. It then creates two CodeFixActions using the createCodeFixAction function, one for each text change.
+     */
     getCodeActions(context) {
         const { sourceFile, preferences, span } = context;
         const changeToExpression = textChanges.ChangeTracker.with(context, t => doChange(t, preferences, sourceFile, span.start, /*useHtmlEntity*/ false));
@@ -47,6 +53,14 @@ function isValidCharacter(character: string): character is keyof typeof htmlEnti
     return hasProperty(htmlEntity, character);
 }
 
+/**
+ * Replaces a single character in a source file with either an HTML entity or a quoted string based on user preferences.
+ * @param changes - The text changes object to track changes made to the source file.
+ * @param preferences - The user preferences object containing information on how to quote characters.
+ * @param sourceFile - The source file to modify.
+ * @param start - The position of the character to replace.
+ * @param useHtmlEntity - A boolean indicating whether to use an HTML entity or a quoted string.
+ */
 function doChange(changes: textChanges.ChangeTracker, preferences: UserPreferences, sourceFile: SourceFile, start: number, useHtmlEntity: boolean) {
     const character = sourceFile.getText()[start];
     // sanity check

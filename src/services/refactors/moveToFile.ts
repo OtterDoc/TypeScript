@@ -185,6 +185,18 @@ function error(notApplicableReason: string) {
     return { edits: [], renameFilename: undefined, renameLocation: undefined, notApplicableReason };
 }
 
+/**
+ * Applies changes to move code from one file to another.
+ * @param context - Refactor context.
+ * @param oldFile - Source file containing the code to be moved.
+ * @param targetFile - Path to the target file where the code will be moved.
+ * @param program - TypeScript program.
+ * @param toMove - Object containing information about the code to be moved.
+ * @param changes - Change tracker.
+ * @param host - Language service host.
+ * @param preferences - User preferences.
+ * @remarks This function creates a new file if the target file does not exist, otherwise it adds the new code to the existing file. It also updates the tsconfig.json file to include the new file.
+ */
 function doChange(context: RefactorContext, oldFile: SourceFile, targetFile: string, program: Program, toMove: ToMove, changes: textChanges.ChangeTracker, host: LanguageServiceHost, preferences: UserPreferences): void {
     const checker = program.getTypeChecker();
     const usage = getUsageInfo(oldFile, toMove.all, checker);
@@ -200,6 +212,19 @@ function doChange(context: RefactorContext, oldFile: SourceFile, targetFile: str
     }
 }
 
+/**
+ * Moves specified statements from oldFile to targetFile and updates imports accordingly.
+ * @param oldFile - The source file containing the statements to move.
+ * @param targetFile - The target file to move the statements to.
+ * @param usage - Information about how the moved statements are used.
+ * @param changes - The text changes to apply to the source file.
+ * @param toMove - The statements to move.
+ * @param program - The TypeScript program.
+ * @param host - The language service host.
+ * @param preferences - User preferences for formatting.
+ * @param importAdder - Optional import adder to use for adding new imports.
+ * @returns An array of statements to replace the original statements in the source file.
+ */
 function getNewStatementsAndRemoveFromOldFile(
     oldFile: SourceFile,
     targetFile: string | SourceFile,
@@ -264,6 +289,21 @@ function getNewStatementsAndRemoveFromOldFile(
     ];
 }
 
+/**
+ * Retrieves the imports from the old file and adds an export to it, then returns an array of the imported statements.
+ * @param {SourceFile} oldFile - The old file to retrieve imports from.
+ * @param {string} targetFile - The target file to add the export to.
+ * @param {Map<Symbol, boolean>} importsToCopy - A map of symbols to boolean values indicating whether they are valid type-only use sites.
+ * @param {Set<Symbol>} targetFileImportsFromOldFile - A set of symbols representing imports from the old file in the target file.
+ * @param {textChanges.ChangeTracker} changes - The change tracker to use for adding the export.
+ * @param {TypeChecker} checker - The type checker to use for symbol resolution.
+ * @param {Program} program - The program to use for module resolution.
+ * @param {LanguageServiceHost} host - The language service host to use for module resolution.
+ * @param {boolean} useEsModuleSyntax - A boolean indicating whether to use ES module syntax.
+ * @param {QuotePreference} quotePreference - The quote preference to use for string literals.
+ * @param {codefix.ImportAdder} [importAdder] - An optional import adder to use for adding imports.
+ * @returns {readonly AnyImportOrRequireStatement[]} An array of the imported statements.
+ */
 function getTargetFileImportsAndAddExportInOldFile(
     oldFile: SourceFile,
     targetFile: string,
@@ -352,7 +392,16 @@ function getTargetFileImportsAndAddExportInOldFile(
         : append(copiedOldImports, makeImportOrRequire(oldFile, oldFileDefault, oldFileNamedImports, oldFile.fileName, program, host, useEsModuleSyntax, quotePreference));
 }
 
-/** @internal */
+/**
+ * Adds a new file to the tsconfig file.
+ * @param program - The program object.
+ * @param changes - The text changes object.
+ * @param oldFileName - The old file name.
+ * @param newFileNameWithExtension - The new file name with extension.
+ * @param getCanonicalFileName - The function to get the canonical file name.
+ * @returns void
+ * @remarks This function modifies the tsconfig file by adding the new file to the "files" property array.
+ */
 export function addNewFileToTsconfig(program: Program, changes: textChanges.ChangeTracker, oldFileName: string, newFileNameWithExtension: string, getCanonicalFileName: GetCanonicalFileName): void {
     const cfg = program.getCompilerOptions().configFile;
     if (!cfg) return;
@@ -383,7 +432,16 @@ export function deleteUnusedOldImports(oldFile: SourceFile, toMove: readonly Sta
     }
 }
 
-/** @internal */
+/**
+ * Updates imports in other files based on changes made to a source file.
+ * @param changes - The text changes to be made.
+ * @param program - The TypeScript program.
+ * @param host - The language service host.
+ * @param oldFile - The old source file.
+ * @param movedSymbols - A set of symbols that have been moved.
+ * @param targetFileName - The name of the target file.
+ * @param quotePreference - The preferred quote character for strings.
+ */
 export function updateImportsInOtherFiles(
     changes: textChanges.ChangeTracker, program: Program, host: LanguageServiceHost, oldFile: SourceFile, movedSymbols: Set<Symbol>, targetFileName: string, quotePreference: QuotePreference
 ): void {
@@ -414,6 +472,11 @@ export function updateImportsInOtherFiles(
     }
 }
 
+/**
+ * Returns an Identifier or undefined based on the kind of SupportedImport node passed in.
+ * @param node The SupportedImport node to be evaluated.
+ * @returns The Identifier or undefined.
+ */
 function getNamespaceLikeImport(node: SupportedImport): Identifier | undefined {
     switch (node.kind) {
         case SyntaxKind.ImportDeclaration:
@@ -428,6 +491,17 @@ function getNamespaceLikeImport(node: SupportedImport): Identifier | undefined {
     }
 }
 
+/**
+ * Updates namespace-like import statements in a source file by replacing the old import identifier with a new namespace identifier and updating the import node with the new module specifier.
+ * @param changes - The text changes to apply to the source file.
+ * @param sourceFile - The source file containing the import statement.
+ * @param checker - The type checker for the source file.
+ * @param movedSymbols - A set of symbols that have been moved to the new namespace.
+ * @param newModuleSpecifier - The new module specifier for the import statement.
+ * @param oldImportId - The old import identifier to replace.
+ * @param oldImportNode - The old import node to update.
+ * @param quotePreference - The preferred quote style for the new module specifier.
+ */
 function updateNamespaceLikeImport(
     changes: textChanges.ChangeTracker,
     sourceFile: SourceFile,
@@ -458,6 +532,14 @@ function updateNamespaceLikeImport(
     }
 }
 
+/**
+ * Updates a namespace-like import node with a new namespace name and module specifier.
+ * @param node The import node to update.
+ * @param newNamespaceName The new namespace name to use.
+ * @param newModuleSpecifier The new module specifier to use.
+ * @param quotePreference The quote preference to use when creating the new module string.
+ * @returns The updated import node.
+ */
 function updateNamespaceLikeImportNode(node: SupportedImport, newNamespaceName: string, newModuleSpecifier: string, quotePreference: QuotePreference): Node {
     const newNamespaceId = factory.createIdentifier(newNamespaceName);
     const newModuleString = makeStringLiteral(newModuleSpecifier, quotePreference);
@@ -488,7 +570,11 @@ export function moduleSpecifierFromImport(i: SupportedImport): StringLiteralLike
         : i.initializer.arguments[0]);
 }
 
-/** @internal */
+/**
+ * Iterates over each import statement in a given statement and invokes a callback function with the import node.
+ * @param statement - The statement to search for import statements.
+ * @param cb - The callback function to invoke with the import node.
+ */
 export function forEachImportInStatement(statement: Statement, cb: (importNode: SupportedImport) => void): void {
     if (isImportDeclaration(statement)) {
         if (isStringLiteral(statement.moduleSpecifier)) cb(statement as SupportedImport);
@@ -519,7 +605,17 @@ export type SupportedImportStatement =
     | ImportEqualsDeclaration
     | VariableStatement;
 
-/** @internal */
+/**
+ * Creates old file imports from target file.
+ * @param sourceFile - The source file.
+ * @param targetFileNeedExport - The set of symbols needed for export.
+ * @param targetFileNameWithExtension - The target file name with extension.
+ * @param program - The program.
+ * @param host - The language service host.
+ * @param useEs6Imports - A boolean indicating whether to use ES6 imports.
+ * @param quotePreference - The quote preference.
+ * @returns An import or require statement or undefined.
+ */
 export function createOldFileImportsFromTargetFile(
     sourceFile: SourceFile,
     targetFileNeedExport: Set<Symbol>,
@@ -542,7 +638,18 @@ export function createOldFileImportsFromTargetFile(
     return makeImportOrRequire(sourceFile, defaultImport, imports, targetFileNameWithExtension, program, host, useEs6Imports, quotePreference);
 }
 
-/** @internal */
+/**
+ * Creates an import or require statement for a given source file, default import, imports, target file name with extension, program, host, useEs6Imports, and quotePreference.
+ * @param {SourceFile} sourceFile - The source file.
+ * @param {Identifier | undefined} defaultImport - The default import.
+ * @param {readonly string[]} imports - The imports.
+ * @param {string} targetFileNameWithExtension - The target file name with extension.
+ * @param {Program} program - The program.
+ * @param {LanguageServiceHost} host - The language service host.
+ * @param {boolean} useEs6Imports - Whether to use ES6 imports.
+ * @param {QuotePreference} quotePreference - The quote preference.
+ * @returns {AnyImportOrRequireStatement | undefined} The import or require statement, or undefined if there are no binding elements.
+ */
 export function makeImportOrRequire(
     sourceFile: SourceFile,
     defaultImport: Identifier | undefined,
@@ -573,7 +680,15 @@ function makeVariableStatement(name: BindingName, type: TypeNode | undefined, in
     return factory.createVariableStatement(/*modifiers*/ undefined, factory.createVariableDeclarationList([factory.createVariableDeclaration(name, /*exclamationToken*/ undefined, type, initializer)], flags));
 }
 
-/** @internal */
+/**
+ * Moves specified statements to the top level of a source file and adds exports if necessary.
+ * @param sourceFile - The source file to modify.
+ * @param toMove - The statements to move to the top level.
+ * @param needExport - The set of symbols that need to be exported.
+ * @param useEs6Exports - Whether to use ES6 exports.
+ * @returns The modified statements with added exports if necessary.
+ * @internal
+ */
 export function addExports(sourceFile: SourceFile, toMove: readonly Statement[], needExport: Set<Symbol>, useEs6Exports: boolean): readonly Statement[] {
     return flatMap(toMove, statement => {
         if (isTopLevelDeclarationStatement(statement) &&
@@ -594,7 +709,13 @@ function isExported(sourceFile: SourceFile, decl: TopLevelDeclarationStatement, 
         getNamesToExportInCommonJS(decl).some(name => sourceFile.symbol.exports!.has(escapeLeadingUnderscores(name)));
 }
 
-/** @internal */
+/**
+ * Deletes unused imports from a source file.
+ * @param sourceFile - The source file to delete unused imports from.
+ * @param importDecl - The import declaration to delete unused imports from.
+ * @param changes - The changes to make to the source file.
+ * @param isUnused - A function that determines if an import is unused.
+ */
 export function deleteUnusedImports(sourceFile: SourceFile, importDecl: SupportedImport, changes: textChanges.ChangeTracker, isUnused: (name: Identifier) => boolean): void {
     switch (importDecl.kind) {
         case SyntaxKind.ImportDeclaration:
@@ -613,6 +734,14 @@ export function deleteUnusedImports(sourceFile: SourceFile, importDecl: Supporte
     }
 }
 
+/**
+ * Deletes unused imports in a given source file.
+ * @param sourceFile - The source file to delete unused imports from.
+ * @param importDecl - The import declaration to check for unused imports.
+ * @param changes - The text changes to make when deleting unused imports.
+ * @param isUnused - A function that determines if an import is unused.
+ * @returns void
+ */
 function deleteUnusedImportsInDeclaration(sourceFile: SourceFile, importDecl: ImportDeclaration, changes: textChanges.ChangeTracker, isUnused: (name: Identifier) => boolean): void {
     if (!importDecl.importClause) return;
     const { name, namedBindings } = importDecl.importClause;
@@ -643,6 +772,13 @@ function deleteUnusedImportsInDeclaration(sourceFile: SourceFile, importDecl: Im
     }
 }
 
+/**
+ * Deletes unused imports in a variable declaration.
+ * @param {SourceFile} sourceFile - The source file containing the variable declaration.
+ * @param {VariableDeclaration} varDecl - The variable declaration to check for unused imports.
+ * @param {textChanges.ChangeTracker} changes - The change tracker to record any deletions.
+ * @param {function} isUnused - A function that takes an identifier and returns a boolean indicating if it is unused.
+ */
 function deleteUnusedImportsInVariableDeclaration(sourceFile: SourceFile, varDecl: VariableDeclaration, changes: textChanges.ChangeTracker, isUnused: (name: Identifier) => boolean) {
     const { name } = varDecl;
     switch (name.kind) {
@@ -687,6 +823,11 @@ function addExport(decl: TopLevelDeclarationStatement, useEs6Exports: boolean): 
     return useEs6Exports ? [addEs6Export(decl)] : addCommonjsExport(decl);
 }
 
+/**
+ * Adds an ES6 export to a given TopLevelDeclarationStatement.
+ * @param {TopLevelDeclarationStatement} d - The declaration statement to add the export to.
+ * @returns {TopLevelDeclarationStatement} - The updated declaration statement with the export added.
+ */
 function addEs6Export(d: TopLevelDeclarationStatement): TopLevelDeclarationStatement {
     const modifiers = canHaveModifiers(d) ? concatenate([factory.createModifier(SyntaxKind.ExportKeyword)], getModifiers(d)) : undefined;
     switch (d.kind) {
@@ -727,6 +868,11 @@ function createExportAssignment(name: string): Statement {
             factory.createIdentifier(name)));
 }
 
+/**
+ * Returns an array of names to export in CommonJS format.
+ * @param decl - The top level declaration statement.
+ * @returns An array of strings representing the names to export.
+ */
 function getNamesToExportInCommonJS(decl: TopLevelDeclarationStatement): readonly string[] {
     switch (decl.kind) {
         case SyntaxKind.FunctionDeclaration:
@@ -748,7 +894,14 @@ function getNamesToExportInCommonJS(decl: TopLevelDeclarationStatement): readonl
     }
 }
 
-/** @internal */
+/**
+ * Filters an import statement, import equals declaration, or variable declaration based on a given module specifier and a function that determines which identifiers to keep.
+ * @internal
+ * @param i - The import statement, import equals declaration, or variable declaration to filter.
+ * @param moduleSpecifier - The module specifier to use in the resulting import statement or variable declaration.
+ * @param keep - A function that determines which identifiers to keep in the resulting import statement or variable declaration.
+ * @returns The filtered import statement or variable declaration, or undefined if no identifiers were kept.
+ */
 export function filterImport(i: SupportedImport, moduleSpecifier: StringLiteralLike, keep: (name: Identifier) => boolean): SupportedImportStatement | undefined {
     switch (i.kind) {
         case SyntaxKind.ImportDeclaration: {
@@ -781,6 +934,12 @@ function filterNamedBindings(namedBindings: NamedImportBindings, keep: (name: Id
     }
 }
 
+/**
+ * Filters the binding name based on the provided function.
+ * @param name The binding name to filter.
+ * @param keep The function used to determine if an identifier should be kept.
+ * @returns The filtered binding name or undefined if none match the criteria.
+ */
 function filterBindingName(name: BindingName, keep: (name: Identifier) => boolean): BindingName | undefined {
     switch (name.kind) {
         case SyntaxKind.Identifier:
@@ -800,7 +959,12 @@ export function nameOfTopLevelDeclaration(d: TopLevelDeclaration): Identifier | 
     return isExpressionStatement(d) ? tryCast(d.expression.left.name, isIdentifier) : tryCast(d.name, isIdentifier);
 }
 
-/** @internal */
+/**
+ * Returns the TopLevelDeclarationStatement of a given TopLevelDeclaration.
+ * @param {TopLevelDeclaration} d - The TopLevelDeclaration to get the statement for.
+ * @returns {TopLevelDeclarationStatement} - The TopLevelDeclarationStatement of the given TopLevelDeclaration.
+ * @internal
+ */
 export function getTopLevelDeclarationStatement(d: TopLevelDeclaration): TopLevelDeclarationStatement {
     switch (d.kind) {
         case SyntaxKind.VariableDeclaration:
@@ -837,7 +1001,10 @@ export interface StatementRange {
     readonly afterLast: Statement | undefined;
 }
 
-/** @internal */
+/**
+ * Represents information about the usage of symbols during a file move operation.
+ * @internal
+ */
 export interface UsageInfo {
     // Symbols whose declarations are moved from the old file to the new file.
     readonly movedSymbols: Set<Symbol>;
@@ -872,7 +1039,15 @@ export interface TopLevelVariableDeclaration extends VariableDeclaration { paren
 /** @internal */
 export type TopLevelDeclaration = NonVariableTopLevelDeclaration | TopLevelVariableDeclaration | BindingElement;
 
-/** @internal */
+/**
+ * Creates a new file name for a refactored file.
+ * @param oldFile - The original source file being refactored.
+ * @param program - The TypeScript program.
+ * @param context - The refactor context.
+ * @param host - The language service host.
+ * @returns The new file name as a string.
+ * @remarks This function uses various helper functions to infer a name for the new file based on the symbols being moved and the old file's imports from the target file.
+ */
 export function createNewFileName(oldFile: SourceFile, program: Program, context: RefactorContext, host: LanguageServiceHost): string {
     const checker = program.getTypeChecker();
     const toMove = getStatementsToMove(context);
@@ -1015,6 +1190,11 @@ export function getUsageInfo(oldFile: SourceFile, toMove: readonly Statement[], 
 
     return { movedSymbols, targetFileImportsFromOldFile, oldFileImportsFromTargetFile, oldImportsNeededByTargetFile, unusedImportsFromOldFile };
 
+    /**
+     * Returns the symbol for the JSX namespace contained in the given Node.
+     * @param containsJsx The Node that may contain JSX.
+     * @returns The symbol for the JSX namespace, or undefined if not found.
+     */
     function getJsxNamespaceSymbol(containsJsx: Node | undefined) {
         if (containsJsx === undefined) {
             return undefined;
@@ -1046,6 +1226,12 @@ function inferNewFileName(importsFromNewFile: Set<Symbol>, movedSymbols: Set<Sym
     return forEachKey(importsFromNewFile, symbolNameNoDefault) || forEachKey(movedSymbols, symbolNameNoDefault) || "newFile";
 }
 
+/**
+ * Iterates over all references to identifiers within a given Node and calls a callback function for each reference.
+ * @param {Node} node - The Node to search for identifier references.
+ * @param {TypeChecker} checker - The TypeChecker to use for symbol lookup.
+ * @param {(s: Symbol, isValidTypeOnlyUseSite: boolean) => void} onReference - The callback function to call for each reference.
+ */
 function forEachReference(node: Node, checker: TypeChecker, onReference: (s: Symbol, isValidTypeOnlyUseSite: boolean) => void) {
     node.forEachChild(function cb(node) {
         if (isIdentifier(node) && !isDeclarationName(node)) {
@@ -1058,6 +1244,13 @@ function forEachReference(node: Node, checker: TypeChecker, onReference: (s: Sym
     });
 }
 
+/**
+ * Iterates over top level declarations in a statement and invokes a callback function for each declaration.
+ * @template T - The type of the value returned by the callback function.
+ * @param {Statement} statement - The statement to iterate over.
+ * @param {(node: TopLevelDeclaration) => T} cb - The callback function to invoke for each declaration.
+ * @returns {T | undefined} The value returned by the last invocation of the callback function, or undefined if no declarations were found.
+ */
 function forEachTopLevelDeclaration<T>(statement: Statement, cb: (node: TopLevelDeclaration) => T): T | undefined {
     switch (statement.kind) {
         case SyntaxKind.FunctionDeclaration:
@@ -1081,6 +1274,11 @@ function forEachTopLevelDeclaration<T>(statement: Statement, cb: (node: TopLevel
     }
 }
 
+/**
+ * Determines if a given Declaration is part of an import statement.
+ * @param decl - The Declaration to check.
+ * @returns {boolean} - True if the Declaration is part of an import statement, false otherwise.
+ */
 function isInImport(decl: Declaration) {
     switch (decl.kind) {
         case SyntaxKind.ImportEqualsDeclaration:
@@ -1110,6 +1308,13 @@ function sourceFileOfTopLevelDeclaration(node: TopLevelDeclaration): Node {
     return isVariableDeclaration(node) ? node.parent.parent.parent : node.parent;
 }
 
+/**
+ * Iterates through each top level declaration in a given binding name and executes a callback function on each node.
+ * @template T - The type of the callback function's return value.
+ * @param {BindingName} name - The binding name to iterate through.
+ * @param {(node: TopLevelDeclaration) => T} cb - The callback function to execute on each node.
+ * @returns {T | undefined} - The return value of the callback function or undefined if no nodes were found.
+ */
 function forEachTopLevelDeclarationInBindingName<T>(name: BindingName, cb: (node: TopLevelDeclaration) => T): T | undefined {
     switch (name.kind) {
         case SyntaxKind.Identifier:
@@ -1122,6 +1327,11 @@ function forEachTopLevelDeclarationInBindingName<T>(name: BindingName, cb: (node
     }
 }
 
+/**
+ * Determines if a given node is a non-variable top level declaration.
+ * @param node The node to check.
+ * @returns A boolean indicating whether the node is a non-variable top level declaration.
+ */
 function isNonVariableTopLevelDeclaration(node: Node): node is NonVariableTopLevelDeclaration {
     switch (node.kind) {
         case SyntaxKind.FunctionDeclaration:

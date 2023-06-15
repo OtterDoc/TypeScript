@@ -118,6 +118,16 @@ function getAwaitErrorSpanExpression(sourceFile: SourceFile, errorCode: number, 
         && isInsideAwaitableBody(expression) ? expression : undefined;
 }
 
+/**
+ * Finds awaitable initializers for a given expression and creates a code fix action to add await to them.
+ * @param context - The code fix context or code fix all context.
+ * @param expression - The expression to search for awaitable initializers.
+ * @param errorCode - The error code associated with the missing await error.
+ * @param checker - The type checker.
+ * @param trackChanges - The function to track changes made to the code.
+ * @param fixedDeclarations - Optional set of fixed declarations.
+ * @returns The code fix action to add await to the initializer(s).
+ */
 function getDeclarationSiteFix(context: CodeFixContext | CodeFixAllContext, expression: Expression, errorCode: number, checker: TypeChecker, trackChanges: ContextualTrackChangesFunction, fixedDeclarations?: Set<number>) {
     const { sourceFile, program, cancellationToken } = context;
     const awaitableInitializers = findAwaitableInitializers(expression, sourceFile, cancellationToken, program, checker);
@@ -164,6 +174,15 @@ interface AwaitableInitializers {
     needsSecondPassForFixAll: boolean;
 }
 
+/**
+ * Finds awaitable initializers for a given expression.
+ * @param expression - The expression to search for awaitable initializers.
+ * @param sourceFile - The source file containing the expression.
+ * @param cancellationToken - The cancellation token.
+ * @param program - The program.
+ * @param checker - The type checker.
+ * @returns An object containing the initializers and a boolean indicating if a second pass is needed for fix all.
+ */
 function findAwaitableInitializers(
     expression: Node,
     sourceFile: SourceFile,
@@ -224,6 +243,12 @@ interface Identifiers {
     isCompleteFix: boolean;
 }
 
+/**
+ * Returns an object containing identifiers and a boolean indicating if the fix is complete.
+ * @param expression - A Node representing an error span expression.
+ * @param checker - A TypeChecker object.
+ * @returns An Identifiers object or undefined.
+ */
 function getIdentifiersFromErrorSpanExpression(expression: Node, checker: TypeChecker): Identifiers | undefined {
     if (isPropertyAccessExpression(expression.parent) && isIdentifier(expression.parent.expression)) {
         return { identifiers: [expression.parent.expression], isCompleteFix: true };
@@ -248,6 +273,15 @@ function getIdentifiersFromErrorSpanExpression(expression: Node, checker: TypeCh
     }
 }
 
+/**
+ * Determines if a symbol reference is missing an await keyword.
+ * @param {Identifier} reference - The symbol reference being checked.
+ * @param {readonly Diagnostic[]} diagnostics - An array of diagnostics.
+ * @param {SourceFile} sourceFile - The source file containing the symbol reference.
+ * @param {TypeChecker} checker - The type checker for the program.
+ * @returns {boolean} - True if the symbol reference is missing an await keyword, false otherwise.
+ * @remarks If the symbol reference is part of a binary expression that is typed as 'any', there is a strong likelihood that the Promise is accidentally missing an await keyword.
+ */
 function symbolReferenceIsAlsoMissingAwait(reference: Identifier, diagnostics: readonly Diagnostic[], sourceFile: SourceFile, checker: TypeChecker) {
     const errorNode = isPropertyAccessExpression(reference.parent) ? reference.parent.name :
         isBinaryExpression(reference.parent) ? reference.parent :
@@ -277,6 +311,21 @@ function isInsideAwaitableBody(node: Node) {
             ancestor.parent.kind === SyntaxKind.MethodDeclaration));
 }
 
+/**
+ * Transforms the given `insertionSite` into an `await` expression if it meets certain conditions.
+ * If the `insertionSite` is a `for...of` statement and the expression being iterated over is an async iterable,
+ * the `for...of` statement is updated to include the `await` keyword.
+ * If the `insertionSite` is a binary expression, each side of the expression is checked and transformed into an `await` expression if the type is a `Promise`.
+ * If the `insertionSite` is a property access expression and the accessed property is a callable constructable, the expression is transformed into an `await` expression.
+ * If the `insertionSite` is a call or new expression and the callee is a callable constructable, the expression is transformed into an `await` expression.
+ * If the `insertionSite` is a variable declaration and the variable is marked as fixed, the expression is transformed into an `await` expression.
+ * @param changeTracker - The `ChangeTracker` object used to track changes to the source file.
+ * @param errorCode - The error code associated with the `insertionSite`.
+ * @param sourceFile - The `SourceFile` object representing the source file being transformed.
+ * @param checker - The `TypeChecker` object used to check types.
+ * @param insertionSite - The expression being transformed.
+ * @param fixedDeclarations - An optional `Set` of fixed variable declarations.
+ */
 function makeChange(changeTracker: textChanges.ChangeTracker, errorCode: number, sourceFile: SourceFile, checker: TypeChecker, insertionSite: Expression, fixedDeclarations?: Set<number>) {
     if (isForOfStatement(insertionSite.parent) && !insertionSite.parent.awaitModifier) {
         const exprType = checker.getTypeAtLocation(insertionSite);

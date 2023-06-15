@@ -90,6 +90,15 @@ export interface DocumentHighlights {
 
 /** @internal */
 export namespace DocumentHighlights {
+    /**
+     * Returns an array of DocumentHighlights for a given position in a source file.
+     * @param {Program} program - The TypeScript program.
+     * @param {CancellationToken} cancellationToken - The cancellation token.
+     * @param {SourceFile} sourceFile - The source file to search in.
+     * @param {number} position - The position in the source file to search for.
+     * @param {readonly SourceFile[]} sourceFilesToSearch - An array of source files to search in.
+     * @returns {DocumentHighlights[] | undefined} - An array of DocumentHighlights or undefined if none are found.
+     */
     export function getDocumentHighlights(program: Program, cancellationToken: CancellationToken, sourceFile: SourceFile, position: number, sourceFilesToSearch: readonly SourceFile[]): DocumentHighlights[] | undefined {
         const node = getTouchingPropertyName(sourceFile, position);
 
@@ -200,8 +209,10 @@ export namespace DocumentHighlights {
     }
 
     /**
-     * Aggregates all throw-statements within this node *without* crossing
+     * Aggregates all throw-statements within the provided node *without* crossing
      * into function boundaries and try-blocks with catch-clauses.
+     * @param {Node} node - The node to aggregate throw-statements from.
+     * @returns {readonly ThrowStatement[] | undefined} An array of throw-statements or undefined if none are found.
      */
     function aggregateOwnedThrowStatements(node: Node): readonly ThrowStatement[] | undefined {
         if (isThrowStatement(node)) {
@@ -218,9 +229,10 @@ export namespace DocumentHighlights {
     }
 
     /**
-     * For lack of a better name, this function takes a throw statement and returns the
-     * nearest ancestor that is a try-block (whose try statement has a catch clause),
-     * function-block, or source file.
+     * Returns the nearest ancestor that is a try-block (whose try statement has a catch clause),
+     * function-block, or source file for a given throw statement.
+     * @param throwStatement - The throw statement to find the owner of.
+     * @returns The nearest ancestor that is a try-block, function-block, or source file, or undefined if none found.
      */
     function getThrowStatementOwner(throwStatement: ThrowStatement): Node | undefined {
         let child: Node = throwStatement;
@@ -248,6 +260,13 @@ export namespace DocumentHighlights {
         return isBreakOrContinueStatement(node) ? [node] : isFunctionLike(node) ? undefined : flatMapChildren(node, aggregateAllBreakAndContinueStatements);
     }
 
+    /**
+     * Returns a flattened array of values returned by the callback function for each child node of the provided node.
+     * @template T
+     * @param {Node} node - The node to iterate over its children.
+     * @param {(child: Node) => readonly T[] | T | undefined} cb - The callback function to execute for each child node.
+     * @returns {readonly T[]} - The flattened array of values returned by the callback function.
+     */
     function flatMapChildren<T>(node: Node, cb: (child: Node) => readonly T[] | T | undefined): readonly T[] {
         const result: T[] = [];
         node.forEachChild(child => {
@@ -264,6 +283,12 @@ export namespace DocumentHighlights {
         return !!actualOwner && actualOwner === owner;
     }
 
+    /**
+     * Returns the owner of a break or continue statement.
+     * @param statement - The statement to find the owner of.
+     * @returns The Node that owns the statement, or undefined if not found.
+     * @remarks This function does not cross function boundaries.
+     */
     function getBreakOrContinueOwner(statement: BreakOrContinueStatement): Node | undefined {
         return findAncestor(statement, node => {
             switch (node.kind) {
@@ -291,6 +316,12 @@ export namespace DocumentHighlights {
         return mapDefined(getNodesToSearchForModifier(declaration, modifierToFlag(modifier)), node => findModifier(node, modifier));
     }
 
+    /**
+     * Returns an array of nodes to search for a given modifier flag within a declaration node.
+     * @param declaration - The declaration node to search within.
+     * @param modifierFlag - The modifier flag to search for.
+     * @returns An array of nodes that match the given modifier flag, or undefined if none are found.
+     */
     function getNodesToSearchForModifier(declaration: Node, modifierFlag: ModifierFlags): readonly Node[] | undefined {
         // Types of node whose children might have modifiers.
         const container = declaration.parent as ModuleBlock | SourceFile | Block | CaseClause | DefaultClause | ConstructorDeclaration | MethodDeclaration | FunctionDeclaration | ObjectTypeDeclaration | ObjectLiteralExpression;
@@ -348,6 +379,11 @@ export namespace DocumentHighlights {
         return false;
     }
 
+    /**
+     * Returns an array of Node objects representing the occurrences of 'break' and 'continue' keywords within a given IterationStatement.
+     * @param {IterationStatement} loopNode - The IterationStatement to search for 'break' and 'continue' keywords.
+     * @returns {Node[]} - An array of Node objects representing the occurrences of 'break' and 'continue' keywords within the given IterationStatement.
+     */
     function getLoopBreakContinueOccurrences(loopNode: IterationStatement): Node[] {
         const keywords: Node[] = [];
 
@@ -373,6 +409,11 @@ export namespace DocumentHighlights {
         return keywords;
     }
 
+    /**
+     * Returns an array of nodes representing occurrences of a break or continue statement within a loop or switch statement.
+     * @param breakOrContinueStatement - The break or continue statement to search for occurrences of.
+     * @returns An array of nodes representing occurrences of the break or continue statement within a loop or switch statement, or undefined if none are found.
+     */
     function getBreakOrContinueStatementOccurrences(breakOrContinueStatement: BreakOrContinueStatement): Node[] | undefined {
         const owner = getBreakOrContinueOwner(breakOrContinueStatement);
 
@@ -393,6 +434,11 @@ export namespace DocumentHighlights {
         return undefined;
     }
 
+    /**
+     * Returns an array of Node objects representing the 'case'/'default' keywords in a given SwitchStatement.
+     * @param {SwitchStatement} switchStatement - The SwitchStatement to analyze.
+     * @returns {Node[]} An array of Node objects representing the 'case'/'default' keywords.
+     */
     function getSwitchCaseDefaultOccurrences(switchStatement: SwitchStatement): Node[] {
         const keywords: Node[] = [];
 
@@ -412,6 +458,12 @@ export namespace DocumentHighlights {
         return keywords;
     }
 
+    /**
+     * Returns an array of nodes representing the occurrences of the try, catch, and finally keywords in a given TryStatement.
+     * @param tryStatement The TryStatement to search for keywords in.
+     * @param sourceFile The SourceFile containing the TryStatement.
+     * @returns An array of Node objects representing the keywords found.
+     */
     function getTryCatchFinallyOccurrences(tryStatement: TryStatement, sourceFile: SourceFile): Node[] {
         const keywords: Node[] = [];
 
@@ -429,6 +481,12 @@ export namespace DocumentHighlights {
         return keywords;
     }
 
+    /**
+     * Returns an array of all occurrences of throw and return statements within the given throw statement's owner.
+     * @param throwStatement - The throw statement to search for occurrences within its owner.
+     * @param sourceFile - The source file containing the throw statement.
+     * @returns An array of nodes representing the occurrences of throw and return statements within the owner of the given throw statement.
+     */
     function getThrowOccurrences(throwStatement: ThrowStatement, sourceFile: SourceFile): Node[] | undefined {
         const owner = getThrowStatementOwner(throwStatement);
 
@@ -453,6 +511,12 @@ export namespace DocumentHighlights {
         return keywords;
     }
 
+    /**
+     * Returns an array of all occurrences of 'return' and 'throw' statements within the containing function of the provided 'returnStatement'.
+     * @param {ReturnStatement} returnStatement - The return statement to search for within the containing function.
+     * @param {SourceFile} sourceFile - The source file containing the function.
+     * @returns {Node[] | undefined} - An array of all 'return' and 'throw' statements within the containing function, or undefined if the containing function cannot be found.
+     */
     function getReturnOccurrences(returnStatement: ReturnStatement, sourceFile: SourceFile): Node[] | undefined {
         const func = getContainingFunction(returnStatement) as FunctionLikeDeclaration;
         if (!func) {
@@ -472,6 +536,11 @@ export namespace DocumentHighlights {
         return keywords;
     }
 
+    /**
+     * Returns an array of nodes containing the 'async' and 'await' keywords within the given function node.
+     * @param {Node} node - The function node to search within.
+     * @returns {Node[]|undefined} - An array of nodes containing the 'async' and 'await' keywords, or undefined if the given node is not a function.
+     */
     function getAsyncAndAwaitOccurrences(node: Node): Node[] | undefined {
         const func = getContainingFunction(node) as FunctionLikeDeclaration;
         if (!func) {
@@ -498,6 +567,11 @@ export namespace DocumentHighlights {
         return keywords;
     }
 
+    /**
+     * Returns an array of Nodes containing all occurrences of the "yield" keyword within the containing function of the provided Node.
+     * @param {Node} node - The Node to search for yield occurrences within the containing function.
+     * @returns {(Node[] | undefined)} - An array of Nodes containing all occurrences of the "yield" keyword within the containing function of the provided Node, or undefined if the Node is not contained within a function.
+     */
     function getYieldOccurrences(node: Node): Node[] | undefined {
         const func = getContainingFunction(node) as FunctionDeclaration;
         if (!func) {
@@ -525,6 +599,13 @@ export namespace DocumentHighlights {
         }
     }
 
+    /**
+     * Returns an array of HighlightSpans for the given IfStatement and SourceFile, highlighting the if/else keywords.
+     * We'd like to highlight else/ifs together if they are only separated by whitespace (i.e. the keywords are separated by no comments, no newlines).
+     * @param {IfStatement} ifStatement - The IfStatement to get the HighlightSpans for.
+     * @param {SourceFile} sourceFile - The SourceFile to get the HighlightSpans for.
+     * @returns {HighlightSpan[]} An array of HighlightSpans for the given IfStatement and SourceFile, highlighting the if/else keywords.
+     */
     function getIfElseOccurrences(ifStatement: IfStatement, sourceFile: SourceFile): HighlightSpan[] {
         const keywords = getIfElseKeywords(ifStatement, sourceFile);
         const result: HighlightSpan[] = [];
@@ -564,6 +645,12 @@ export namespace DocumentHighlights {
         return result;
     }
 
+    /**
+     * Returns an array of if/else keywords of if-statements.
+     * @param ifStatement - The if-statement to start traversing from.
+     * @param sourceFile - The source file containing the if-statement.
+     * @returns An array of if/else keywords of if-statements.
+     */
     function getIfElseKeywords(ifStatement: IfStatement, sourceFile: SourceFile): Node[] {
         const keywords: Node[] = [];
 

@@ -89,6 +89,13 @@ function hasUsableJSDoc(decl: DeclarationWithType | ParameterDeclaration): boole
         : !decl.type && !!getJSDocType(decl);
 }
 
+/**
+ * Updates the type annotations of a function declaration based on its JSDoc comments.
+ * @param changes - The text changes to apply to the source file.
+ * @param sourceFile - The source file containing the function declaration.
+ * @param decl - The function declaration to update.
+ * @remarks This function will add missing type parameters, type annotations for parameters and return type, and parentheses if necessary.
+ */
 function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, decl: DeclarationWithType): void {
     if (isFunctionLikeDeclaration(decl) && (getJSDocReturnType(decl) || decl.parameters.some(p => !!getJSDocType(p)))) {
         if (!decl.typeParameters) {
@@ -123,6 +130,11 @@ function isDeclarationWithType(node: Node): node is DeclarationWithType {
         node.kind === SyntaxKind.PropertyDeclaration;
 }
 
+/**
+ * Transforms a JSDoc type node into a regular TypeScript type node.
+ * @param node The JSDoc type node to transform.
+ * @returns The transformed TypeScript type node.
+ */
 function transformJSDocType(node: Node): Node {
     switch (node.kind) {
         case SyntaxKind.JSDocAllType:
@@ -149,6 +161,11 @@ function transformJSDocType(node: Node): Node {
     }
 }
 
+/**
+ * Transforms a JSDoc type literal node into a TypeScript type literal node.
+ * @param node - The JSDoc type literal node to transform.
+ * @returns The transformed TypeScript type literal node.
+ */
 function transformJSDocTypeLiteral(node: JSDocTypeLiteral) {
     const typeNode = factory.createTypeLiteralNode(map(node.jsDocPropertyTags, tag =>
         factory.createPropertySignature(
@@ -186,6 +203,11 @@ function transformJSDocParameter(node: ParameterDeclaration) {
     return factory.createParameterDeclaration(node.modifiers, dotdotdot, name, node.questionToken, visitNode(node.type, transformJSDocType, isTypeNode), node.initializer);
 }
 
+/**
+ * Transforms a JSDoc type reference node into a TypeScript type reference node.
+ * @param node - The JSDoc type reference node to transform.
+ * @returns The transformed TypeScript type reference node.
+ */
 function transformJSDocTypeReference(node: TypeReferenceNode) {
     let name = node.typeName;
     let args = node.typeArguments;
@@ -218,6 +240,11 @@ function transformJSDocTypeReference(node: TypeReferenceNode) {
     return factory.createTypeReferenceNode(name, args);
 }
 
+/**
+ * Transforms a JSDoc index signature node into a TypeScript index signature node.
+ * @param node - The JSDoc index signature node to transform.
+ * @returns The transformed TypeScript index signature node.
+ */
 function transformJSDocIndexSignature(node: TypeReferenceNode) {
     const index = factory.createParameterDeclaration(
         /*modifiers*/ undefined,

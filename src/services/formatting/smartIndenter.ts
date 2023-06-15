@@ -159,6 +159,14 @@ export namespace SmartIndenter {
         return getSmartIndent(sourceFile, position, precedingToken, lineAtPosition, assumeNewLineBeforeCloseBrace, options);
     }
 
+    /**
+     * Calculates the indentation level of a comment based on the position of the enclosing comment range and the previous line.
+     * @param sourceFile The source file containing the comment.
+     * @param position The position of the comment.
+     * @param options The editor settings.
+     * @param enclosingCommentRange The range of the enclosing comment.
+     * @returns The indentation level of the comment.
+     */
     function getCommentIndent(sourceFile: SourceFile, position: number, options: EditorSettings, enclosingCommentRange: CommentRange): number {
         const previousLine = getLineAndCharacterOfPosition(sourceFile, position).line - 1;
         const commentStartLine = getLineAndCharacterOfPosition(sourceFile, enclosingCommentRange.pos).line;
@@ -329,6 +337,13 @@ export namespace SmartIndenter {
     /*
      * Function returns Value.Unknown if indentation cannot be determined
      */
+    /**
+     * Returns the actual indentation level for the list item before a comma token.
+     * @param commaToken - The comma token separating items in the list.
+     * @param sourceFile - The source file containing the list.
+     * @param options - The editor settings to use for indentation.
+     * @returns The actual indentation level as a number, or Value.Unknown if the code is broken.
+     */
     function getActualIndentationForListItemBeforeComma(commaToken: Node, sourceFile: SourceFile, options: EditorSettings): number {
         // previous token is comma that separates items in list - find the previous item and try to derive indentation from it
         const commaItemInfo = findListItemInfo(commaToken);
@@ -343,6 +358,16 @@ export namespace SmartIndenter {
 
     /*
      * Function returns Value.Unknown if actual indentation for node should not be used (i.e because node is nested expression)
+     */
+    /**
+     * Calculates the actual indentation for a given node based on its parent and other parameters.
+     * @param {Node} current - The current node being evaluated.
+     * @param {Node} parent - The parent node of the current node.
+     * @param {LineAndCharacter} currentLineAndChar - The line and character position of the current node.
+     * @param {boolean} parentAndChildShareLine - Indicates whether the parent and child nodes share the same line.
+     * @param {SourceFile} sourceFile - The source file containing the current node.
+     * @param {EditorSettings} options - The editor settings to use for indentation.
+     * @returns {number} The actual indentation value for the current node.
      */
     function getActualIndentationForNode(current: Node,
         parent: Node,
@@ -371,6 +396,14 @@ export namespace SmartIndenter {
         CloseBrace
     }
 
+    /**
+     * Determines the type of the next token after the current cursor position.
+     * @param precedingToken - The preceding token before the cursor position.
+     * @param current - The current token at the cursor position.
+     * @param lineAtPosition - The line number of the cursor position.
+     * @param sourceFile - The source file being analyzed.
+     * @returns The type of the next token as a NextTokenKind enum value.
+     */
     function nextTokenIsCurlyBraceOnSameLineAsCursor(precedingToken: Node, current: Node, lineAtPosition: number, sourceFile: SourceFile): NextTokenKind {
         const nextToken = findNextToken(precedingToken, current, sourceFile);
         if (!nextToken) {
@@ -412,6 +445,14 @@ export namespace SmartIndenter {
         return expressionOfCallExpressionEndLine === childStartLine;
     }
 
+    /**
+     * Determines whether a child node starts on the same line as the "else" keyword in an "if" statement.
+     * @param {Node} parent - The parent node.
+     * @param {TextRangeWithKind} child - The child node.
+     * @param {number} childStartLine - The line number where the child node starts.
+     * @param {SourceFileLike} sourceFile - The source file.
+     * @returns {boolean} - Returns true if the child node starts on the same line as the "else" keyword, otherwise false.
+     */
     export function childStartsOnTheSameLineWithElseInIfStatement(parent: Node, child: TextRangeWithKind, childStartLine: number, sourceFile: SourceFileLike): boolean {
         if (parent.kind === SyntaxKind.IfStatement && (parent as IfStatement).elseStatement === child) {
             const elseKeyword = findChildOfKind(parent, SyntaxKind.ElseKeyword, sourceFile)!;
@@ -445,6 +486,14 @@ export namespace SmartIndenter {
     // whenTrue and whenFalse children to avoid double-indenting their contents. To identify this scenario,
     // we check for the whenTrue branch beginning on the line that the condition ends, and the whenFalse
     // branch beginning on the line that the whenTrue branch ends.
+    /**
+     * Determines if a child node is an unindented branch of a conditional expression.
+     * @param parent The parent node.
+     * @param child The child node.
+     * @param childStartLine The starting line of the child node.
+     * @param sourceFile The source file.
+     * @returns A boolean indicating if the child node is an unindented branch of a conditional expression.
+     */
     export function childIsUnindentedBranchOfConditionalExpression(parent: Node, child: TextRangeWithKind, childStartLine: number, sourceFile: SourceFileLike): boolean {
         if (isConditionalExpression(parent) && (child === parent.whenTrue || child === parent.whenFalse)) {
             const conditionEndLine = getLineAndCharacterOfPosition(sourceFile, parent.condition.end).line;
@@ -467,6 +516,14 @@ export namespace SmartIndenter {
         return false;
     }
 
+    /**
+     * Determines if the start of an argument is on the same line as the end of the previous argument in a call or new expression.
+     * @param {Node} parent - The parent node of the argument.
+     * @param {TextRangeWithKind} child - The child argument node.
+     * @param {number} childStartLine - The line number of the start of the child argument.
+     * @param {SourceFileLike} sourceFile - The source file containing the call or new expression.
+     * @returns {boolean} - True if the start of the argument is on the same line as the end of the previous argument, false otherwise.
+     */
     export function argumentStartsOnSameLineAsPreviousArgument(parent: Node, child: TextRangeWithKind, childStartLine: number, sourceFile: SourceFileLike): boolean {
         if (isCallOrNewExpression(parent)) {
             if (!parent.arguments) return false;
@@ -495,6 +552,14 @@ export namespace SmartIndenter {
         return node && getListByRange(pos, pos, node, sourceFile);
     }
 
+    /**
+     * Returns a NodeArray of nodes within the specified range based on the given starting and ending positions.
+     * @param start The starting position of the range.
+     * @param end The ending position of the range.
+     * @param node The node to search for nodes within the range.
+     * @param sourceFile The source file containing the node.
+     * @returns A NodeArray of nodes within the specified range, or undefined if no nodes are found.
+     */
     function getListByRange(start: number, end: number, node: Node, sourceFile: SourceFile): NodeArray<Node> | undefined {
         switch (node.kind) {
             case SyntaxKind.TypeReference:
@@ -558,6 +623,14 @@ export namespace SmartIndenter {
         return findColumnForFirstNonWhitespaceCharacterInLine(sourceFile.getLineAndCharacterOfPosition(list.pos), sourceFile, options);
     }
 
+    /**
+     * Calculates the actual indentation for a list item based on its node, source file, editor settings, and whether it is a child of a list. If the node is a VariableDeclarationList, returns Value.Unknown as it has no wrapping tokens.
+     * @param {Node} node - The node to calculate the indentation for.
+     * @param {SourceFile} sourceFile - The source file containing the node.
+     * @param {EditorSettings} options - The editor settings to use for indentation calculation.
+     * @param {boolean} listIndentsChild - Whether the list item is a child of a list.
+     * @returns {number} - The actual indentation for the list item.
+     */
     function getActualIndentationForListItem(node: Node, sourceFile: SourceFile, options: EditorSettings, listIndentsChild: boolean): number {
         if (node.parent && node.parent.kind === SyntaxKind.VariableDeclarationList) {
             // VariableDeclarationList has no wrapping tokens
@@ -577,6 +650,14 @@ export namespace SmartIndenter {
         return Value.Unknown;
     }
 
+    /**
+     * Derives the actual indentation level of a node in a list, based on the indentation of the previous nodes in the list.
+     * @param {readonly Node[]} list - The list of nodes to derive indentation from.
+     * @param {number} index - The index of the node to derive indentation for.
+     * @param {SourceFile} sourceFile - The source file containing the nodes.
+     * @param {EditorSettings} options - The editor settings to use for indentation.
+     * @returns {number} - The actual indentation level of the node.
+     */
     function deriveActualIndentationFromList(list: readonly Node[], index: number, sourceFile: SourceFile, options: EditorSettings): number {
         Debug.assert(index >= 0 && index < list.length);
         const node = list[index];
@@ -605,11 +686,12 @@ export namespace SmartIndenter {
     }
 
     /**
-     * Character is the actual index of the character since the beginning of the line.
-     * Column - position of the character after expanding tabs to spaces.
-     * "0\t2$"
-     * value of 'character' for '$' is 3
-     * value of 'column' for '$' is 6 (assuming that tab size is 4)
+     * Finds the position of the first non-whitespace character in a given range of a source file.
+     * @param startPos The starting position of the range to search.
+     * @param endPos The ending position of the range to search.
+     * @param sourceFile The source file to search in.
+     * @param options The editor settings to use for tab expansion.
+     * @returns An object with the position of the first non-whitespace character in terms of character and column indices.
      */
     export function findFirstNonWhitespaceCharacterAndColumn(startPos: number, endPos: number, sourceFile: SourceFileLike, options: EditorSettings) {
         let character = 0;
@@ -636,6 +718,15 @@ export namespace SmartIndenter {
         return findFirstNonWhitespaceCharacterAndColumn(startPos, endPos, sourceFile, options).column;
     }
 
+    /**
+     * Determines whether a child node should be indented based on the parent node and formatting settings.
+     * @param {FormatCodeSettings} settings - The formatting settings.
+     * @param {TextRangeWithKind} parent - The parent node.
+     * @param {TextRangeWithKind | undefined} child - The child node.
+     * @param {SourceFileLike | undefined} sourceFile - The source file.
+     * @param {boolean} indentByDefault - Whether to indent by default.
+     * @returns {boolean} - Whether the child node should be indented.
+     */
     export function nodeWillIndentChild(settings: FormatCodeSettings, parent: TextRangeWithKind, child: TextRangeWithKind | undefined, sourceFile: SourceFileLike | undefined, indentByDefault: boolean): boolean {
         const childKind = child ? child.kind : SyntaxKind.Unknown;
 
@@ -739,6 +830,12 @@ export namespace SmartIndenter {
         return indentByDefault;
     }
 
+    /**
+     * Determines if a given syntax kind is a control flow ending statement.
+     * @param {SyntaxKind} kind - The syntax kind to check.
+     * @param {TextRangeWithKind} parent - The parent node of the syntax kind.
+     * @returns {boolean} - True if the syntax kind is a control flow ending statement, false otherwise.
+     */
     function isControlFlowEndingStatement(kind: SyntaxKind, parent: TextRangeWithKind): boolean {
         switch (kind) {
             case SyntaxKind.ReturnStatement:

@@ -71,6 +71,15 @@ registerCodeFix({
     }
 });
 
+/**
+ * Returns a code fix action for deleting an unused parameter tag.
+ * @param {CodeFixContext} context - The context of the code fix.
+ * @param {Object} info - An object containing the name, jsDocHost, and jsDocParameterTag.
+ * @param {string} info.name - The name of the parameter.
+ * @param {Object} info.jsDocHost - The JSDoc host object.
+ * @param {Object} info.jsDocParameterTag - The JSDoc parameter tag object.
+ * @returns {Object} - A code fix action for deleting the unused parameter tag.
+ */
 function getDeleteAction(context: CodeFixContext, { name, jsDocHost, jsDocParameterTag }: Info) {
     const changes = textChanges.ChangeTracker.with(context, changeTracker =>
         changeTracker.filterJSDocTags(context.sourceFile, jsDocHost, t => t !== jsDocParameterTag));
@@ -83,6 +92,16 @@ function getDeleteAction(context: CodeFixContext, { name, jsDocHost, jsDocParame
     );
 }
 
+/**
+ * Returns a code fix action for renaming an unmatched parameter in a function signature.
+ * @param context - The code fix context.
+ * @param info - An object containing information about the parameter to be renamed.
+ * @param info.name - The name of the parameter to be renamed.
+ * @param info.jsDocHost - The JSDoc host node.
+ * @param info.signature - The function signature.
+ * @param info.jsDocParameterTag - The JSDoc parameter tag.
+ * @returns A code fix action without fix all.
+ */
 function getRenameAction(context: CodeFixContext, { name, jsDocHost, signature, jsDocParameterTag }: Info) {
     if (!length(signature.parameters)) return undefined;
 
@@ -121,6 +140,12 @@ interface Info {
     readonly name: Identifier;
 }
 
+/**
+ * Retrieves information about a JSDoc parameter tag at a specific position in a source file.
+ * @param sourceFile - The source file to search in.
+ * @param pos - The position to search at.
+ * @returns An object containing information about the JSDoc parameter tag, or undefined if not found.
+ */
 function getInfo(sourceFile: SourceFile, pos: number): Info | undefined {
     const token = getTokenAtPosition(sourceFile, pos);
     if (token.parent && isJSDocParameterTag(token.parent) && isIdentifier(token.parent.name)) {

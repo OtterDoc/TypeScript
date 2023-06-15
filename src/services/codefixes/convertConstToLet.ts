@@ -58,6 +58,13 @@ interface Info {
     token: Token<SyntaxKind.ConstKeyword>;
 }
 
+/**
+ * Retrieves information about a symbol at a given position in a source file.
+ * @param sourceFile - The source file to search in.
+ * @param pos - The position to search at.
+ * @param program - The program to use for type checking.
+ * @returns An object containing the symbol and the const token if found, or undefined.
+ */
 function getInfo(sourceFile: SourceFile, pos: number, program: Program): Info | undefined {
     const checker = program.getTypeChecker();
     const symbol = checker.getSymbolAtLocation(getTokenAtPosition(sourceFile, pos));

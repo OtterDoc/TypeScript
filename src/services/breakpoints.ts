@@ -127,6 +127,14 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
         return spanInNode(otherwiseOnNode);
     }
 
+    /**
+     * Returns a TextSpan object that represents the span of text in the given NodeArray that contains the provided Node and matches the given criteria.
+     * @template T - Type parameter that extends Node
+     * @param {NodeArray<T> | undefined} nodeArray - The NodeArray to search for the span of text.
+     * @param {T} node - The Node to find the span of text for.
+     * @param {(value: Node) => boolean} match - The function that determines if a Node matches the criteria for the span of text.
+     * @returns {TextSpan} - The TextSpan object that represents the span of text in the NodeArray that contains the provided Node and matches the given criteria.
+     */
     function spanInNodeArray<T extends Node>(nodeArray: NodeArray<T> | undefined, node: T, match: (value: Node) => boolean) {
         if (nodeArray) {
             const index = nodeArray.indexOf(node);
@@ -451,6 +459,12 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             }
         }
 
+        /**
+         * Returns a TextSpan object based on the provided VariableDeclaration, PropertyDeclaration, or PropertySignature.
+         * If the provided VariableDeclaration is the first in its list, the returned TextSpan includes the "let" keyword.
+         * @param variableDeclaration The VariableDeclaration, PropertyDeclaration, or PropertySignature to create a TextSpan from.
+         * @returns The TextSpan object created from the provided VariableDeclaration.
+         */
         function textSpanFromVariableDeclaration(variableDeclaration: VariableDeclaration | PropertyDeclaration | PropertySignature): TextSpan {
             if (isVariableDeclarationList(variableDeclaration.parent) && variableDeclaration.parent.declarations[0] === variableDeclaration) {
                 // First declaration - include let keyword
@@ -462,6 +476,15 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             }
         }
 
+        /**
+         * Returns the TextSpan of a given VariableDeclaration, PropertyDeclaration, or PropertySignature node.
+         * If the parent node is a ForInStatement, the span is set in the parent node.
+         * If the name is a destructuring pattern, the span is set in the binding pattern.
+         * If there is initialization or declaration from 'for of', the span is set in the variableDeclaration.
+         * If the declaration cannot have a breakpoint, the span is set on the previous one.
+         * @param {VariableDeclaration | PropertyDeclaration | PropertySignature} variableDeclaration - The node to get the TextSpan from.
+         * @returns {TextSpan | undefined} The TextSpan of the given node, or undefined if it cannot have a breakpoint.
+         */
         function spanInVariableDeclaration(variableDeclaration: VariableDeclaration | PropertyDeclaration | PropertySignature): TextSpan | undefined {
             // If declaration of for in statement, just set the span in parent
             if (variableDeclaration.parent.parent.kind === SyntaxKind.ForInStatement) {
@@ -498,6 +521,12 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
                 hasSyntacticModifier(parameter, ModifierFlags.Public | ModifierFlags.Private);
         }
 
+        /**
+         * Returns a TextSpan object or undefined based on the provided ParameterDeclaration.
+         * @param parameter - The ParameterDeclaration to check.
+         * @returns A TextSpan object or undefined.
+         * @remarks If the parameter's name is a BindingPattern, a breakpoint is set in the binding pattern. If the parameter can have a span in a parameter declaration, a text span is returned. If the parameter is not the first parameter in the function declaration, the function recursively calls itself with the previous parameter. If the parameter is the first parameter, a breakpoint is set in the function declaration body.
+         */
         function spanInParameterDeclaration(parameter: ParameterDeclaration): TextSpan | undefined {
             if (isBindingPattern(parameter.name)) {
                 // Set breakpoint in binding pattern
@@ -526,6 +555,11 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
                 (functionDeclaration.parent.kind === SyntaxKind.ClassDeclaration && functionDeclaration.kind !== SyntaxKind.Constructor);
         }
 
+        /**
+         * Returns a TextSpan object or undefined based on the provided FunctionLikeDeclaration.
+         * @param {FunctionLikeDeclaration} functionDeclaration - The function declaration to check.
+         * @returns {TextSpan|undefined} - A TextSpan object or undefined.
+         */
         function spanInFunctionDeclaration(functionDeclaration: FunctionLikeDeclaration): TextSpan | undefined {
             // No breakpoints in the function signature
             if (!functionDeclaration.body) {
@@ -550,6 +584,11 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             return spanInNode(nodeForSpanInBlock);
         }
 
+        /**
+         * Returns the TextSpan object or undefined if the given block does not have a parent module declaration with an instantiated module instance state.
+         * @param {Block} block - The block to check for TextSpan.
+         * @returns {TextSpan|undefined} - The TextSpan object or undefined.
+         */
         function spanInBlock(block: Block): TextSpan | undefined {
             switch (block.parent.kind) {
                 case SyntaxKind.ModuleDeclaration:
@@ -574,6 +613,11 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             return spanInNode(block.statements[0]);
         }
 
+        /**
+         * Returns the TextSpan of the first declaration in the initializer of a ForStatement, ForOfStatement, or ForInStatement. If the initializer is an expression, returns the TextSpan of the expression.
+         * @param forLikeStatement The ForStatement, ForOfStatement, or ForInStatement to analyze.
+         * @returns The TextSpan of the first declaration in the initializer or the TextSpan of the expression, or undefined if there is no initializer.
+         */
         function spanInInitializerOfForLike(forLikeStatement: ForStatement | ForOfStatement | ForInStatement): TextSpan | undefined {
             if (forLikeStatement.initializer!.kind === SyntaxKind.VariableDeclarationList) {
                 // Declaration list - set breakpoint in first declaration
@@ -588,6 +632,11 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             }
         }
 
+        /**
+         * Returns a TextSpan object or undefined based on the provided ForStatement object.
+         * @param forStatement - The ForStatement object to analyze.
+         * @returns {TextSpan|undefined} - A TextSpan object or undefined.
+         */
         function spanInForStatement(forStatement: ForStatement): TextSpan | undefined {
             if (forStatement.initializer) {
                 return spanInInitializerOfForLike(forStatement);
@@ -601,6 +650,12 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             }
         }
 
+        /**
+         * Returns the TextSpan of the first non-omitted binding element in the provided BindingPattern object.
+         * If no such element exists, returns the TextSpan of the parent BindingElement or VariableDeclaration.
+         * @param {BindingPattern} bindingPattern - The BindingPattern object to search for a TextSpan.
+         * @returns {TextSpan | undefined} - The TextSpan of the first non-omitted binding element, or the parent BindingElement or VariableDeclaration.
+         */
         function spanInBindingPattern(bindingPattern: BindingPattern): TextSpan | undefined {
             // Set breakpoint in first binding element
             const firstBindingElement = forEach(bindingPattern.elements,
@@ -619,6 +674,11 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             return textSpanFromVariableDeclaration(bindingPattern.parent as VariableDeclaration);
         }
 
+        /**
+         * Returns the TextSpan of the first non-omitted element in an array or object destructuring pattern.
+         * @param node The DestructuringPattern node to search.
+         * @returns The TextSpan of the first non-omitted element, or undefined if none found.
+         */
         function spanInArrayLiteralOrObjectLiteralDestructuringPattern(node: DestructuringPattern): TextSpan | undefined {
             Debug.assert(node.kind !== SyntaxKind.ArrayBindingPattern && node.kind !== SyntaxKind.ObjectBindingPattern);
             const elements: NodeArray<Expression | ObjectLiteralElement> = node.kind === SyntaxKind.ArrayLiteralExpression ? node.elements : node.properties;
@@ -656,6 +716,11 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             return spanInNode(node.parent);
         }
 
+        /**
+         * Returns a TextSpan object representing the span of the close brace token of the provided node, if applicable.
+         * @param {Node} node - The node to check for a close brace token.
+         * @returns {TextSpan|undefined} - The TextSpan object representing the span of the close brace token, or undefined if none exists.
+         */
         function spanInCloseBraceToken(node: Node): TextSpan | undefined {
             switch (node.parent.kind) {
                 case SyntaxKind.ModuleBlock:
@@ -705,6 +770,12 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             }
         }
 
+        /**
+         * Returns a TextSpan object or undefined based on the provided Node object.
+         * @param node The Node object to check.
+         * @returns A TextSpan object or undefined.
+         * @remarks This function checks the parent kind of the provided Node object and returns a TextSpan object based on the kind.
+         */
         function spanInCloseBracketToken(node: Node): TextSpan | undefined {
             switch (node.parent.kind) {
                 case SyntaxKind.ArrayBindingPattern:
@@ -724,6 +795,12 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             }
         }
 
+        /**
+         * Returns the TextSpan of the open parenthesis token that contains the given Node.
+         * If the Node is not contained in an open parenthesis token, returns undefined.
+         * @param {Node} node - The Node to search for.
+         * @returns {TextSpan|undefined} - The TextSpan of the open parenthesis token that contains the given Node, or undefined if not found.
+         */
         function spanInOpenParenToken(node: Node): TextSpan | undefined {
             if (node.parent.kind === SyntaxKind.DoStatement || // Go to while keyword and do action instead
                 node.parent.kind === SyntaxKind.CallExpression ||
@@ -739,6 +816,12 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             return spanInNode(node.parent);
         }
 
+        /**
+         * Determines the TextSpan of a close paren token within a Node.
+         * @param {Node} node - The Node containing the close paren token.
+         * @returns {TextSpan | undefined} - The TextSpan of the close paren token or undefined if not found.
+         * @remarks This function checks if the close paren token is part of a parameter list and sets the span in the previous token. If not, it sets the span in the parent node.
+         */
         function spanInCloseParenToken(node: Node): TextSpan | undefined {
             // Is this close paren token of parameter list, set span in previous token
             switch (node.parent.kind) {
@@ -765,6 +848,11 @@ export function spanInSourceFileAtLocation(sourceFile: SourceFile, position: num
             }
         }
 
+        /**
+         * Returns the TextSpan of the colon token in the provided Node.
+         * @param node The Node to search for the colon token.
+         * @returns The TextSpan of the colon token, or undefined if not found.
+         */
         function spanInColonToken(node: Node): TextSpan | undefined {
             // Is this : specifying return annotation of the function declaration
             if (isFunctionLike(node.parent) ||

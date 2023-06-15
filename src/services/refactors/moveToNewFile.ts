@@ -82,6 +82,17 @@ registerRefactor(refactorName, {
     }
 });
 
+/**
+ * Applies changes to a source file by moving specified elements to a new file.
+ * @param oldFile - The source file to modify.
+ * @param program - The TypeScript program instance.
+ * @param toMove - An object containing information about the elements to move.
+ * @param changes - The change tracker to use for making modifications.
+ * @param host - The language service host.
+ * @param preferences - The user preferences for the refactoring.
+ * @param context - The context for the refactoring.
+ * @returns void
+ */
 function doChange(oldFile: SourceFile, program: Program, toMove: ToMove, changes: textChanges.ChangeTracker, host: LanguageServiceHost, preferences: UserPreferences, context: RefactorContext): void {
     const checker = program.getTypeChecker();
     const usage = getUsageInfo(oldFile, toMove.all, checker);
@@ -94,6 +105,18 @@ function doChange(oldFile: SourceFile, program: Program, toMove: ToMove, changes
     addNewFileToTsconfig(program, changes, oldFile.fileName, newFilename, hostGetCanonicalFileName(host));
 }
 
+/**
+ * Retrieves new statements and removes them from the old file.
+ * @param oldFile - The old source file.
+ * @param usage - The usage information.
+ * @param changes - The text changes.
+ * @param toMove - The statements to move.
+ * @param program - The program.
+ * @param host - The language service host.
+ * @param newFilename - The new file name.
+ * @param preferences - The user preferences.
+ * @returns An array of statements.
+ */
 function getNewStatementsAndRemoveFromOldFile(
     oldFile: SourceFile, usage: UsageInfo, changes: textChanges.ChangeTracker, toMove: ToMove, program: Program, host: LanguageServiceHost, newFilename: string, preferences: UserPreferences,
 ) {
@@ -133,6 +156,19 @@ function getNewStatementsAndRemoveFromOldFile(
     ];
 }
 
+/**
+ * Returns an array of supported import statements that are copied from the old file and have an export added in the old file.
+ * @param {SourceFile} oldFile - The old file to copy imports from and add exports to.
+ * @param {Map<Symbol, boolean>} importsToCopy - A map of symbols to boolean values indicating whether to copy the symbol's import or not.
+ * @param {Set<Symbol>} newFileImportsFromOldFile - A set of symbols used in the new file that are imported from the old file.
+ * @param {textChanges.ChangeTracker} changes - The change tracker to use for adding exports to the old file.
+ * @param {TypeChecker} checker - The type checker to use for getting symbols.
+ * @param {Program} program - The program to use for getting the base file name.
+ * @param {LanguageServiceHost} host - The language service host to use for making imports or requires.
+ * @param {boolean} useEsModuleSyntax - A boolean indicating whether to use ES module syntax or not.
+ * @param {QuotePreference} quotePreference - The quote preference to use for making imports or requires.
+ * @returns {readonly SupportedImportStatement[]} An array of supported import statements that are copied from the old file and have an export added in the old file.
+ */
 function getNewFileImportsAndAddExportInOldFile(
     oldFile: SourceFile,
     importsToCopy: Map<Symbol, boolean>,

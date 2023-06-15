@@ -317,6 +317,12 @@ export function isContextWithStartAndEndNode(node: ContextNode): node is Context
     return node && (node as Node).kind === undefined;
 }
 
+/**
+ * Returns the context node for a given node entry.
+ * @param {Node} node - The node to get the context node for.
+ * @returns {ContextNode | undefined} - The context node or undefined if not found.
+ * @remarks This function handles various scenarios such as declarations, JSX tags, computed property names, and more.
+ */
 function getContextNodeForNodeEntry(node: Node): ContextNode | undefined {
     if (isDeclaration(node)) {
         return getContextNode(node);
@@ -383,7 +389,12 @@ function getContextNodeForNodeEntry(node: Node): ContextNode | undefined {
     return undefined;
 }
 
-/** @internal */
+/**
+ * Returns the context node for a given NamedDeclaration, BinaryExpression, or ForInOrOfStatement node.
+ * @internal
+ * @param {NamedDeclaration | BinaryExpression | ForInOrOfStatement | undefined} node - The node to get the context node for.
+ * @returns {ContextNode | undefined} The context node for the given node, or undefined if the node is falsy.
+ */
 export function getContextNode(node: NamedDeclaration | BinaryExpression | ForInOrOfStatement | undefined): ContextNode | undefined {
     if (!node) return undefined;
     switch (node.kind) {
@@ -448,7 +459,15 @@ export function toContextSpan(textSpan: TextSpan, sourceFile: SourceFile, contex
         undefined;
 }
 
-/** @internal */
+/**
+ * An enumeration representing the different ways to search for references to a symbol.
+ * @enum {number}
+ * @property {number} Other - When searching for references to a symbol, the location will not be adjusted (this is the default behavior when not specified).
+ * @property {number} References - When searching for references to a symbol, the location will be adjusted if the cursor was on a keyword.
+ * @property {number} Rename - When searching for references to a symbol, the location will be adjusted if the cursor was on a keyword.
+ * Unlike `References`, the location will only be adjusted keyword belonged to a declaration with a valid name.
+ * If set, we will find fewer references -- if it is referenced by several different names, we still only find references for the original name.
+ */
 export const enum FindReferencesUse {
     /**
      * When searching for references to a symbol, the location will not be adjusted (this is the default behavior when not specified).
@@ -466,7 +485,14 @@ export const enum FindReferencesUse {
     Rename,
 }
 
-/** @internal */
+/**
+ * Options for finding references in TypeScript code.
+ * @param {boolean} [findInStrings] - Whether to search for references in string literals. Defaults to false.
+ * @param {boolean} [findInComments] - Whether to search for references in comments. Defaults to false.
+ * @param {FindReferencesUse} [use] - The type of references to search for. Defaults to 'references'.
+ * @param {boolean} [implementations] - Whether to search for implementations instead of references. Defaults to false.
+ * @param {boolean} [providePrefixAndSuffixTextForRename] - Whether to opt in for enhanced renaming of shorthand properties and import/export specifiers. Defaults to false.
+ */
 export interface Options {
     readonly findInStrings?: boolean;
     readonly findInComments?: boolean;
@@ -481,7 +507,15 @@ export interface Options {
     readonly providePrefixAndSuffixTextForRename?: boolean;
 }
 
-/** @internal */
+/**
+ * Finds referenced symbols for a given position in a source file.
+ * @param program - The TypeScript program.
+ * @param cancellationToken - The cancellation token.
+ * @param sourceFiles - The source files to search.
+ * @param sourceFile - The source file to search in.
+ * @param position - The position to search at.
+ * @returns An array of referenced symbols or undefined if none are found.
+ */
 export function findReferencedSymbols(program: Program, cancellationToken: CancellationToken, sourceFiles: readonly SourceFile[], sourceFile: SourceFile, position: number): ReferencedSymbol[] | undefined {
     const node = getTouchingPropertyName(sourceFile, position);
     const options = { use: FindReferencesUse.References };
@@ -505,7 +539,15 @@ function isDefinitionForReference(node: Node): boolean {
         || (node.kind === SyntaxKind.ConstructorKeyword && isConstructorDeclaration(node.parent));
 }
 
-/** @internal */
+/**
+ * Returns an array of ImplementationLocation objects for the given program, source files, source file, and position.
+ * @param program - The Program object.
+ * @param cancellationToken - The CancellationToken object.
+ * @param sourceFiles - An array of SourceFile objects.
+ * @param sourceFile - The SourceFile object.
+ * @param position - The position in the source file.
+ * @returns An array of ImplementationLocation objects or undefined.
+ */
 export function getImplementationsAtPosition(program: Program, cancellationToken: CancellationToken, sourceFiles: readonly SourceFile[], sourceFile: SourceFile, position: number): ImplementationLocation[] | undefined {
     const node = getTouchingPropertyName(sourceFile, position);
     let referenceEntries: Entry[] | undefined;
@@ -538,6 +580,15 @@ export function getImplementationsAtPosition(program: Program, cancellationToken
     return map(referenceEntries, entry => toImplementationLocation(entry, checker));
 }
 
+/**
+ * Retrieves the implementation reference entries for a given node in a program.
+ * @param program - The program to search for references in.
+ * @param cancellationToken - A token that can be used to cancel the operation.
+ * @param sourceFiles - The source files to search for references in.
+ * @param node - The node to retrieve implementation reference entries for.
+ * @param position - The position of the node in the source file.
+ * @returns An array of Entry objects representing the implementation reference entries for the given node, or undefined if the node is a SourceFile or no implementation reference entries were found.
+ */
 function getImplementationReferenceEntries(program: Program, cancellationToken: CancellationToken, sourceFiles: readonly SourceFile[], node: Node, position: number): readonly Entry[] | undefined {
     if (node.kind === SyntaxKind.SourceFile) {
         return undefined;
@@ -574,7 +625,17 @@ export function findReferenceOrRenameEntries<T>(
 /** @internal */
 export type ToReferenceOrRenameEntry<T> = (entry: Entry, originalNode: Node, checker: TypeChecker) => T;
 
-/** @internal */
+/**
+ * Retrieves reference entries for a given node.
+ * @param position - The position of the node.
+ * @param node - The node to retrieve reference entries for.
+ * @param program - The program containing the node.
+ * @param sourceFiles - An array of source files to search for references in.
+ * @param cancellationToken - A token used to cancel the operation.
+ * @param options - Optional options to customize the search.
+ * @param sourceFilesSet - Optional set of source file names to limit the search to.
+ * @returns An array of reference entries or undefined if none were found.
+ */
 export function getReferenceEntriesForNode(
     position: number,
     node: Node,
@@ -591,6 +652,13 @@ function flattenEntries(referenceSymbols: readonly SymbolAndEntries[] | undefine
     return referenceSymbols && flatMap(referenceSymbols, r => r.references);
 }
 
+/**
+ * Returns a ReferencedSymbolDefinitionInfo object based on the provided Definition, TypeChecker, and Node.
+ * @param {Definition} def - The Definition object to use.
+ * @param {TypeChecker} checker - The TypeChecker object to use.
+ * @param {Node} originalNode - The original Node object to use.
+ * @returns {ReferencedSymbolDefinitionInfo} - The resulting ReferencedSymbolDefinitionInfo object.
+ */
 function definitionToReferencedSymbolDefinitionInfo(def: Definition, checker: TypeChecker, originalNode: Node): ReferencedSymbolDefinitionInfo {
     const info = ((): { sourceFile: SourceFile, textSpan: TextSpan, name: string, kind: ScriptElementKind, displayParts: SymbolDisplayPart[], context?: Node | ContextWithStartAndEndNode } => {
         switch (def.type) {
@@ -690,7 +758,12 @@ function toReferencedSymbolEntry(entry: Entry, symbol: Symbol | undefined): Refe
     };
 }
 
-/** @internal */
+/**
+ * Converts an Entry object to a ReferenceEntry object.
+ * @param {Entry} entry - The Entry object to convert.
+ * @returns {ReferenceEntry} The converted ReferenceEntry object.
+ * @remarks This function is marked as internal.
+ */
 export function toReferenceEntry(entry: Entry): ReferenceEntry {
     const documentSpan = entryToDocumentSpan(entry);
     if (entry.kind === EntryKind.Span) {
@@ -704,6 +777,11 @@ export function toReferenceEntry(entry: Entry): ReferenceEntry {
     };
 }
 
+/**
+ * Converts an Entry object to a DocumentSpan object.
+ * @param {Entry} entry - The Entry object to be converted.
+ * @returns {DocumentSpan} - The resulting DocumentSpan object.
+ */
 function entryToDocumentSpan(entry: Entry): DocumentSpan {
     if (entry.kind === EntryKind.Span) {
         return { textSpan: entry.textSpan, fileName: entry.fileName };
@@ -720,6 +798,14 @@ function entryToDocumentSpan(entry: Entry): DocumentSpan {
 }
 
 interface PrefixAndSuffix { readonly prefixText?: string; readonly suffixText?: string; }
+/**
+ * Returns an object containing prefix and suffix text for a given entry, original node, checker, and quote preference.
+ * @param {Entry} entry - The entry to get prefix and suffix text for.
+ * @param {Node} originalNode - The original node.
+ * @param {TypeChecker} checker - The type checker.
+ * @param {QuotePreference} quotePreference - The quote preference.
+ * @returns {PrefixAndSuffix} An object containing prefix and suffix text.
+ */
 function getPrefixAndSuffixText(entry: Entry, originalNode: Node, checker: TypeChecker, quotePreference: QuotePreference): PrefixAndSuffix {
     if (entry.kind !== EntryKind.Span && isIdentifier(originalNode)) {
         const { node, kind } = entry;
@@ -773,6 +859,12 @@ function getPrefixAndSuffixText(entry: Entry, originalNode: Node, checker: TypeC
     return emptyOptions;
 }
 
+/**
+ * Returns an ImplementationLocation object based on the provided Entry and TypeChecker.
+ * @param {Entry} entry - The Entry object to be converted to an ImplementationLocation.
+ * @param {TypeChecker} checker - The TypeChecker object to be used in the conversion process.
+ * @returns {ImplementationLocation} - The resulting ImplementationLocation object.
+ */
 function toImplementationLocation(entry: Entry, checker: TypeChecker): ImplementationLocation {
     const documentSpan = entryToDocumentSpan(entry);
     if (entry.kind !== EntryKind.Span) {
@@ -787,6 +879,12 @@ function toImplementationLocation(entry: Entry, checker: TypeChecker): Implement
     }
 }
 
+/**
+ * Returns the kind and display parts of a given node's implementation. If the node is a symbol, it retrieves the definition kind and display parts using the provided TypeChecker. If the node is an object literal expression, it returns an interface element with display parts indicating it is an object literal. If the node is a class expression, it returns a local class element with display parts indicating it is an anonymous local class. Otherwise, it returns the kind of the node and an empty array of display parts.
+ * @param node The node to retrieve the implementation kind and display parts of.
+ * @param checker The TypeChecker to use for retrieving the definition kind and display parts of a symbol.
+ * @returns An object containing the kind and display parts of the node's implementation.
+ */
 function implementationKindDisplayParts(node: Node, checker: TypeChecker): { kind: ScriptElementKind, displayParts: SymbolDisplayPart[] } {
     const symbol = checker.getSymbolAtLocation(isDeclaration(node) && node.name ? node.name : node);
     if (symbol) {
@@ -809,7 +907,11 @@ function implementationKindDisplayParts(node: Node, checker: TypeChecker): { kin
     }
 }
 
-/** @internal */
+/**
+ * Converts an Entry object to a HighlightSpan object with fileName and span properties.
+ * @param entry - The Entry object to convert.
+ * @returns An object with fileName and span properties.
+ */
 export function toHighlightSpan(entry: Entry): { fileName: string, span: HighlightSpan } {
     const documentSpan = entryToDocumentSpan(entry);
     if (entry.kind === EntryKind.Span) {
@@ -832,6 +934,13 @@ export function toHighlightSpan(entry: Entry): { fileName: string, span: Highlig
     return { fileName: documentSpan.fileName, span };
 }
 
+/**
+ * Returns a TextSpan object based on the provided Node and SourceFile.
+ * @param {Node} node - The Node to get the start position from.
+ * @param {SourceFile} sourceFile - The SourceFile to get the start position from.
+ * @param {Node} [endNode] - Optional end Node to get the end position from.
+ * @returns {TextSpan} - The TextSpan object containing the start and end positions.
+ */
 function getTextSpan(node: Node, sourceFile: SourceFile, endNode?: Node): TextSpan {
     let start = node.getStart(sourceFile);
     let end = (endNode || node).getEnd();
@@ -860,8 +969,10 @@ export function isWriteAccessForReference(node: Node): boolean {
 }
 
 /**
- * Whether a reference, `node`, is a definition of the `target` symbol
- *
+ * Determines whether a given reference node is a definition of the target symbol.
+ * @param node - The reference node to check.
+ * @param target - The symbol to check against.
+ * @returns A boolean indicating whether the reference node is a definition of the target symbol.
  * @internal
  */
 export function isDeclarationOfSymbol(node: Node, target: Symbol | undefined): boolean {
@@ -876,8 +987,9 @@ export function isDeclarationOfSymbol(node: Node, target: Symbol | undefined): b
 }
 
 /**
- * True if 'decl' provides a value, as in `function f() {}`;
- * false if 'decl' is just a location for a future write, as in 'let x;'
+ * Determines if a given declaration provides a value or is just a location for a future write.
+ * @param decl - The declaration to check.
+ * @returns True if the declaration provides a value, false otherwise.
  */
 function declarationIsWriteAccess(decl: Declaration): boolean {
     // Consider anything in an ambient declaration to be a write access since it may be coming from JS.
@@ -942,7 +1054,17 @@ function declarationIsWriteAccess(decl: Declaration): boolean {
  * @internal
  */
 export namespace Core {
-    /** Core find-all-references algorithm. Handles special cases before delegating to `getReferencedSymbolsForSymbol`. */
+    /**
+     * Retrieves all symbols referenced by a given node in a TypeScript program.
+     * @param position The position of the node in the source file.
+     * @param node The node to retrieve referenced symbols for.
+     * @param program The TypeScript program.
+     * @param sourceFiles An array of source files to search for references in.
+     * @param cancellationToken A token used to cancel the operation.
+     * @param options Optional options for the operation.
+     * @param sourceFilesSet A set of source file names to limit the search to.
+     * @returns An array of SymbolAndEntries objects representing the referenced symbols and their references.
+     */
     export function getReferencedSymbolsForNode(position: number, node: Node, program: Program, sourceFiles: readonly SourceFile[], cancellationToken: CancellationToken, options: Options = {}, sourceFilesSet: ReadonlySet<string> = new Set(sourceFiles.map(f => f.fileName))): readonly SymbolAndEntries[] | undefined {
         node = getAdjustedNode(node, options);
         if (isSourceFile(node)) {
@@ -1032,6 +1154,13 @@ export namespace Core {
         return referencedFile && fileIncludeReasons && getReferencesForNonModule(referencedFile, fileIncludeReasons, program) || emptyArray;
     }
 
+    /**
+     * Retrieves the span entries for a non-module referenced file.
+     * @param referencedFile - The source file being referenced.
+     * @param refFileMap - The map of reference file paths to their include reasons.
+     * @param program - The program containing the source files.
+     * @returns An array of span entries or undefined if none exist.
+     */
     function getReferencesForNonModule(referencedFile: SourceFile, refFileMap: MultiMap<Path, FileIncludeReason>, program: Program): readonly SpanEntry[] | undefined {
         let entries: SpanEntry[] | undefined;
         const references = refFileMap.get(referencedFile.path) || emptyArray;
@@ -1051,6 +1180,13 @@ export namespace Core {
         return entries;
     }
 
+    /**
+     * Returns the merged aliased symbol of a namespace export declaration.
+     * @param {Node} node - The node to check.
+     * @param {Symbol} symbol - The symbol to check.
+     * @param {TypeChecker} checker - The type checker to use.
+     * @returns {Symbol|undefined} - The merged symbol or undefined if not found.
+     */
     function getMergedAliasedSymbolOfNamespaceExportDeclaration(node: Node, symbol: Symbol, checker: TypeChecker) {
         if (node.parent && isNamespaceExportDeclaration(node.parent)) {
             const aliasedSymbol = checker.getAliasedSymbol(symbol);
@@ -1062,6 +1198,16 @@ export namespace Core {
         return undefined;
     }
 
+    /**
+     * Retrieves referenced symbols for a module if it is declared by a source file.
+     * @param symbol - The symbol to retrieve referenced symbols for.
+     * @param program - The program containing the symbol.
+     * @param sourceFiles - The source files to search for references.
+     * @param cancellationToken - The cancellation token.
+     * @param options - The options for retrieving references.
+     * @param sourceFilesSet - The set of source files to search for references.
+     * @returns The referenced symbols for the module if it is declared by a source file, otherwise undefined.
+     */
     function getReferencedSymbolsForModuleIfDeclaredBySourceFile(symbol: Symbol, program: Program, sourceFiles: readonly SourceFile[], cancellationToken: CancellationToken, options: Options, sourceFilesSet: ReadonlySet<string>) {
         const moduleSourceFile = (symbol.flags & SymbolFlags.Module) && symbol.declarations && find(symbol.declarations, isSourceFile);
         if (!moduleSourceFile) return undefined;
@@ -1076,7 +1222,12 @@ export namespace Core {
     }
 
     /**
-     * Merges the references by sorting them (by file index in sourceFiles and their location in it) that point to same definition symbol
+     * Merges an array of SymbolAndEntries objects by sorting them (by file index in sourceFiles and their location in it) that point to the same definition symbol.
+     *
+     * @param program - The Program instance.
+     * @param referencesToMerge - An array of SymbolAndEntries objects to merge.
+     *
+     * @returns An array of SymbolAndEntries objects merged by sorting them.
      */
     function mergeReferences(program: Program, ...referencesToMerge: (SymbolAndEntries[] | undefined)[]): SymbolAndEntries[] | undefined {
         let result: SymbolAndEntries[] | undefined;
@@ -1129,6 +1280,15 @@ export namespace Core {
         return program.getSourceFiles().indexOf(sourceFile);
     }
 
+    /**
+     * Returns an array of SymbolAndEntries objects representing the references to a given symbol in a module.
+     * @param program The Program object representing the TypeScript program.
+     * @param symbol The Symbol object representing the symbol to find references for.
+     * @param excludeImportTypeOfExportEquals A boolean indicating whether to exclude import types of export equals.
+     * @param sourceFiles An array of SourceFile objects representing the source files to search for references in.
+     * @param sourceFilesSet A ReadonlySet of strings representing the set of source file names to search for references in.
+     * @returns An array of SymbolAndEntries objects representing the references to the given symbol in the module.
+     */
     function getReferencedSymbolsForModule(program: Program, symbol: Symbol, excludeImportTypeOfExportEquals: boolean, sourceFiles: readonly SourceFile[], sourceFilesSet: ReadonlySet<string>): SymbolAndEntries[] {
         Debug.assert(!!symbol.valueDeclaration);
 
@@ -1203,7 +1363,13 @@ export namespace Core {
             && node.parent.operator === SyntaxKind.ReadonlyKeyword;
     }
 
-    /** getReferencedSymbols for special node kinds. */
+    /**
+     * Retrieves referenced symbols for special node kinds.
+     * @param node The node to retrieve referenced symbols for.
+     * @param sourceFiles An array of source files to search for references in.
+     * @param cancellationToken A token used to cancel the operation if needed.
+     * @returns An array of SymbolAndEntries objects representing the referenced symbols and their entries, or undefined if no referenced symbols were found.
+     */
     function getReferencedSymbolsSpecial(node: Node, sourceFiles: readonly SourceFile[], cancellationToken: CancellationToken): SymbolAndEntries[] | undefined {
         if (isTypeKeyword(node.kind)) {
             // A void expression (i.e., `void foo()`) is not special, but the `void` type is.
@@ -1256,7 +1422,17 @@ export namespace Core {
         return undefined;
     }
 
-    /** Core find-all-references algorithm for a normal symbol. */
+    /**
+     * Finds all references to a given symbol within a set of source files.
+     * @param originalSymbol - The symbol to search for references to.
+     * @param node - The node to search within. If undefined, searches all nodes.
+     * @param sourceFiles - The set of source files to search within.
+     * @param sourceFilesSet - A set of source file names to limit the search to.
+     * @param checker - The type checker to use for symbol resolution.
+     * @param cancellationToken - A cancellation token to cancel the search.
+     * @param options - Options for the search, such as whether to include implementations or not.
+     * @returns An array of SymbolAndEntries objects representing the references found.
+     */
     function getReferencedSymbolsForSymbol(originalSymbol: Symbol, node: Node | undefined, sourceFiles: readonly SourceFile[], sourceFilesSet: ReadonlySet<string>, checker: TypeChecker, cancellationToken: CancellationToken, options: Options): SymbolAndEntries[] {
         const symbol = node && skipPastExportOrImportSpecifierOrUnion(originalSymbol, node, checker, /*useLocalSymbolForExportSpecifier*/ !isForRenameWithPrefixAndSuffixText(options)) || originalSymbol;
 
@@ -1282,6 +1458,13 @@ export namespace Core {
         return result;
     }
 
+    /**
+     * Searches for references of a given symbol in a container or files.
+     * @param {Symbol} symbol - The symbol to search for references of.
+     * @param {State} state - The state object containing source files and cancellation token.
+     * @param {Search} search - The search object containing the name to search for and search type.
+     * @returns {void}
+     */
     function getReferencesInContainerOrFiles(symbol: Symbol, state: State, search: Search): void {
         // Try to get the smallest valid scope that we can limit our search to;
         // otherwise we'll need to search globally (i.e. include each file).
@@ -1298,6 +1481,11 @@ export namespace Core {
         }
     }
 
+    /**
+     * Returns the SpecialSearchKind of a given Node.
+     * @param {Node} node - The Node to check.
+     * @returns {SpecialSearchKind} - The SpecialSearchKind of the Node.
+     */
     function getSpecialSearchKind(node: Node): SpecialSearchKind {
         switch (node.kind) {
             case SyntaxKind.Constructor:
@@ -1314,7 +1502,14 @@ export namespace Core {
         }
     }
 
-    /** Handle a few special cases relating to export/import specifiers. */
+    /**
+     * Retrieves the symbol for a given node, skipping past any export or import specifiers or union types.
+     * @param symbol - The symbol to retrieve.
+     * @param node - The node to retrieve the symbol from.
+     * @param checker - The TypeChecker to use.
+     * @param useLocalSymbolForExportSpecifier - Whether to use the local symbol for export specifiers.
+     * @returns The retrieved symbol, or undefined if none was found.
+     */
     function skipPastExportOrImportSpecifierOrUnion(symbol: Symbol, node: Node, checker: TypeChecker, useLocalSymbolForExportSpecifier: boolean): Symbol | undefined {
         const { parent } = node;
         if (isExportSpecifier(parent) && useLocalSymbolForExportSpecifier) {
@@ -1335,8 +1530,15 @@ export namespace Core {
     }
 
     /**
-     * Symbol that is currently being searched for.
-     * This will be replaced if we find an alias for the symbol.
+     * Represents a search for a symbol within a program.
+     * @interface
+     * @property {ImportExport} [comingFrom] - If coming from an export, we will not recursively search for the imported symbol (since that's where we came from).
+     * @property {Symbol} symbol - The symbol being searched for.
+     * @property {string} text - The text of the symbol being searched for.
+     * @property {__String} escapedText - The escaped text of the symbol being searched for.
+     * @property {readonly Symbol[] | undefined} parents - Only set if `options.implementations` is true. These are the symbols checked to get the implementations of a property access.
+     * @property {readonly Symbol[]} allSearchSymbols - An array of all symbols being searched for.
+     * @function includes - Whether a symbol is in the search set. Do not compare directly to `symbol` because there may be related symbols to search for. See `populateSearchSymbolSet`.
      */
     interface Search {
         /** If coming from an export, we will not recursively search for the imported symbol (since that's where we came from). */
@@ -1369,8 +1571,8 @@ export namespace Core {
     }
 
     /**
-     * Holds all state needed for the finding references.
-     * Unlike `Search`, there is only one `State`.
+     * Holds all state needed for finding references.
+     * @class
      */
     class State {
         /** Cache for `explicitlyinheritsFrom`. */
@@ -1420,7 +1622,16 @@ export namespace Core {
             return this.importTracker(exportSymbol, exportInfo, this.options.use === FindReferencesUse.Rename);
         }
 
-        /** @param allSearchSymbols set of additional symbols for use by `includes`. */
+        /**
+         * Creates a Search object based on the provided parameters.
+         * @param location The location of the search.
+         * @param symbol The symbol to search for.
+         * @param comingFrom The import/export statement the symbol is coming from.
+         * @param searchOptions Optional search options.
+         * @param searchOptions.text The text to search for.
+         * @param searchOptions.allSearchSymbols Set of additional symbols for use by `includes`.
+         * @returns The created Search object.
+         */
         createSearch(location: Node | undefined, symbol: Symbol, comingFrom: ImportExport | undefined, searchOptions: { text?: string, allSearchSymbols?: Symbol[] } = {}): Search {
             // Note: if this is an external module symbol, the name doesn't include quotes.
             // Note: getLocalSymbolForExportDefault handles `export default class C {}`, but not `export default C` or `export { C as default }`.
@@ -1460,7 +1671,12 @@ export namespace Core {
 
         // Source file ID -> symbol ID -> Whether the symbol has been searched for in the source file.
         private readonly sourceFileToSeenSymbols: Set<number>[] = [];
-        /** Returns `true` the first time we search for a symbol in a file and `false` afterwards. */
+        /**
+         * Marks symbols as searched in a source file and returns a boolean indicating if any new symbols were added to the set.
+         * @param {SourceFile} sourceFile - The source file to mark symbols as searched in.
+         * @param {readonly Symbol[]} symbols - The symbols to mark as searched.
+         * @returns {boolean} - A boolean indicating if any new symbols were added to the set.
+         */
         markSearchedSymbols(sourceFile: SourceFile, symbols: readonly Symbol[]): boolean {
             const sourceId = getNodeId(sourceFile);
             const seenSymbols = this.sourceFileToSeenSymbols[sourceId] || (this.sourceFileToSeenSymbols[sourceId] = new Set<number>());
@@ -1473,7 +1689,13 @@ export namespace Core {
         }
     }
 
-    /** Search for all imports of a given exported symbol using `State.getImportSearches`. */
+    /**
+     * Searches for all imports of a given exported symbol using `State.getImportSearches`.
+     * @param exportLocation - The location of the exported symbol.
+     * @param exportSymbol - The exported symbol to search for imports of.
+     * @param exportInfo - Information about the exported symbol.
+     * @param state - The state object containing information about the program being analyzed.
+     */
     function searchForImportsOfExport(exportLocation: Node, exportSymbol: Symbol, exportInfo: ExportInfo, state: State): void {
         const { importSearches, singleReferences, indirectUsers } = state.getImportSearches(exportSymbol, exportInfo);
 
@@ -1511,6 +1733,17 @@ export namespace Core {
         }
     }
 
+    /**
+     * Iterates over all references to a specific export in a set of source files and calls a callback function for each reference.
+     * @param sourceFiles - An array of source files to search for references.
+     * @param checker - The type checker to use for symbol resolution.
+     * @param cancellationToken - An optional cancellation token.
+     * @param exportSymbol - The symbol of the export to search for references to.
+     * @param exportingModuleSymbol - The symbol of the module that is exporting the exportSymbol.
+     * @param exportName - The name of the export to search for references to.
+     * @param isDefaultExport - A boolean indicating whether the export is a default export.
+     * @param cb - The callback function to call for each reference found.
+     */
     export function eachExportReference(
         sourceFiles: readonly SourceFile[],
         checker: TypeChecker,
@@ -1581,8 +1814,10 @@ export namespace Core {
      * Note that not every construct has been accounted for. This function can
      * probably be improved.
      *
-     * @returns undefined if the scope cannot be determined, implying that
-     * a reference to a symbol can occur anywhere.
+     * @param symbol - The symbol to determine the scope for.
+     * @returns If the scope cannot be determined, returns undefined, implying that
+     * a reference to a symbol can occur anywhere. Otherwise, returns the Node representing
+     * the smallest scope in which the symbol may have named references.
      */
     function getSymbolScope(symbol: Symbol): Node | undefined {
         // If this is the symbol of a named function expression or named class expression,
@@ -1660,6 +1895,16 @@ export namespace Core {
         return eachSymbolReferenceInFile(definition, checker, sourceFile, () => true, searchContainer) || false;
     }
 
+    /**
+     * Iterates over each possible symbol reference node in a source file and invokes a callback function for each matching identifier token.
+     * @template T
+     * @param {Identifier} definition - The identifier token to search for.
+     * @param {TypeChecker} checker - The type checker instance to use.
+     * @param {SourceFile} sourceFile - The source file to search in.
+     * @param {(token: Identifier) => T} cb - The callback function to invoke for each matching identifier token.
+     * @param {Node} [searchContainer=sourceFile] - The node to start the search from.
+     * @returns {T | undefined} The result of the callback function or undefined if no matching identifier token is found.
+     */
     export function eachSymbolReferenceInFile<T>(definition: Identifier, checker: TypeChecker, sourceFile: SourceFile, cb: (token: Identifier) => T, searchContainer: Node = sourceFile): T | undefined {
         const symbol = isParameterPropertyDeclaration(definition.parent, definition.parent.parent)
             ? first(checker.getSymbolsOfParameterPropertyDeclaration(definition.parent, definition.text))
@@ -1677,6 +1922,12 @@ export namespace Core {
         }
     }
 
+    /**
+     * Returns an array of the top-most declaration nodes with the given name in the provided source file.
+     * @param {string} declarationName - The name of the declaration to search for.
+     * @param {SourceFile} sourceFile - The source file to search in.
+     * @returns {readonly Node[]} - An array of the top-most declaration nodes with the given name.
+     */
     export function getTopMostDeclarationNamesInFile(declarationName: string, sourceFile: SourceFile): readonly Node[] {
         const candidates = filter(getPossibleSymbolReferenceNodes(sourceFile, declarationName), name => !!getDeclarationFromName(name));
         return candidates.reduce((topMost, decl) => {
@@ -1702,6 +1953,14 @@ export namespace Core {
         }
     }
 
+    /**
+     * Checks if a given SignatureDeclaration is used in any of the provided SourceFiles.
+     * @param signature - The SignatureDeclaration to check.
+     * @param sourceFiles - An array of SourceFiles to search for usage of the SignatureDeclaration.
+     * @param checker - The TypeChecker to use for symbol resolution.
+     * @param cb - A callback function to execute for each usage of the SignatureDeclaration.
+     * @returns Returns a boolean indicating whether the SignatureDeclaration is used in any of the provided SourceFiles.
+     */
     export function someSignatureUsage(
         signature: SignatureDeclaration,
         sourceFiles: readonly SourceFile[],
@@ -1735,6 +1994,14 @@ export namespace Core {
         });
     }
 
+    /**
+     * Returns an array of possible symbol reference positions in a given source file for a given symbol name.
+     * @param sourceFile - The source file to search in.
+     * @param symbolName - The name of the symbol to search for.
+     * @param container - The node to search within. Defaults to the entire source file.
+     * @returns An array of numbers representing the positions of possible symbol references.
+     * @remarks This function is resilient in the face of a symbol with no name or zero length name. It also checks if the symbol is part of a larger word before adding it to the result array.
+     */
     function getPossibleSymbolReferencePositions(sourceFile: SourceFile, symbolName: string, container: Node = sourceFile): readonly number[] {
         const positions: number[] = [];
 
@@ -1779,6 +2046,12 @@ export namespace Core {
         return [{ definition: { type: DefinitionKind.Label, node: targetLabel }, references }];
     }
 
+    /**
+     * Determines if a given node is a valid reference position for a search symbol name.
+     * @param {Node} node - The node to check.
+     * @param {string} searchSymbolName - The symbol name to search for.
+     * @returns {boolean} - True if the node is a valid reference position, false otherwise.
+     */
     function isValidReferencePosition(node: Node, searchSymbolName: string): boolean {
         // Compare the length so we filter out strict superstrings of the symbol we are looking for
         switch (node.kind) {
@@ -1807,6 +2080,12 @@ export namespace Core {
         }
     }
 
+    /**
+     * Returns an array of SymbolAndEntries objects representing all references to the "meta" property of the import.meta object in the provided source files.
+     * @param {readonly SourceFile[]} sourceFiles - An array of SourceFile objects to search for references in.
+     * @param {CancellationToken} cancellationToken - A CancellationToken object that can be used to cancel the search.
+     * @returns {SymbolAndEntries[] | undefined} - An array of SymbolAndEntries objects representing all references to the "meta" property of the import.meta object in the provided source files, or undefined if no references were found.
+     */
     function getAllReferencesForImportMeta(sourceFiles: readonly SourceFile[], cancellationToken: CancellationToken): SymbolAndEntries[] | undefined {
         const references = flatMap(sourceFiles, sourceFile => {
             cancellationToken.throwIfCancellationRequested();
@@ -1820,6 +2099,14 @@ export namespace Core {
         return references.length ? [{ definition: { type: DefinitionKind.Keyword, node: references[0].node }, references }] : undefined;
     }
 
+    /**
+     * Retrieves all references to a specified keyword in an array of source files.
+     * @param sourceFiles An array of source files to search through.
+     * @param keywordKind The syntax kind of the keyword to search for.
+     * @param cancellationToken A token used to cancel the search if needed.
+     * @param filter An optional function used to filter the search results.
+     * @returns An array of symbol and entry objects representing the keyword definition and its references, or undefined if no references were found.
+     */
     function getAllReferencesForKeyword(sourceFiles: readonly SourceFile[], keywordKind: SyntaxKind, cancellationToken: CancellationToken, filter?: (node: Node) => boolean): SymbolAndEntries[] | undefined {
         const references = flatMap(sourceFiles, sourceFile => {
             cancellationToken.throwIfCancellationRequested();
@@ -1926,6 +2213,16 @@ export namespace Core {
         getImportOrExportReferences(referenceLocation, referenceSymbol, search, state);
     }
 
+    /**
+     * Searches for references at an export specifier.
+     * @param {Identifier} referenceLocation - The location of the reference.
+     * @param {Symbol} referenceSymbol - The symbol being referenced.
+     * @param {ExportSpecifier} exportSpecifier - The export specifier being searched.
+     * @param {Search} search - The search parameters.
+     * @param {State} state - The state of the search.
+     * @param {boolean} addReferencesHere - Whether to add references at the current location.
+     * @param {boolean} [alwaysGetReferences] - Whether to always get references.
+     */
     function getReferencesAtExportSpecifier(
         referenceLocation: Identifier,
         referenceSymbol: Symbol,
@@ -1994,6 +2291,12 @@ export namespace Core {
         return isExportSpecifierAlias(referenceLocation, exportSpecifier) && checker.getExportSpecifierLocalTargetSymbol(exportSpecifier) || referenceSymbol;
     }
 
+    /**
+     * Determines if an export specifier is an alias for a reference location.
+     * @param {Identifier} referenceLocation - The reference location to check against.
+     * @param {ExportSpecifier} exportSpecifier - The export specifier to check.
+     * @returns {boolean} - True if the export specifier is an alias for the reference location, false otherwise.
+     */
     function isExportSpecifierAlias(referenceLocation: Identifier, exportSpecifier: ExportSpecifier): boolean {
         const { parent, propertyName, name } = exportSpecifier;
         Debug.assert(propertyName === referenceLocation || name === referenceLocation);
@@ -2008,6 +2311,14 @@ export namespace Core {
         }
     }
 
+    /**
+     * Searches for import or export references of a given symbol in a specified location.
+     * @param {Node} referenceLocation - The location to search for references.
+     * @param {Symbol} referenceSymbol - The symbol to search for references of.
+     * @param {Search} search - The search options.
+     * @param {State} state - The state of the search.
+     * @returns {void}
+     */
     function getImportOrExportReferences(referenceLocation: Node, referenceSymbol: Symbol, search: Search, state: State): void {
         const importOrExport = getImportOrExportSymbol(referenceLocation, referenceSymbol, state.checker, search.comingFrom === ImportExport.Export);
         if (!importOrExport) return;
@@ -2024,6 +2335,18 @@ export namespace Core {
         }
     }
 
+    /**
+     * Finds the reference for a shorthand property.
+     * @param {Symbol} param0 - The symbol object containing flags and valueDeclaration.
+     * @param {Search} search - The search object.
+     * @param {State} state - The state object.
+     * @remarks
+     * Because in short-hand property assignment, an identifier which stored as name of the short-hand property assignment
+     * has two meanings: property name and property value. Therefore when we do findAllReference at the position where
+     * an identifier is declared, the language service should return the position of the variable declaration as well as
+     * the position in short-hand property assignment excluding property accessing. However, if we do findAllReference at the
+     * position of property accessing, the referenceEntry of such position will be handled in the first case.
+     */
     function getReferenceForShorthandProperty({ flags, valueDeclaration }: Symbol, search: Search, state: State): void {
         const shorthandValueSymbol = state.checker.getShorthandAssignmentValueSymbol(valueDeclaration)!;
         const name = valueDeclaration && getNameOfDeclaration(valueDeclaration);
@@ -2039,6 +2362,13 @@ export namespace Core {
         }
     }
 
+    /**
+     * Adds a reference to a symbol in the given state.
+     * @param {Node} referenceLocation - The location of the reference.
+     * @param {Symbol | RelatedSymbol} relatedSymbol - The symbol or related symbol to add a reference to.
+     * @param {State} state - The state object containing options and reference adder function.
+     * @returns {void}
+     */
     function addReference(referenceLocation: Node, relatedSymbol: Symbol | RelatedSymbol, state: State): void {
         const { kind, symbol } = "kind" in relatedSymbol ? relatedSymbol : { kind: undefined, symbol: relatedSymbol }; // eslint-disable-line local/no-in-operator
 
@@ -2226,7 +2556,9 @@ export namespace Core {
     }
 
     /**
-     * Returns true if this is an expression that can be considered an implementation
+     * Determines if the provided expression can be considered an implementation.
+     * @param {Expression} node - The expression to check.
+     * @returns {boolean} - True if the expression is an implementation, false otherwise.
      */
     function isImplementationExpression(node: Expression): boolean {
         switch (node.kind) {
@@ -2248,8 +2580,8 @@ export namespace Core {
      * is an interface, determines if some ancestor of the child symbol extends or inherits from it.
      * Also takes in a cache of previous results which makes this slightly more efficient and is
      * necessary to avoid potential loops like so:
-     *     class A extends B { }
-     *     class B extends A { }
+     * class A extends B { }
+     * class B extends A { }
      *
      * We traverse the AST rather than using the type checker because users are typically only interested
      * in explicit implementations of an interface/class when calling "Go to Implementation". Sibling
@@ -2261,6 +2593,8 @@ export namespace Core {
      * @param symbol         A class or interface Symbol
      * @param parent        Another class or interface Symbol
      * @param cachedResults A map of symbol id pairs (i.e. "child,parent") to booleans indicating previous results
+     * @param checker       A TypeChecker instance
+     * @returns              A boolean indicating if the parent symbol occurs somewhere in the child's ancestry
      */
     function explicitlyInheritsFrom(symbol: Symbol, parent: Symbol, cachedResults: Map<string, boolean>, checker: TypeChecker): boolean {
         if (symbol === parent) {
@@ -2285,6 +2619,11 @@ export namespace Core {
         return inherits;
     }
 
+    /**
+     * Returns an array of symbol references for the 'super' keyword within a given node.
+     * @param {Node} superKeyword - The 'super' keyword node to search for references.
+     * @returns {SymbolAndEntries[] | undefined} - An array of symbol references for the 'super' keyword, or undefined if none are found.
+     */
     function getReferencesForSuperKeyword(superKeyword: Node): SymbolAndEntries[] | undefined {
         let searchSpaceNode: SuperContainer | ClassLikeDeclaration | TypeLiteralNode | InterfaceDeclaration | ObjectLiteralExpression | undefined = getSuperContainer(superKeyword, /*stopOnFunctions*/ false);
         if (!searchSpaceNode) {
@@ -2329,6 +2668,13 @@ export namespace Core {
         return node.kind === SyntaxKind.Identifier && node.parent.kind === SyntaxKind.Parameter && (node.parent as ParameterDeclaration).name === node;
     }
 
+    /**
+     * Returns an array of SymbolAndEntries objects representing references to the 'this' keyword within the given search space node. The search space node is determined by the given thisOrSuperKeyword parameter and its container hierarchy. If no references are found, returns undefined.
+     * @param {Node} thisOrSuperKeyword - The 'this' or 'super' keyword node to search for references to.
+     * @param {readonly SourceFile[]} sourceFiles - An array of source files to search within if the search space node is a SourceFile.
+     * @param {CancellationToken} cancellationToken - A token that can be used to cancel the search operation.
+     * @returns {SymbolAndEntries[] | undefined} An array of SymbolAndEntries objects representing references to the 'this' keyword within the given search space node, or undefined if no references are found.
+     */
     function getReferencesForThisKeyword(thisOrSuperKeyword: Node, sourceFiles: readonly SourceFile[], cancellationToken: CancellationToken): SymbolAndEntries[] | undefined {
         let searchSpaceNode: Node = getThisContainer(thisOrSuperKeyword, /*includeArrowFunctions*/ false, /*includeClassComputedPropertyName*/ false);
 
@@ -2400,6 +2746,14 @@ export namespace Core {
         }];
     }
 
+    /**
+     * Returns an array of SymbolAndEntries objects containing information about references to a given StringLiteralLike node in an array of source files.
+     * @param {StringLiteralLike} node - The node to search for references.
+     * @param {readonly SourceFile[]} sourceFiles - The array of source files to search in.
+     * @param {TypeChecker} checker - The TypeChecker object to use for type checking.
+     * @param {CancellationToken} cancellationToken - The CancellationToken object to use for cancellation.
+     * @returns {SymbolAndEntries[]} An array of SymbolAndEntries objects containing information about references to the given node.
+     */
     function getReferencesForStringLiteral(node: StringLiteralLike, sourceFiles: readonly SourceFile[], checker: TypeChecker, cancellationToken: CancellationToken): SymbolAndEntries[] {
         const type = getContextualTypeFromParentOrAncestorTypeNode(node, checker);
         const references = flatMap(sourceFiles, sourceFile => {
@@ -2428,6 +2782,16 @@ export namespace Core {
 
     // For certain symbol kinds, we need to include other symbols in the search set.
     // This is not needed when searching for re-exports.
+    /**
+     * Returns an array of symbols related to the given symbol and location.
+     * @param symbol - The symbol to search for related symbols.
+     * @param location - The location to search for related symbols.
+     * @param checker - The type checker to use for symbol analysis.
+     * @param isForRename - A boolean indicating whether the search is for renaming.
+     * @param providePrefixAndSuffixText - A boolean indicating whether to provide prefix and suffix text.
+     * @param implementations - A boolean indicating whether to search for implementations.
+     * @returns An array of symbols related to the given symbol and location.
+     */
     function populateSearchSymbolSet(symbol: Symbol, location: Node, checker: TypeChecker, isForRename: boolean, providePrefixAndSuffixText: boolean, implementations: boolean): Symbol[] {
         const result: Symbol[] = [];
         forEachRelatedSymbol<void>(symbol, location, checker, isForRename, !(isForRename && providePrefixAndSuffixText),
@@ -2446,7 +2810,16 @@ export namespace Core {
     }
 
     /**
-     * @param allowBaseTypes return true means it would try to find in base class or interface.
+     * Finds a related symbol to the given symbol at a specific location.
+     * @template T The type of the related symbol.
+     * @param symbol The symbol to find a related symbol for.
+     * @param location The location to search for the related symbol.
+     * @param checker The TypeChecker instance to use.
+     * @param isForRenamePopulateSearchSymbolSet Whether the search is for renaming or populating the search symbol set.
+     * @param onlyIncludeBindingElementAtReferenceLocation Whether to only include binding elements at the reference location.
+     * @param cbSymbol A callback function to handle the found related symbol.
+     * @param allowBaseTypes A function that returns true if it should try to find in base class or interface.
+     * @returns The related symbol if found, undefined otherwise.
      */
     function forEachRelatedSymbol<T>(
         symbol: Symbol, location: Node, checker: TypeChecker, isForRenamePopulateSearchSymbolSet: boolean, onlyIncludeBindingElementAtReferenceLocation: boolean,
@@ -2544,6 +2917,12 @@ export namespace Core {
             return bindingElementPropertySymbol && fromRoot(bindingElementPropertySymbol, EntryKind.SearchedPropertyFoundLocal);
         }
 
+        /**
+         * Returns the root symbol of a given symbol, along with any related symbols.
+         * @param sym - The symbol to find the root symbol for.
+         * @param kind - Optional parameter to specify the kind of node entry.
+         * @returns The root symbol, or undefined if none is found.
+         */
         function fromRoot(sym: Symbol, kind?: NodeEntryKind): T | undefined {
             // If this is a union property:
             //   - In populateSearchSymbolsSet we will add all the symbols from all its source symbols in all unioned types.
@@ -2568,17 +2947,23 @@ export namespace Core {
     }
 
     /**
-     * Find symbol of the given property-name and add the symbol to the given result array
-     * @param symbol a symbol to start searching for the given propertyName
-     * @param propertyName a name of property to search for
-     * @param result an array of symbol of found property symbols
-     * @param previousIterationSymbolsCache a cache of symbol from previous iterations of calling this function to prevent infinite revisiting of the same symbol.
-     *                                The value of previousIterationSymbol is undefined when the function is first called.
+     * Retrieves the symbol of the given property-name from the base types of the provided symbol.
+     * @template T - The type of the symbol to be returned.
+     * @param symbol - The symbol to start searching for the given propertyName.
+     * @param propertyName - The name of the property to search for.
+     * @param checker - The TypeChecker instance to use for type checking.
+     * @param cb - A callback function to be called on the found symbol.
+     * @returns The symbol of the found property symbols or undefined if not found.
      */
     function getPropertySymbolsFromBaseTypes<T>(symbol: Symbol, propertyName: string, checker: TypeChecker, cb: (symbol: Symbol) => T | undefined): T | undefined {
         const seen = new Map<SymbolId, true>();
         return recur(symbol);
 
+        /**
+         * Recursively searches for a property symbol in a given symbol's declarations and its super types.
+         * @param symbol - The symbol to search for the property symbol.
+         * @returns The property symbol or undefined if not found.
+         */
         function recur(symbol: Symbol): T | undefined {
             // Use `addToSeen` to ensure we don't infinitely recurse in this situation:
             //      interface C extends C {
@@ -2606,6 +2991,14 @@ export namespace Core {
         return !!(modifierFlags & ModifierFlags.Static);
     }
 
+    /**
+     * Returns a RelatedSymbol object if the referenceSymbol is related to the search criteria.
+     * @param {Search} search - The search criteria.
+     * @param {Symbol} referenceSymbol - The reference symbol to compare against.
+     * @param {Node} referenceLocation - The reference location.
+     * @param {State} state - The state object.
+     * @returns {RelatedSymbol | undefined} - The RelatedSymbol object if found, otherwise undefined.
+     */
     function getRelatedSymbol(search: Search, referenceSymbol: Symbol, referenceLocation: Node, state: State): RelatedSymbol | undefined {
         const { checker } = state;
         return forEachRelatedSymbol(referenceSymbol, referenceLocation, checker, /*isForRenamePopulateSearchSymbolSet*/ false,
@@ -2629,12 +3022,10 @@ export namespace Core {
     }
 
     /**
-     * Given an initial searchMeaning, extracted from a location, widen the search scope based on the declarations
-     * of the corresponding symbol. e.g. if we are searching for "Foo" in value position, but "Foo" references a class
-     * then we need to widen the search to include type positions as well.
-     * On the contrary, if we are searching for "Bar" in type position and we trace bar to an interface, and an uninstantiated
-     * module, we want to keep the search limited to only types, as the two declarations (interface and uninstantiated module)
-     * do not intersect in any of the three spaces.
+     * Given a node and a symbol, this function determines the semantic meaning of the node by iterating through the declarations of the symbol and checking for intersection with the initial meaning of the node. The result is order-sensitive, meaning that if the initial meaning intersects with multiple declarations, all of them will be considered.
+     * @param {Node} node - The node to determine the meaning of.
+     * @param {Symbol} symbol - The symbol to check declarations of.
+     * @returns {SemanticMeaning} - The semantic meaning of the node.
      */
     export function getIntersectingMeaningFromDeclarations(node: Node, symbol: Symbol): SemanticMeaning {
         let meaning = getMeaningFromLocation(node);
@@ -2670,6 +3061,12 @@ export namespace Core {
             isClassLike(node) || isModuleOrEnumDeclaration(node));
     }
 
+    /**
+     * Retrieves reference entries for shorthand property assignments.
+     * @param node - The node to retrieve reference entries for.
+     * @param checker - The type checker to use.
+     * @param addReference - The function to add reference entries to.
+     */
     export function getReferenceEntriesForShorthandPropertyAssignment(node: Node, checker: TypeChecker, addReference: (node: Node) => void): void {
         const refSymbol = checker.getSymbolAtLocation(node)!;
         const shorthandSymbol = checker.getShorthandAssignmentValueSymbol(refSymbol.valueDeclaration);

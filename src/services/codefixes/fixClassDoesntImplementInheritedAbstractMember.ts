@@ -56,6 +56,14 @@ function getClass(sourceFile: SourceFile, pos: number): ClassLikeDeclaration {
     return cast(token.parent, isClassLike);
 }
 
+/**
+ * Adds missing members to a class declaration based on its extended class.
+ * @param classDeclaration The class declaration to add missing members to.
+ * @param sourceFile The source file containing the class declaration.
+ * @param context The type construction context.
+ * @param changeTracker The change tracker to record changes made to the source file.
+ * @param preferences The user preferences for the program.
+ */
 function addMissingMembers(classDeclaration: ClassLikeDeclaration, sourceFile: SourceFile, context: TypeConstructionContext, changeTracker: textChanges.ChangeTracker, preferences: UserPreferences): void {
     const extendsNode = getEffectiveBaseTypeNode(classDeclaration)!;
     const checker = context.program.getTypeChecker();

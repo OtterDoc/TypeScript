@@ -36,6 +36,11 @@ registerCodeFix({
         return [createCodeFixAction(fixId, changes, Diagnostics.Make_super_call_the_first_statement_in_the_constructor, fixId, Diagnostics.Make_all_super_calls_the_first_statement_in_their_constructor)];
     },
     fixIds: [fixId],
+    /**
+     * Returns all code actions for a given context.
+     * @param {ts.CodeFixContext} context - The context for which to retrieve code actions.
+     * @returns {ts.CodeAction[]} An array of code actions.
+     */
     getAllCodeActions(context) {
         const { sourceFile } = context;
         const seenClasses = new Map<number, true>(); // Ensure we only do this once per class.

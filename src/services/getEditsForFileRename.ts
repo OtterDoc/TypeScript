@@ -52,7 +52,18 @@ import {
     UserPreferences,
 } from "./_namespaces/ts";
 
-/** @internal */
+/**
+ * Returns an array of FileTextChanges for renaming a file or directory within a TypeScript program.
+ * @param program - The TypeScript program.
+ * @param oldFileOrDirPath - The old file or directory path.
+ * @param newFileOrDirPath - The new file or directory path.
+ * @param host - The LanguageServiceHost.
+ * @param formatContext - The FormatContext.
+ * @param preferences - The UserPreferences.
+ * @param sourceMapper - The SourceMapper.
+ * @returns An array of FileTextChanges.
+ * @internal
+ */
 export function getEditsForFileRename(
     program: Program,
     oldFileOrDirPath: string,
@@ -79,7 +90,15 @@ export function getEditsForFileRename(
  */
 export type PathUpdater = (path: string) => string | undefined;
 // exported for tests
-/** @internal */
+/**
+ * Returns a PathUpdater function that updates paths based on the provided old and new file or directory paths.
+ * @param {string} oldFileOrDirPath - The old file or directory path to update.
+ * @param {string} newFileOrDirPath - The new file or directory path to update to.
+ * @param {GetCanonicalFileName} getCanonicalFileName - A function that returns the canonical form of a file name.
+ * @param {SourceMapper | undefined} sourceMapper - An optional source mapper object.
+ * @returns {PathUpdater} A function that updates paths based on the provided old and new file or directory paths.
+ * @remarks This function is marked as internal and should not be used outside of its module.
+ */
 export function getPathUpdater(oldFileOrDirPath: string, newFileOrDirPath: string, getCanonicalFileName: GetCanonicalFileName, sourceMapper: SourceMapper | undefined): PathUpdater {
     const canonicalOldPath = getCanonicalFileName(oldFileOrDirPath);
     return path => {
@@ -103,6 +122,16 @@ function makeCorrespondingRelativeChange(a0: string, b0: string, a1: string, get
     return combinePathsSafe(getDirectoryPath(a1), rel);
 }
 
+/**
+ * Updates the paths in the tsconfig files based on the provided parameters.
+ * @param program - The program to update the tsconfig files for.
+ * @param changeTracker - The change tracker to use for updating the files.
+ * @param oldToNew - The path updater to use for updating the paths.
+ * @param oldFileOrDirPath - The old file or directory path to update.
+ * @param newFileOrDirPath - The new file or directory path to update to.
+ * @param currentDirectory - The current directory.
+ * @param useCaseSensitiveFileNames - Whether or not to use case sensitive file names.
+ */
 function updateTsconfigFiles(program: Program, changeTracker: textChanges.ChangeTracker, oldToNew: PathUpdater, oldFileOrDirPath: string, newFileOrDirPath: string, currentDirectory: string, useCaseSensitiveFileNames: boolean): void {
     const { configFile } = program.getCompilerOptions();
     if (!configFile) return;
@@ -157,6 +186,11 @@ function updateTsconfigFiles(program: Program, changeTracker: textChanges.Change
         return foundExactMatch;
     }
 
+    /**
+     * Tries to update a string element with a new path.
+     * @param {Expression} element - The element to update.
+     * @returns {boolean} - True if the element was updated, false otherwise.
+     */
     function tryUpdateString(element: Expression): boolean {
         if (!isStringLiteral(element)) return false;
         const elementFileName = combinePathsSafe(configDir, element.text);
@@ -174,6 +208,15 @@ function updateTsconfigFiles(program: Program, changeTracker: textChanges.Change
     }
 }
 
+/**
+ * Updates import statements in all source files of a given program based on a set of path updates.
+ * @param program - The program to update imports in.
+ * @param changeTracker - The change tracker to use for updating the source files.
+ * @param oldToNew - A function that maps old paths to new paths.
+ * @param newToOld - A function that maps new paths to old paths.
+ * @param host - The language service host to use for resolving modules.
+ * @param getCanonicalFileName - A function that returns the canonical file name for a given file name.
+ */
 function updateImports(
     program: Program,
     changeTracker: textChanges.ChangeTracker,
@@ -233,6 +276,16 @@ interface ToImport {
     /** True if the imported file was renamed. */
     readonly updated: boolean;
 }
+/**
+ * Returns the file to import from based on the provided parameters.
+ * @param {Symbol | undefined} importedModuleSymbol - The imported module symbol.
+ * @param {StringLiteralLike} importLiteral - The import literal.
+ * @param {SourceFile} importingSourceFile - The importing source file.
+ * @param {Program} program - The program.
+ * @param {LanguageServiceHost} host - The language service host.
+ * @param {PathUpdater} oldToNew - The path updater.
+ * @returns {ToImport | undefined} The file to import or undefined if not found.
+ */
 function getSourceFileToImport(
     importedModuleSymbol: Symbol | undefined,
     importLiteral: StringLiteralLike,
@@ -256,6 +309,14 @@ function getSourceFileToImport(
     }
 }
 
+/**
+ * Returns an object containing the new file name and whether it was updated, if the importLiteral can be resolved to a new file location.
+ * @param importLiteral - The import literal to resolve.
+ * @param resolved - The resolved module with failed lookup locations.
+ * @param oldToNew - The function to update the old file name to the new file name.
+ * @param sourceFiles - An array of source files to search through.
+ * @returns An object containing the new file name and whether it was updated, if the importLiteral can be resolved to a new file location. Otherwise, undefined.
+ */
 function getSourceFileToImportFromResolved(importLiteral: StringLiteralLike, resolved: ResolvedModuleWithFailedLookupLocations | undefined, oldToNew: PathUpdater, sourceFiles: readonly SourceFile[]): ToImport | undefined {
     // Search through all locations looking for a moved file, and only then test already existing files.
     // This is because if `a.ts` is compiled to `a.js` and `a.ts` is moved, we don't want to resolve anything to `a.js`, but to `a.ts`'s new location.
@@ -293,6 +354,13 @@ function getSourceFileToImportFromResolved(importLiteral: StringLiteralLike, res
     }
 }
 
+/**
+ * Updates the imports in a given source file by calling the provided updateRef and updateImport functions.
+ * @param {SourceFile} sourceFile - The source file to update imports in.
+ * @param {textChanges.ChangeTracker} changeTracker - The change tracker to use for making updates.
+ * @param {(refText: string) => string | undefined} updateRef - The function to use for updating reference text.
+ * @param {(importLiteral: StringLiteralLike) => string | undefined} updateImport - The function to use for updating import literals.
+ */
 function updateImportsWorker(sourceFile: SourceFile, changeTracker: textChanges.ChangeTracker, updateRef: (refText: string) => string | undefined, updateImport: (importLiteral: StringLiteralLike) => string | undefined) {
     for (const ref of sourceFile.referencedFiles || emptyArray) { // TODO: GH#26162
         const updated = updateRef(ref.fileName);
