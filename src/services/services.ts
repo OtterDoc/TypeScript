@@ -342,6 +342,56 @@ function createNode<TKind extends SyntaxKind>(kind: TKind, pos: number, end: num
     return node;
 }
 
+/**
+ * Represents a node in the TypeScript AST.
+ * @class
+ * @implements Node
+ * @remarks
+ * This class provides methods for accessing and manipulating nodes in the AST.
+ * @constructor
+ * @param {SyntaxKind} kind - The syntax kind of the node.
+ * @param {number} pos - The position of the node in the source file.
+ * @param {number} end - The end position of the node in the source file.
+ * @property {SyntaxKind} kind - The syntax kind of the node.
+ * @property {number} pos - The position of the node in the source file.
+ * @property {number} end - The end position of the node in the source file.
+ * @property {NodeFlags} flags - The flags associated with the node.
+ * @property {ModifierFlags} modifierFlagsCache - The modifier flags associated with the node.
+ * @property {TransformFlags} transformFlags - The transform flags associated with the node.
+ * @property {Node} parent - The parent node of the current node.
+ * @property {Symbol} [symbol] - The symbol associated with the node.
+ * @property {JSDoc[]} [jsDoc] - The JSDoc comments associated with the node.
+ * @property {Node} [original] - The original node from which this node was cloned.
+ * @property {Node[]} [_children] - The child nodes of the current node.
+ * @returns {SourceFile} The source file of the node.
+ * @param {SourceFileLike} [sourceFile] - The source file to use.
+ * @param {boolean} [includeJsDocComment] - Whether to include JSDoc comments in the result.
+ * @returns {number} The start position of the node.
+ * @returns {number} The full start position of the node.
+ * @returns {number} The end position of the node.
+ * @param {SourceFile} [sourceFile] - The source file to use.
+ * @returns {number} The width of the node.
+ * @returns {number} The full width of the node.
+ * @param {SourceFile} [sourceFile] - The source file to use.
+ * @returns {number} The width of the leading trivia of the node.
+ * @param {SourceFile} [sourceFile] - The source file to use.
+ * @returns {string} The full text of the node.
+ * @param {SourceFile} [sourceFile] - The source file to use.
+ * @returns {string} The text of the node.
+ * @returns {number} The number of child nodes of the node.
+ * @param {number} index - The index of the child node to retrieve.
+ * @param {SourceFile} [sourceFile] - The source file to use.
+ * @returns {Node} The child node at the specified index.
+ * @param {SourceFileLike} [sourceFile] - The source file to use.
+ * @returns {Node[]} The child nodes of the node.
+ * @param {SourceFileLike} [sourceFile] - The source file to use.
+ * @returns {Node | undefined} The first token of the node.
+ * @param {SourceFileLike} [sourceFile] - The source file to use.
+ * @returns {Node | undefined} The last token of the node.
+ * @param {(node: Node) => T} cbNode - The callback function to invoke for each child node.
+ * @param {(nodes: NodeArray<Node>) => T} [cbNodeArray] - The callback function to invoke for each child node array.
+ * @returns {T | undefined} The result of the callback function.
+ */
 class NodeObject implements Node {
     public kind: SyntaxKind;
     public pos: number;
@@ -430,6 +480,11 @@ class NodeObject implements Node {
         return this._children || (this._children = createChildren(this, sourceFile));
     }
 
+    /**
+     * Retrieves the first token of the node.
+     * @param {SourceFileLike} [sourceFile] - Optional source file to use.
+     * @returns {Node | undefined} - The first token of the node or undefined if none exists.
+     */
     public getFirstToken(sourceFile?: SourceFileLike): Node | undefined {
         this.assertHasRealPosition();
         const children = this.getChildren(sourceFile);
@@ -443,6 +498,11 @@ class NodeObject implements Node {
             child.getFirstToken(sourceFile);
     }
 
+    /**
+     * Returns the last token of the node or undefined if there are no tokens.
+     * @param {SourceFileLike} [sourceFile] - Optional source file to use.
+     * @returns {Node | undefined} - The last token of the node or undefined if there are no tokens.
+     */
     public getLastToken(sourceFile?: SourceFileLike): Node | undefined {
         this.assertHasRealPosition();
         const children = this.getChildren(sourceFile);
@@ -460,6 +520,12 @@ class NodeObject implements Node {
     }
 }
 
+/**
+ * Creates an array of child nodes for a given node.
+ * @param {Node} node - The parent node.
+ * @param {SourceFileLike | undefined} [sourceFile] - The source file to use for the node's text.
+ * @returns {Node[]} An array of child nodes.
+ */
 function createChildren(node: Node, sourceFile: SourceFileLike | undefined): Node[] {
     if (!isNodeKind(node.kind)) {
         return emptyArray;
@@ -499,6 +565,14 @@ function createChildren(node: Node, sourceFile: SourceFileLike | undefined): Nod
     return children;
 }
 
+/**
+ * Adds synthetic nodes to an array of nodes.
+ * @param {Node[]} nodes - The array of nodes to add synthetic nodes to.
+ * @param {number} pos - The starting position of the synthetic nodes.
+ * @param {number} end - The ending position of the synthetic nodes.
+ * @param {Node} parent - The parent node of the synthetic nodes.
+ * @remarks This function uses a scanner to scan for tokens and create nodes based on those tokens. It also checks for identifiers in the parent node's trivia and throws an error if found.
+ */
 function addSyntheticNodes(nodes: Node[], pos: number, end: number, parent: Node): void {
     scanner.resetTokenState(pos);
     while (pos < end) {
@@ -520,6 +594,12 @@ function addSyntheticNodes(nodes: Node[], pos: number, end: number, parent: Node
     }
 }
 
+/**
+ * Creates a syntax list node from an array of nodes and a parent node.
+ * @param nodes - An array of nodes to be included in the syntax list.
+ * @param parent - The parent node of the syntax list.
+ * @returns The created syntax list node.
+ */
 function createSyntaxList(nodes: NodeArray<Node>, parent: Node): Node {
     const list = createNode(SyntaxKind.SyntaxList, nodes.pos, nodes.end, parent) as any as SyntaxList;
     list._children = [];
@@ -533,6 +613,39 @@ function createSyntaxList(nodes: NodeArray<Node>, parent: Node): Node {
     return list;
 }
 
+/**
+ * Represents a token or identifier in the TypeScript AST.
+ * @class
+ * @implements Node
+ * @property {SyntaxKind} kind - The syntax kind of the token or identifier.
+ * @property {number} pos - The position of the first character of the token or identifier.
+ * @property {number} end - The position of the last character of the token or identifier.
+ * @property {NodeFlags} flags - The flags associated with the token or identifier.
+ * @property {ModifierFlags} modifierFlagsCache - The modifier flags associated with the token or identifier.
+ * @property {TransformFlags} transformFlags - The transform flags associated with the token or identifier.
+ * @property {Node} parent - The parent node of the token or identifier.
+ * @property {Symbol} symbol - The symbol associated with the token or identifier.
+ * @property {JSDoc[]} [jsDocComments] - The JSDoc comments associated with the token or identifier.
+ * @returns {SourceFile} The source file containing the token or identifier.
+ * @param {SourceFileLike} [sourceFile] - The source file to use for calculating the start position of the token or identifier.
+ * @param {boolean} [includeJsDocComment] - Whether to include JSDoc comments in the start position calculation.
+ * @returns {number} The start position of the token or identifier.
+ * @returns {number} The full start position of the token or identifier.
+ * @returns {number} The end position of the token or identifier.
+ * @param {SourceFile} [sourceFile] - The source file to use for calculating the width of the token or identifier.
+ * @returns {number} The width of the token or identifier.
+ * @returns {number} The full width of the token or identifier.
+ * @param {SourceFile} [sourceFile] - The source file to use for calculating the leading trivia width of the token or identifier.
+ * @returns {number} The leading trivia width of the token or identifier.
+ * @param {SourceFile} [sourceFile] - The source file to use for getting the full text of the token or identifier.
+ * @returns {string} The full text of the token or identifier.
+ * @param {SourceFile} [sourceFile] - The source file to use for getting the text of the token or identifier.
+ * @returns {string} The text of the token or identifier.
+ * @returns {number} The number of children of the token or identifier.
+ * @param {number} index - The index of the child node to get.
+ * @returns {Node} The child node at the specified index.
+ * @returns {Node[]} An array of the child nodes of the token or identifier.
+ */
 class TokenOrIdentifierObject implements Node {
     public kind!: SyntaxKind;
     public pos: number;
@@ -618,6 +731,27 @@ class TokenOrIdentifierObject implements Node {
     }
 }
 
+/**
+ * Represents a symbol object that implements the Symbol interface.
+ * @class
+ * @implements {Symbol}
+ * @property {SymbolFlags} flags - The flags of the symbol.
+ * @property {__String} escapedName - The escaped name of the symbol.
+ * @property {Declaration[]} declarations - The declarations of the symbol.
+ * @property {Declaration} valueDeclaration - The value declaration of the symbol.
+ * @property {number} id - The id of the symbol.
+ * @property {number} mergeId - The merge id of the symbol.
+ * @property {boolean|undefined} constEnumOnlyModule - Whether the symbol is a const enum only module or not.
+ * @property {SymbolDisplayPart[]|undefined} documentationComment - The documentation comment of the symbol.
+ * @property {JSDocTagInfo[]|undefined} tags - The JSDoc tags of the symbol.
+ * @property {SymbolDisplayPart[]|undefined} contextualGetAccessorDocumentationComment - The contextual documentation comment of the get accessor of the symbol.
+ * @property {SymbolDisplayPart[]|undefined} contextualSetAccessorDocumentationComment - The contextual documentation comment of the set accessor of the symbol.
+ * @property {JSDocTagInfo[]|undefined} contextualGetAccessorTags - The JSDoc tags of the get accessor of the symbol.
+ * @property {JSDocTagInfo[]|undefined} contextualSetAccessorTags - The JSDoc tags of the set accessor of the symbol.
+ * @param {SymbolFlags} flags - The flags of the symbol.
+ * @param {__String} name - The name of the symbol.
+ * @returns {SymbolObject} A new instance of SymbolObject.
+ */
 class SymbolObject implements Symbol {
     flags: SymbolFlags;
     escapedName: __String;
@@ -663,6 +797,11 @@ class SymbolObject implements Symbol {
         return this.declarations;
     }
 
+    /**
+     * Retrieves the TypeDoc comment for the given checker.
+     * @param {TypeChecker | undefined} checker - The type checker to retrieve the comment for.
+     * @returns {SymbolDisplayPart[]} - The documentation comment.
+     */
     getDocumentationComment(checker: TypeChecker | undefined): SymbolDisplayPart[] {
         if (!this.documentationComment) {
             this.documentationComment = emptyArray; // Set temporarily to avoid an infinite loop finding inherited docs
@@ -678,6 +817,12 @@ class SymbolObject implements Symbol {
         return this.documentationComment;
     }
 
+    /**
+     * Returns the contextual documentation comment for a given node and type checker.
+     * @param {Node | undefined} context - The node to get the documentation comment for.
+     * @param {TypeChecker | undefined} checker - The type checker to use.
+     * @returns {SymbolDisplayPart[]} - The contextual documentation comment.
+     */
     getContextualDocumentationComment(context: Node | undefined, checker: TypeChecker | undefined): SymbolDisplayPart[] {
         if (context) {
             if (isGetAccessor(context)) {
@@ -708,6 +853,12 @@ class SymbolObject implements Symbol {
         return this.tags;
     }
 
+    /**
+     * Returns an array of JSDoc tags for a given context and type checker. If the context is a get or set accessor, it will retrieve the tags for that specific accessor. Otherwise, it will retrieve the tags for all declarations associated with the current symbol.
+     * @param {Node | undefined} context - The context for which to retrieve JSDoc tags.
+     * @param {TypeChecker | undefined} checker - The type checker to use for retrieving JSDoc tags.
+     * @returns {JSDocTagInfo[]} - An array of JSDoc tags for the given context and type checker.
+     */
     getContextualJsDocTags(context: Node | undefined, checker: TypeChecker | undefined): JSDocTagInfo[] {
         if (context) {
             if (isGetAccessor(context)) {
@@ -740,6 +891,10 @@ class TokenObject<TKind extends SyntaxKind> extends TokenOrIdentifierObject impl
     }
 }
 
+/**
+ * Represents an Identifier object which extends TokenOrIdentifierObject and implements Identifier.
+ * @class
+ */
 class IdentifierObject extends TokenOrIdentifierObject implements Identifier {
     public override kind: SyntaxKind.Identifier = SyntaxKind.Identifier;
     public escapedText!: __String;
@@ -762,6 +917,27 @@ class IdentifierObject extends TokenOrIdentifierObject implements Identifier {
     }
 }
 IdentifierObject.prototype.kind = SyntaxKind.Identifier;
+/**
+ * Represents a PrivateIdentifierObject that extends TokenOrIdentifierObject and implements PrivateIdentifier.
+ * @class
+ * @extends TokenOrIdentifierObject
+ * @implements PrivateIdentifier
+ * @remarks This class represents a private identifier in TypeScript.
+ * @constructor
+ * @param {SyntaxKind.PrivateIdentifier} _kind - The kind of private identifier.
+ * @param {number} pos - The position of the private identifier.
+ * @param {number} end - The end position of the private identifier.
+ * @returns {PrivateIdentifierObject} A new PrivateIdentifierObject instance.
+ * @property {SyntaxKind.PrivateIdentifier} kind - The kind of private identifier.
+ * @property {__String} escapedText - The escaped text of the private identifier.
+ * @property {any} _primaryExpressionBrand - The primary expression brand.
+ * @property {any} _memberExpressionBrand - The member expression brand.
+ * @property {any} _leftHandSideExpressionBrand - The left hand side expression brand.
+ * @property {any} _updateExpressionBrand - The update expression brand.
+ * @property {any} _unaryExpressionBrand - The unary expression brand.
+ * @property {any} _expressionBrand - The expression brand.
+ * @property {string} text - The text of the private identifier.
+ */
 class PrivateIdentifierObject extends TokenOrIdentifierObject implements PrivateIdentifier {
     public override kind: SyntaxKind.PrivateIdentifier = SyntaxKind.PrivateIdentifier;
     public escapedText!: __String;
@@ -781,6 +957,19 @@ class PrivateIdentifierObject extends TokenOrIdentifierObject implements Private
 }
 PrivateIdentifierObject.prototype.kind = SyntaxKind.PrivateIdentifier;
 
+/**
+ * Represents a type object with various methods to retrieve information about the type.
+ * @class
+ * @implements Type
+ * @property {TypeChecker} checker - The type checker used to check the type.
+ * @property {TypeFlags} flags - The flags associated with the type.
+ * @property {ObjectFlags|undefined} objectFlags - The object flags associated with the type.
+ * @property {number} id - The ID of the type.
+ * @property {Symbol} symbol - The symbol associated with the type.
+ * @param {TypeChecker} checker - The type checker used to check the type.
+ * @param {TypeFlags} flags - The flags associated with the type.
+ * @returns {void}
+ */
 class TypeObject implements Type {
     checker: TypeChecker;
     flags: TypeFlags;
@@ -878,6 +1067,17 @@ class TypeObject implements Type {
     }
 }
 
+/**
+ * Represents a signature object that contains information about a function signature.
+ * @class
+ * @implements Signature
+ * @param {TypeChecker} checker - The type checker used to check the signature.
+ * @param {SignatureFlags} flags - The signature flags.
+ * @returns {void}
+ * @remarks
+ * The SignatureObject class provides methods to retrieve information about the signature, such as the declaration, type parameters, parameters, and return type.
+ * It also provides methods to retrieve the documentation comment and JSDoc tags associated with the signature.
+ */
 class SignatureObject implements Signature {
     flags: SignatureFlags;
     checker: TypeChecker;
@@ -912,6 +1112,11 @@ class SignatureObject implements Signature {
     getReturnType(): Type {
         return this.checker.getReturnTypeOfSignature(this);
     }
+    /**
+     * Returns the type of the parameter at the specified position.
+     * @param {number} pos - The position of the parameter.
+     * @returns {Type} - The type of the parameter.
+     */
     getTypeParameterAtPosition(pos: number): Type {
         const type = this.checker.getParameterType(this, pos);
         if (type.isIndexType() && isThisTypeParameter(type.type)) {
@@ -941,6 +1146,12 @@ function hasJSDocInheritDocTag(node: Node) {
     return getJSDocTags(node).some(tag => tag.tagName.text === "inheritDoc" || tag.tagName.text === "inheritdoc");
 }
 
+/**
+ * Returns an array of JSDoc tags for a given array of declarations and a type checker.
+ * @param declarations An array of Declaration objects.
+ * @param checker A TypeChecker object.
+ * @returns An array of JSDocTagInfo objects.
+ */
 function getJsDocTagsOfDeclarations(declarations: Declaration[] | undefined, checker: TypeChecker | undefined): JSDocTagInfo[] {
     if (!declarations) return emptyArray;
 
@@ -965,6 +1176,12 @@ function getJsDocTagsOfDeclarations(declarations: Declaration[] | undefined, che
     return tags;
 }
 
+/**
+ * Retrieves the TypeDoc comment for a given set of declarations and checker.
+ * @param declarations - An array of Declaration objects to retrieve comments from.
+ * @param checker - The TypeChecker object to use for retrieving comments.
+ * @returns An array of SymbolDisplayPart objects representing the TypeDoc comment.
+ */
 function getDocumentationComment(declarations: readonly Declaration[] | undefined, checker: TypeChecker | undefined): SymbolDisplayPart[] {
     if (!declarations) return emptyArray;
 
@@ -988,6 +1205,14 @@ function getDocumentationComment(declarations: readonly Declaration[] | undefine
     return doc;
 }
 
+/**
+ * Finds the base of a declaration.
+ * @template T - The type of the callback function's return value.
+ * @param {TypeChecker} checker - The TypeChecker object.
+ * @param {Declaration} declaration - The declaration to find the base of.
+ * @param {(symbol: Symbol) => T[] | undefined} cb - The callback function to execute on the symbol.
+ * @returns {T[] | undefined} - The result of the callback function or undefined.
+ */
 function findBaseOfDeclaration<T>(checker: TypeChecker, declaration: Declaration, cb: (symbol: Symbol) => T[] | undefined): T[] | undefined {
     const classOrInterfaceDeclaration = declaration.parent?.kind === SyntaxKind.Constructor ? declaration.parent.parent : declaration.parent;
     if (!classOrInterfaceDeclaration) return;
@@ -1074,6 +1299,11 @@ class SourceFileObject extends NodeObject implements SourceFile {
         return computePositionOfLineAndCharacter(getLineStarts(this), line, character, this.text, allowEdits);
     }
 
+    /**
+     * Returns the position of the last character in the line containing the given position.
+     * @param {number} pos - The position to get the line end of.
+     * @returns {number} - The position of the last character in the line.
+     */
     public getLineEndOfPosition(pos: number): number {
         const { line } = this.getLineAndCharacterOfPosition(pos);
         const lineStarts = this.getLineStarts();
@@ -1099,6 +1329,12 @@ class SourceFileObject extends NodeObject implements SourceFile {
         return this.namedDeclarations;
     }
 
+    /**
+     * Computes a map of named declarations in the current source file.
+     * @returns {Map<string, Declaration[]>} A map of named declarations.
+     * @remarks This method uses the TypeScript compiler API to traverse the AST of the source file and identify named declarations such as functions, classes, interfaces, enums, variables, etc. It then creates a map of these declarations with their names as keys and an array of corresponding declarations as values. Overloads and implementations of functions are also handled appropriately.
+     * @private
+     */
     private computeNamedDeclarations(): Map<string, Declaration[]> {
         const result = createMultiMap<string, Declaration>();
 
@@ -1127,6 +1363,11 @@ class SourceFileObject extends NodeObject implements SourceFile {
                 : isPropertyName(name) ? getNameFromPropertyName(name) : undefined);
         }
 
+        /**
+         * Visits a node in the AST and adds its declaration to the list of declarations.
+         * @param {Node} node - The node to visit.
+         * @returns {void}
+         */
         function visit(node: Node): void {
             switch (node.kind) {
                 case SyntaxKind.FunctionDeclaration:
@@ -1257,6 +1498,11 @@ class SourceMapSourceObject implements SourceMapSource {
     }
 }
 
+/**
+ * Returns an object allocator with methods for constructing various object types.
+ * @returns {ObjectAllocator} An object allocator.
+ * @remarks This function returns an object with methods for constructing NodeObject, TokenObject, IdentifierObject, PrivateIdentifierObject, SourceFileObject, SymbolObject, TypeObject, SignatureObject, and SourceMapSourceObject.
+ */
 function getServicesObjectAllocator(): ObjectAllocator {
     return {
         getNodeConstructor: () => NodeObject,
@@ -1282,6 +1528,11 @@ export interface DisplayPartsSymbolWriter extends EmitTextWriter {
 /** @internal */
 export function toEditorSettings(options: FormatCodeOptions | FormatCodeSettings): FormatCodeSettings;
 export function toEditorSettings(options: EditorOptions | EditorSettings): EditorSettings;
+/**
+ * Converts optionsAsMap to editor settings.
+ * @param {MapLike<any>} optionsAsMap - The options to convert.
+ * @returns {MapLike<any>} - The converted editor settings.
+ */
 export function toEditorSettings(optionsAsMap: MapLike<any>): MapLike<any> {
     let allPropertiesAreCamelCased = true;
     for (const key in optionsAsMap) {
@@ -1327,6 +1578,10 @@ export function getSupportedCodeFixes() {
     return codefix.getSupportedErrorCodes();
 }
 
+/**
+ * A cache for the syntax tree of the currently edited file, used for syntactic only features.
+ * @class
+ */
 class SyntaxTreeCache {
     // For our syntactic only features, we also keep a cache of the syntax tree for the
     // currently edited file.
@@ -1338,6 +1593,12 @@ class SyntaxTreeCache {
     constructor(private host: LanguageServiceHost) {
     }
 
+    /**
+     * Retrieves the current SourceFile for the given fileName.
+     * @param {string} fileName - The name of the file to retrieve the SourceFile for.
+     * @returns {SourceFile} - The current SourceFile for the given fileName.
+     * @throws {Error} - If the host does not know about the file.
+     */
     public getCurrentSourceFile(fileName: string): SourceFile {
         const scriptSnapshot = this.host.getScriptSnapshot(fileName);
         if (!scriptSnapshot) {
@@ -1392,6 +1653,16 @@ export function createLanguageServiceSourceFile(fileName: string, scriptSnapshot
     return sourceFile;
 }
 
+/**
+ * Updates the given `sourceFile` with the provided `scriptSnapshot` and returns the updated `SourceFile`.
+ * If a `textChangeRange` is provided, the file is incrementally parsed. Otherwise, a new source file is created.
+ * @param sourceFile - The original `SourceFile` to update.
+ * @param scriptSnapshot - The `IScriptSnapshot` containing the updated text.
+ * @param version - The new version of the file.
+ * @param textChangeRange - Optional. The range of text that was changed.
+ * @param aggressiveChecks - Optional. Whether to perform aggressive checks during incremental parsing.
+ * @returns The updated `SourceFile`.
+ */
 export function updateLanguageServiceSourceFile(sourceFile: SourceFile, scriptSnapshot: IScriptSnapshot, version: string, textChangeRange: TextChangeRange | undefined, aggressiveChecks?: boolean): SourceFile {
     // If we were given a text change range, and our version or open-ness changed, then
     // incrementally parse this file.
@@ -1457,6 +1728,13 @@ const NoopCancellationToken: CancellationToken = {
     throwIfCancellationRequested: noop,
 };
 
+/**
+ * Represents a CancellationToken object that implements the CancellationToken interface.
+ * @class
+ * @param {HostCancellationToken} cancellationToken - The HostCancellationToken object to be used for cancellation.
+ * @returns {void}
+ * @remarks This class provides methods to check if cancellation has been requested and to throw an exception if cancellation has been requested.
+ */
 class CancellationTokenObject implements CancellationToken {
     constructor(private cancellationToken: HostCancellationToken) {
     }
@@ -1474,8 +1752,7 @@ class CancellationTokenObject implements CancellationToken {
 }
 
 /**
- * A cancellation that throttles calls to the host
- *
+ * Represents a cancellation token that throttles calls to the host.
  * @internal
  */
 export class ThrottledCancellationToken implements CancellationToken {
@@ -1487,6 +1764,10 @@ export class ThrottledCancellationToken implements CancellationToken {
     constructor(private hostCancellationToken: HostCancellationToken, private readonly throttleWaitMilliseconds = 20) {
     }
 
+    /**
+     * Checks if cancellation has been requested by the host.
+     * @returns {boolean} True if cancellation has been requested, false otherwise.
+     */
     public isCancellationRequested(): boolean {
         const time = timestamp();
         const duration = Math.abs(time - this.lastCancellationCheckTime);
@@ -1598,6 +1879,12 @@ export function createLanguageService(
         log
     });
 
+    /**
+     * Retrieves a valid SourceFile object for the given file name.
+     * @param {string} fileName - The name of the file to retrieve the SourceFile for.
+     * @returns {SourceFile} - The SourceFile object for the given file name.
+     * @remarks If the source file cannot be found, an error will be thrown with additional information attached for debugging purposes.
+     */
     function getValidSourceFile(fileName: string): SourceFile {
         const sourceFile = program.getSourceFile(fileName);
         if (!sourceFile) {
@@ -1754,6 +2041,11 @@ export function createLanguageService(
         program.getTypeChecker();
         return;
 
+        /**
+         * Retrieves the parsed command line for a given file name.
+         * @param fileName - The name of the file to retrieve the parsed command line for.
+         * @returns Either a ParsedCommandLine object or undefined if the command line could not be retrieved.
+         */
         function getParsedCommandLine(fileName: string): ParsedCommandLine | undefined {
             const path = toPath(fileName, currentDirectory, getCanonicalFileName);
             const existing = parsedCommandLines?.get(path);
@@ -1766,6 +2058,12 @@ export function createLanguageService(
             return result;
         }
 
+        /**
+         * Parses the command line of a configuration file using a source file.
+         * @param {string} configFileName - The name of the configuration file.
+         * @returns {ParsedCommandLine | undefined} - The parsed command line or undefined if the source file is not found.
+         * @remarks - This function uses the getOrCreateSourceFile and parseJsonSourceFileConfigFileContent functions to parse the command line.
+         */
         function getParsedCommandLineOfConfigFileUsingSourceFile(configFileName: string): ParsedCommandLine | undefined {
             const result = getOrCreateSourceFile(configFileName, ScriptTarget.JSON) as JsonSourceFile | undefined;
             if (!result) return undefined;
@@ -1801,6 +2099,15 @@ export function createLanguageService(
             return getOrCreateSourceFileByPath(fileName, toPath(fileName, currentDirectory, getCanonicalFileName), languageVersionOrOptions, onError, shouldCreateNewSourceFile);
         }
 
+        /**
+         * Retrieves or creates a SourceFile object for a given file path. If the file does not exist, returns undefined.
+         * @param fileName - The name of the file to retrieve or create.
+         * @param path - The path of the file to retrieve or create.
+         * @param languageVersionOrOptions - The language version or options to use when creating a new SourceFile.
+         * @param _onError - An optional callback function to handle error messages.
+         * @param shouldCreateNewSourceFile - Whether or not to create a new SourceFile even if one already exists for the given file name.
+         * @returns A SourceFile object for the given file path, or undefined if the file does not exist.
+         */
         function getOrCreateSourceFileByPath(fileName: string, path: Path, languageVersionOrOptions: ScriptTarget | CreateSourceFileOptions, _onError?: (message: string) => void, shouldCreateNewSourceFile?: boolean): SourceFile | undefined {
             Debug.assert(compilerHost, "getOrCreateSourceFileByPath called after typical CompilerHost lifetime, check the callstack something with a reference to an old host.");
             // The program is asking for this file, check first if the host can locate it.
@@ -1865,6 +2172,10 @@ export function createLanguageService(
     }
 
     // TODO: GH#18217 frequently asserted as defined
+    /**
+     * Retrieves the current program or undefined if in Syntactic mode.
+     * @returns {Program | undefined} The current program or undefined.
+     */
     function getProgram(): Program | undefined {
         if (languageServiceMode === LanguageServiceMode.Syntactic) {
             Debug.assert(program === undefined);
@@ -1880,6 +2191,12 @@ export function createLanguageService(
         return host.getPackageJsonAutoImportProvider?.();
     }
 
+    /**
+     * Updates the `isDefinition` property of each `ReferencedSymbol` in the `referencedSymbols` array based on whether it is a definition of the symbol represented by `knownSymbolSpans`. Uses the `program` and `sourceMapper` objects to retrieve the necessary information.
+     * @param referencedSymbols An array of `ReferencedSymbol` objects.
+     * @param knownSymbolSpans A `Set` of `DocumentSpan` objects representing the known symbol spans.
+     * @returns A boolean indicating whether the update was successful.
+     */
     function updateIsDefinitionOfReferencedSymbols(referencedSymbols: readonly ReferencedSymbol[], knownSymbolSpans: Set<DocumentSpan>): boolean {
         const checker = program.getTypeChecker();
         const symbol = getSymbolForProgram();
@@ -1906,6 +2223,10 @@ export function createLanguageService(
 
         return true;
 
+        /**
+         * Returns the symbol for the program, or undefined if not found.
+         * @returns {Symbol | undefined} The symbol for the program, or undefined if not found.
+         */
         function getSymbolForProgram(): Symbol | undefined {
             for (const referencedSymbol of referencedSymbols) {
                 for (const ref of referencedSymbol.references) {
@@ -1959,8 +2280,10 @@ export function createLanguageService(
     }
 
     /**
-     * getSemanticDiagnostics return array of Diagnostics. If '-d' is not enabled, only report semantic errors
-     * If '-d' enabled, report both semantic and emitter errors
+     * Returns an array of Diagnostics for a given file name. If '-d' is not enabled, only semantic errors are reported.
+     * If '-d' is enabled, both semantic and emitter errors are reported.
+     * @param {string} fileName - The name of the file to get diagnostics for.
+     * @returns {Diagnostic[]} An array of Diagnostics for the given file name.
      */
     function getSemanticDiagnostics(fileName: string): Diagnostic[] {
         synchronizeHostData();
@@ -1990,6 +2313,21 @@ export function createLanguageService(
         return [...program.getOptionsDiagnostics(cancellationToken), ...program.getGlobalDiagnostics(cancellationToken)];
     }
 
+    /**
+     * Retrieves completion suggestions for a given file and position.
+     * @param fileName - The name of the file to retrieve completions for.
+     * @param position - The position within the file to retrieve completions for.
+     * @param options - Optional settings for the completion request.
+     * @param options.includeCompletionsForModuleExports - Whether to include completions for module exports.
+     * @param options.includeCompletionsWithInsertText - Whether to include completions with insert text.
+     * @param options.includeExternalModuleExports - Deprecated option name for includeCompletionsForModuleExports.
+     * @param options.includeInsertTextCompletions - Deprecated option name for includeCompletionsWithInsertText.
+     * @param options.triggerCharacter - The character that triggered the completion request.
+     * @param options.triggerKind - The kind of trigger that caused the completion request.
+     * @param options.includeSymbol - Whether to include symbols in the completion results.
+     * @param formattingSettings - Optional settings for formatting the completion results.
+     * @returns The completion suggestions for the given file and position, or undefined if none are found.
+     */
     function getCompletionsAtPosition(fileName: string, position: number, options: GetCompletionsAtPositionOptions = emptyOptions, formattingSettings?: FormatCodeSettings): CompletionInfo | undefined {
         // Convert from deprecated options names to new names
         const fullPreferences: UserPreferences = {
@@ -2012,6 +2350,17 @@ export function createLanguageService(
             options.includeSymbol);
     }
 
+    /**
+     * Retrieves details about a completion entry at a given position in a file.
+     * @param fileName - The name of the file.
+     * @param position - The position in the file.
+     * @param name - The name of the completion entry.
+     * @param formattingOptions - The formatting options for the completion entry.
+     * @param source - The source of the completion entry.
+     * @param preferences - The user preferences for the completion entry.
+     * @param data - The data for the completion entry.
+     * @returns The details of the completion entry, or undefined if none are found.
+     */
     function getCompletionEntryDetails(fileName: string, position: number, name: string, formattingOptions: FormatCodeSettings | undefined, source: string | undefined, preferences: UserPreferences = emptyOptions, data?: CompletionEntryData): CompletionEntryDetails | undefined {
         synchronizeHostData();
         return Completions.getCompletionEntryDetails(
@@ -2032,6 +2381,12 @@ export function createLanguageService(
         return Completions.getCompletionEntrySymbol(program, log, getValidSourceFile(fileName), position, { name, source }, host, preferences);
     }
 
+    /**
+     * Retrieves quick info about a symbol at a given position in a source file.
+     * @param fileName - The name of the source file.
+     * @param position - The position in the source file to retrieve quick info for.
+     * @returns QuickInfo object containing information about the symbol at the given position, or undefined if no symbol is found.
+     */
     function getQuickInfoAtPosition(fileName: string, position: number): QuickInfo | undefined {
         synchronizeHostData();
 
@@ -2071,6 +2426,11 @@ export function createLanguageService(
         };
     }
 
+    /**
+     * Returns the node to use for quick info based on the provided node.
+     * @param {Node} node - The node to get quick info for.
+     * @returns {Node} - The node to use for quick info.
+     */
     function getNodeForQuickInfo(node: Node): Node {
         if (isNewExpression(node.parent) && node.pos === node.parent.pos) {
             return node.parent.expression;
@@ -2087,6 +2447,13 @@ export function createLanguageService(
         return node;
     }
 
+    /**
+     * Determines whether or not to retrieve type information for a given node in a source file.
+     * @param sourceFile - The source file containing the node.
+     * @param node - The node to check for type information.
+     * @param position - The position of the node in the source file.
+     * @returns {boolean} - True if type information should be retrieved, false otherwise.
+     */
     function shouldGetType(sourceFile: SourceFile, node: Node, position: number): boolean {
         switch (node.kind) {
             case SyntaxKind.Identifier:
@@ -2141,6 +2508,15 @@ export function createLanguageService(
         return DocumentHighlights.getDocumentHighlights(program, cancellationToken, sourceFile, position, sourceFilesToSearch);
     }
 
+    /**
+     * Finds locations where a symbol can be renamed in a given file at a given position.
+     * @param fileName - The name of the file to search in.
+     * @param position - The position in the file to search at.
+     * @param findInStrings - Whether to search in string literals.
+     * @param findInComments - Whether to search in comments.
+     * @param preferences - Optional user preferences for the rename operation.
+     * @returns An array of RenameLocation objects representing the locations where the symbol can be renamed, or undefined if the symbol is not eligible for renaming.
+     */
     function findRenameLocations(fileName: string, position: number, findInStrings: boolean, findInComments: boolean, preferences?: UserPreferences | boolean): RenameLocation[] | undefined {
         synchronizeHostData();
         const sourceFile = getValidSourceFile(fileName);
@@ -2170,6 +2546,15 @@ export function createLanguageService(
         return getReferencesWorker(getTouchingPropertyName(getValidSourceFile(fileName), position), position, { use: FindAllReferences.FindReferencesUse.References }, FindAllReferences.toReferenceEntry);
     }
 
+    /**
+     * Finds all references to a given node at a specific position in the program.
+     * @typeparam T - The type of the reference or rename entry.
+     * @param node - The node to find references for.
+     * @param position - The position of the node to find references for.
+     * @param options - The options for finding references.
+     * @param cb - The callback function to handle the reference or rename entries.
+     * @returns An array of reference or rename entries, or undefined if none were found.
+     */
     function getReferencesWorker<T>(node: Node, position: number, options: FindAllReferences.Options, cb: FindAllReferences.ToReferenceOrRenameEntry<T>): T[] | undefined {
         synchronizeHostData();
 
@@ -2222,6 +2607,13 @@ export function createLanguageService(
         return syntaxTreeCache.getCurrentSourceFile(fileName);
     }
 
+    /**
+     * Returns a TextSpan object representing the span of the name or dotted name at the given position in the specified file.
+     * @param {string} fileName - The name of the file to search in.
+     * @param {number} startPos - The starting position of the name or dotted name.
+     * @param {number} _endPos - The ending position of the name or dotted name.
+     * @returns {TextSpan | undefined} - The TextSpan object representing the span of the name or dotted name, or undefined if it cannot be created.
+     */
     function getNameOrDottedNameSpan(fileName: string, startPos: number, _endPos: number): TextSpan | undefined {
         const sourceFile = syntaxTreeCache.getCurrentSourceFile(fileName);
 
@@ -2295,6 +2687,13 @@ export function createLanguageService(
     }
 
     function getSemanticClassifications(fileName: string, span: TextSpan): ClassifiedSpan[];
+    /**
+     * Retrieves semantic classifications for a given file and text span.
+     * @param fileName - The name of the file to retrieve classifications for.
+     * @param span - The text span to retrieve classifications for.
+     * @param format - Optional. The format of the response. Defaults to SemanticClassificationFormat.Original.
+     * @returns An array of ClassifiedSpan objects or ClassifiedSpan2020 objects, depending on the response format.
+     */
     function getSemanticClassifications(fileName: string, span: TextSpan, format?: SemanticClassificationFormat): ClassifiedSpan[] | ClassifiedSpan2020[] {
         synchronizeHostData();
 
@@ -2307,6 +2706,13 @@ export function createLanguageService(
         }
     }
 
+    /**
+     * Retrieves encoded semantic classifications for a given file and text span.
+     * @param fileName - The name of the file to retrieve classifications for.
+     * @param span - The text span to retrieve classifications for.
+     * @param format - Optional. The format of the response. Defaults to SemanticClassificationFormat.Original.
+     * @returns The classifications for the given file and text span.
+     */
     function getEncodedSemanticClassifications(fileName: string, span: TextSpan, format?: SemanticClassificationFormat): Classifications {
         synchronizeHostData();
 
@@ -2352,6 +2758,13 @@ export function createLanguageService(
         return match ? [createTextSpanFromNode(token, sourceFile), createTextSpanFromNode(match, sourceFile)].sort((a, b) => a.start - b.start) : emptyArray;
     }
 
+    /**
+     * Returns the indentation level at a given position in a source file.
+     * @param {string} fileName - The name of the source file.
+     * @param {number} position - The position in the source file to get the indentation level for.
+     * @param {EditorOptions | EditorSettings} editorOptions - The editor options or settings to use for formatting.
+     * @returns {number} - The indentation level at the given position.
+     */
     function getIndentationAtPosition(fileName: string, position: number, editorOptions: EditorOptions | EditorSettings) {
         let start = timestamp();
         const settings = toEditorSettings(editorOptions);
@@ -2375,6 +2788,14 @@ export function createLanguageService(
         return formatting.formatDocument(syntaxTreeCache.getCurrentSourceFile(fileName), formatting.getFormatContext(toEditorSettings(options), host));
     }
 
+    /**
+     * Returns an array of TextChange objects representing the formatting edits to be made after a keystroke.
+     * @param fileName - The name of the file to be formatted.
+     * @param position - The position in the file where the keystroke occurred.
+     * @param key - The key that was pressed.
+     * @param options - The options for formatting the code.
+     * @returns An array of TextChange objects representing the formatting edits to be made.
+     */
     function getFormattingEditsAfterKeystroke(fileName: string, position: number, key: string, options: FormatCodeOptions | FormatCodeSettings): TextChange[] {
         const sourceFile = syntaxTreeCache.getCurrentSourceFile(fileName);
         const formatContext = formatting.getFormatContext(toEditorSettings(options), host);
@@ -2395,6 +2816,16 @@ export function createLanguageService(
         return [];
     }
 
+    /**
+     * Retrieves an array of code fix actions for a given file, start and end position, error codes, format options, and user preferences.
+     * @param {string} fileName - The name of the file to retrieve code fixes for.
+     * @param {number} start - The starting position of the code fix range.
+     * @param {number} end - The ending position of the code fix range.
+     * @param {readonly number[]} errorCodes - An array of error codes to retrieve code fixes for.
+     * @param {FormatCodeSettings} formatOptions - The format options to use for the code fixes.
+     * @param {UserPreferences} [preferences=emptyOptions] - The user preferences to use for the code fixes.
+     * @returns {readonly CodeFixAction[]} An array of code fix actions for the given parameters.
+     */
     function getCodeFixesAtPosition(fileName: string, start: number, end: number, errorCodes: readonly number[], formatOptions: FormatCodeSettings, preferences: UserPreferences = emptyOptions): readonly CodeFixAction[] {
         synchronizeHostData();
         const sourceFile = getValidSourceFile(fileName);
@@ -2453,6 +2884,14 @@ export function createLanguageService(
         return JsDoc.getDocCommentTemplateAtPosition(getNewLineOrDefaultFromHost(host, formatSettings), syntaxTreeCache.getCurrentSourceFile(fileName), position, options);
     }
 
+    /**
+     * Determines if a brace completion is valid at a given position in a file.
+     * @param fileName - The name of the file to check.
+     * @param position - The position to check for brace completion validity.
+     * @param openingBrace - The character code of the opening brace to check for validity.
+     * @returns A boolean indicating whether the brace completion is valid at the given position.
+     * @remarks The '<' character is currently not supported, as determining whether it is part of a generic type or a comparison is too expensive during typing scenarios. This function also checks if the position is inside a string, JSX element or attribute, or a template string, and returns false if so. Additionally, it checks if the opening brace is a single quote, double quote, or backtick, and returns false if the position is inside a comment.
+     */
     function isValidBraceCompletionAtPosition(fileName: string, position: number, openingBrace: number): boolean {
         // '<' is currently not supported, figuring out if we're in a Generic Type vs. a comparison is too
         // expensive to do during typing scenarios
@@ -2489,6 +2928,12 @@ export function createLanguageService(
         return true;
     }
 
+    /**
+     * Returns information about the closing tag of a JSX element or fragment at the specified position in the given file.
+     * @param fileName - The name of the file to search in.
+     * @param position - The position to search at.
+     * @returns - An object containing the new text for the closing tag, or undefined if no closing tag is found.
+     */
     function getJsxClosingTagAtPosition(fileName: string, position: number): JsxClosingTagInfo | undefined {
         const sourceFile = syntaxTreeCache.getCurrentSourceFile(fileName);
         const token = findPrecedingToken(position, sourceFile);
@@ -2505,6 +2950,12 @@ export function createLanguageService(
         }
     }
 
+    /**
+     * Returns information about the range of a JSX element tag that can be edited together.
+     * @param fileName - The name of the file to get the linked editing range for.
+     * @param position - The position of the cursor.
+     * @returns An object containing the ranges of the opening and closing tags and the word pattern to use for linked editing, or undefined if the cursor is not within a JSX element tag.
+     */
     function getLinkedEditingRangeAtPosition(fileName: string, position: number): LinkedEditingInfo | undefined {
         const sourceFile = syntaxTreeCache.getCurrentSourceFile(fileName);
         const token = findPrecedingToken(position, sourceFile);
@@ -2571,6 +3022,13 @@ export function createLanguageService(
         };
     }
 
+    /**
+     * Toggles line comments on a given range of text in a file.
+     * @param fileName - The name of the file to toggle comments in.
+     * @param textRange - The range of text to toggle comments on.
+     * @param insertComment - Optional. If true, comments will be inserted. If false, comments will be removed. If undefined, comments will be toggled.
+     * @returns An array of TextChange objects representing the changes made to the text.
+     */
     function toggleLineComment(fileName: string, textRange: TextRange, insertComment?: boolean): TextChange[] {
         const sourceFile = syntaxTreeCache.getCurrentSourceFile(fileName);
         const textChanges: TextChange[] = [];
@@ -2768,6 +3226,12 @@ export function createLanguageService(
             : toggleLineComment(fileName, textRange, /*insertComment*/ true);
     }
 
+    /**
+     * Toggles the comment status of a selected text range in a file.
+     * @param fileName - The name of the file to modify.
+     * @param textRange - The range of text to toggle comments on.
+     * @returns An array of text changes made to the file.
+     */
     function uncommentSelection(fileName: string, textRange: TextRange): TextChange[] {
         const sourceFile = syntaxTreeCache.getCurrentSourceFile(fileName);
         const textChanges: TextChange[] = [];
@@ -2981,6 +3445,13 @@ export function createLanguageService(
         };
     }
 
+    /**
+     * Creates an InlayHintsContext object.
+     * @param {SourceFile} file - The source file.
+     * @param {TextSpan} span - The text span.
+     * @param {UserPreferences} preferences - The user preferences.
+     * @returns {InlayHintsContext} - The InlayHintsContext object.
+     */
     function getInlayHintsContext(file: SourceFile, span: TextSpan, preferences: UserPreferences): InlayHintsContext {
         return {
             file,
@@ -3002,6 +3473,13 @@ export function createLanguageService(
         return refactor.getApplicableRefactors(getRefactorContext(file, positionOrRange, preferences, emptyOptions, triggerReason, kind), includeInteractiveActions);
     }
 
+    /**
+     * Returns an object containing suggested file names for refactoring based on the provided file name, position or range, and user preferences.
+     * @param fileName - The name of the file to suggest refactoring for.
+     * @param positionOrRange - The position or range to suggest refactoring for.
+     * @param preferences - Optional user preferences.
+     * @returns An object with properties 'newFileName' (string) and 'files' (string[]).
+     */
     function getMoveToRefactoringFileSuggestions(fileName: string, positionOrRange: number | TextRange, preferences: UserPreferences = emptyOptions): { newFileName: string, files: string[] } {
         synchronizeHostData();
         const sourceFile = getValidSourceFile(fileName);
@@ -3015,6 +3493,17 @@ export function createLanguageService(
         return { newFileName, files };
     }
 
+    /**
+     * Returns the RefactorEditInfo object for a given file, format options, position or range, refactor name, action name, user preferences, and optional interactive refactor arguments.
+     * @param {string} fileName - The name of the file to refactor.
+     * @param {FormatCodeSettings} formatOptions - The format options for the refactored code.
+     * @param {number | TextRange} positionOrRange - The position or range to refactor.
+     * @param {string} refactorName - The name of the refactor to perform.
+     * @param {string} actionName - The name of the action to perform.
+     * @param {UserPreferences} [preferences=emptyOptions] - The user preferences for the refactored code.
+     * @param {InteractiveRefactorArguments} [interactiveRefactorArguments] - The interactive refactor arguments for the refactored code.
+     * @returns {RefactorEditInfo | undefined} - The RefactorEditInfo object for the refactored code, or undefined if the refactoring failed.
+     */
     function getEditsForRefactor(
         fileName: string,
         formatOptions: FormatCodeSettings,
@@ -3029,6 +3518,14 @@ export function createLanguageService(
         return refactor.getEditsForRefactor(getRefactorContext(file, positionOrRange, preferences, formatOptions), refactorName, actionName, interactiveRefactorArguments);
     }
 
+    /**
+     * Returns the line and character offset of a given position in a file.
+     * @param {string} fileName - The name of the file.
+     * @param {number} position - The position in the file.
+     * @returns {LineAndCharacter} - The line and character offset of the given position.
+     * @remarks
+     * This function special-cases the conversion of position 0 to avoid a crash trying to get the text for that file, since this function otherwise assumes that 'fileName' is the name of a file that exists.
+     */
     function toLineColumnOffset(fileName: string, position: number): LineAndCharacter {
         // Go to Definition supports returning a zero-length span at position 0 for
         // non-existent files. We need to special-case the conversion of position 0
@@ -3174,6 +3671,12 @@ export function getNameTable(sourceFile: SourceFile): Map<__String, number> {
     return sourceFile.nameTable!; // TODO: GH#18217
 }
 
+/**
+ * Initializes a name table for a given source file.
+ * @param {SourceFile} sourceFile - The source file to initialize the name table for.
+ * @returns {void}
+ * @remarks The name table is a Map object that maps identifiers and private identifiers to their positions in the source file.
+ */
 function initializeNameTable(sourceFile: SourceFile): void {
     const nameTable = sourceFile.nameTable = new Map();
     sourceFile.forEachChild(function walk(node) {
@@ -3217,6 +3720,11 @@ export function getContainingObjectLiteralElement(node: Node): ObjectLiteralElem
     const element = getContainingObjectLiteralElementWorker(node);
     return element && (isObjectLiteralExpression(element.parent) || isJsxAttributes(element.parent)) ? element as ObjectLiteralElementWithName : undefined;
 }
+/**
+ * Returns the containing object literal element of a given node, if it exists.
+ * @param node The node to check for containing object literal element.
+ * @returns The containing object literal element, or undefined if not found.
+ */
 function getContainingObjectLiteralElementWorker(node: Node): ObjectLiteralElement | undefined {
     switch (node.kind) {
         case SyntaxKind.StringLiteral:
@@ -3238,6 +3746,12 @@ function getContainingObjectLiteralElementWorker(node: Node): ObjectLiteralEleme
 /** @internal */
 export type ObjectLiteralElementWithName = ObjectLiteralElement & { name: PropertyName; parent: ObjectLiteralExpression | JsxAttributes };
 
+/**
+ * Returns the symbol at a given location for quick info.
+ * @param {Node} node - The node to get the symbol from.
+ * @param {TypeChecker} checker - The type checker to use.
+ * @returns {Symbol|undefined} - The symbol at the given location, or undefined if none found.
+ */
 function getSymbolAtLocationForQuickInfo(node: Node, checker: TypeChecker): Symbol | undefined {
     const object = getContainingObjectLiteralElement(node);
     if (object) {
@@ -3251,9 +3765,13 @@ function getSymbolAtLocationForQuickInfo(node: Node, checker: TypeChecker): Symb
 }
 
 /**
- * Gets all symbols for one property. Does not get symbols for every property.
- *
+ * Gets all symbols for one property from a contextual type. Does not retrieve symbols for every property.
  * @internal
+ * @param {ObjectLiteralElementWithName} node - The object literal element with the property name.
+ * @param {TypeChecker} checker - The type checker instance.
+ * @param {Type} contextualType - The contextual type to retrieve the symbols from.
+ * @param {boolean} unionSymbolOk - Indicates whether union symbols are allowed.
+ * @returns {readonly Symbol[]} An array of symbols for the specified property.
  */
 export function getPropertySymbolsFromContextualType(node: ObjectLiteralElementWithName, checker: TypeChecker, contextualType: Type, unionSymbolOk: boolean): readonly Symbol[] {
     const name = getNameFromPropertyName(node.name);

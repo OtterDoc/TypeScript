@@ -62,9 +62,13 @@ export const enum TokenModifier {
 }
 
 /**
- * This is mainly used internally for testing
+ * Returns an array of classified spans for a given program, source file, and text span.
  *
- * @internal
+ * @param {Program} program - The TypeScript program.
+ * @param {CancellationToken} cancellationToken - The cancellation token.
+ * @param {SourceFile} sourceFile - The source file to classify.
+ * @param {TextSpan} span - The text span to classify.
+ * @returns {ClassifiedSpan2020[]} An array of classified spans.
  */
 export function getSemanticClassifications(program: Program, cancellationToken: CancellationToken, sourceFile: SourceFile, span: TextSpan): ClassifiedSpan2020[] {
     const classifications = getEncodedSemanticClassifications(program, cancellationToken, sourceFile, span);
@@ -90,6 +94,14 @@ export function getEncodedSemanticClassifications(program: Program, cancellation
     };
 }
 
+/**
+ * Retrieves semantic tokens for a given program, source file, text span, and cancellation token.
+ * @param program - The program to retrieve tokens from.
+ * @param sourceFile - The source file to retrieve tokens from.
+ * @param span - The text span to retrieve tokens from.
+ * @param cancellationToken - The cancellation token to use.
+ * @returns An array of numbers representing the semantic tokens.
+ */
 function getSemanticTokens(program: Program, sourceFile: SourceFile, span: TextSpan, cancellationToken: CancellationToken): number[] {
     const resultTokens: number[] = [];
 
@@ -103,11 +115,23 @@ function getSemanticTokens(program: Program, sourceFile: SourceFile, span: TextS
     return resultTokens;
 }
 
+/**
+ * Collects tokens from a given program, source file, and text span using a provided collector function.
+ * @param program - The program to collect tokens from.
+ * @param sourceFile - The source file to collect tokens from.
+ * @param span - The text span to collect tokens from.
+ * @param collector - The function to use for collecting tokens.
+ * @param cancellationToken - The cancellation token to use for cancelling the operation.
+ */
 function collectTokens(program: Program, sourceFile: SourceFile, span: TextSpan, collector: (node: Node, tokenType: number, tokenModifier: number) => void, cancellationToken: CancellationToken) {
     const typeChecker = program.getTypeChecker();
 
     let inJSXElement = false;
 
+    /**
+     * Visits a node and classifies its symbol based on its type and modifiers.
+     * @param node The node to visit.
+     */
     function visit(node: Node) {
         switch(node.kind) {
             case SyntaxKind.ModuleDeclaration:
@@ -192,6 +216,12 @@ function collectTokens(program: Program, sourceFile: SourceFile, span: TextSpan,
     visit(sourceFile);
 }
 
+/**
+ * Determines the token type of a given symbol based on its flags and meaning.
+ * @param symbol - The symbol to classify.
+ * @param meaning - The semantic meaning of the symbol.
+ * @returns The token type of the symbol, or undefined if it cannot be classified.
+ */
 function classifySymbol(symbol: Symbol, meaning: SemanticMeaning): TokenType | undefined {
     const flags = symbol.getFlags();
     if (flags & SymbolFlags.Class) {
@@ -218,6 +248,13 @@ function classifySymbol(symbol: Symbol, meaning: SemanticMeaning): TokenType | u
     return decl && tokenFromDeclarationMapping.get(decl.kind);
 }
 
+/**
+ * Reclassifies a token type based on the type of the node and its type checker.
+ * @param {TypeChecker} typeChecker - The type checker to use.
+ * @param {Node} node - The node to check.
+ * @param {TokenType} typeIdx - The token type index to reclassify.
+ * @returns {TokenType} - The reclassified token type.
+ */
 function reclassifyByType(typeChecker: TypeChecker, node: Node, typeIdx: TokenType): TokenType {
     // type based classifications
     if (typeIdx === TokenType.variable || typeIdx === TokenType.property || typeIdx === TokenType.parameter) {
@@ -237,6 +274,12 @@ function reclassifyByType(typeChecker: TypeChecker, node: Node, typeIdx: TokenTy
     return typeIdx;
 }
 
+/**
+ * Determines if a given declaration is a local declaration in a specific source file.
+ * @param decl - The declaration to check.
+ * @param sourceFile - The source file to check against.
+ * @returns {boolean} - True if the declaration is local to the source file, false otherwise.
+ */
 function isLocalDeclaration(decl: Declaration, sourceFile: SourceFile): boolean {
     if (isBindingElement(decl)) {
         decl = getDeclarationForBindingElement(decl);
@@ -250,6 +293,11 @@ function isLocalDeclaration(decl: Declaration, sourceFile: SourceFile): boolean 
     return false;
 }
 
+/**
+ * Returns the VariableDeclaration or ParameterDeclaration for a given BindingElement.
+ * @param element - The BindingElement to get the declaration for.
+ * @returns The VariableDeclaration or ParameterDeclaration for the given BindingElement.
+ */
 function getDeclarationForBindingElement(element: BindingElement): VariableDeclaration | ParameterDeclaration {
     while (true) {
         if (isBindingElement(element.parent.parent)) {

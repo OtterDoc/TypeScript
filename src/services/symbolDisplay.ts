@@ -111,7 +111,14 @@ import {
 const symbolDisplayNodeBuilderFlags = NodeBuilderFlags.OmitParameterModifiers | NodeBuilderFlags.IgnoreErrors | NodeBuilderFlags.UseAliasDefinedOutsideCurrentScope;
 
 // TODO(drosen): use contextual SemanticMeaning.
-/** @internal */
+/**
+ * Returns the ScriptElementKind of a given symbol based on its flags and declaration kind.
+ * @param {TypeChecker} typeChecker - The TypeChecker instance.
+ * @param {Symbol} symbol - The symbol to get the ScriptElementKind of.
+ * @param {Node} location - The location of the symbol.
+ * @returns {ScriptElementKind} The ScriptElementKind of the symbol.
+ * @internal
+ */
 export function getSymbolKind(typeChecker: TypeChecker, symbol: Symbol, location: Node): ScriptElementKind {
     const result = getSymbolKindOfConstructorPropertyMethodAccessorFunctionOrVar(typeChecker, symbol, location);
     if (result !== ScriptElementKind.unknown) {
@@ -202,6 +209,11 @@ function getSymbolKindOfConstructorPropertyMethodAccessorFunctionOrVar(typeCheck
     return ScriptElementKind.unknown;
 }
 
+/**
+ * Returns an array of normalized symbol modifiers for a given Symbol.
+ * @param {Symbol} symbol - The Symbol to get modifiers for.
+ * @returns {string[]} An array of normalized symbol modifiers.
+ */
 function getNormalizedSymbolModifiers(symbol: Symbol) {
     if (symbol.declarations && symbol.declarations.length) {
         const [declaration, ...declarations] = symbol.declarations;
@@ -789,6 +801,11 @@ export function getSymbolDisplayPartsDocumentationAndSymbolKind(typeChecker: Typ
         }
     }
 
+    /**
+     * Adds a prefix to the next meaning of a symbol or variable.
+     * @param {Symbol} symbol - The symbol to add a prefix to.
+     * @param {string} symbolKind - The kind of symbol being added.
+     */
     function addPrefixForAnyFunctionOrVar(symbol: Symbol, symbolKind: string) {
         prefixNextMeaning();
         if (symbolKind) {
@@ -800,6 +817,11 @@ export function getSymbolDisplayPartsDocumentationAndSymbolKind(typeChecker: Typ
         }
     }
 
+    /**
+     * Adds a symbol kind to the display parts array.
+     * @param {string} symbolKind - The symbol kind to add.
+     * @returns {void}
+     */
     function pushSymbolKind(symbolKind: string) {
         switch (symbolKind) {
             case ScriptElementKind.variableElement:
@@ -846,6 +868,12 @@ export function getSymbolDisplayPartsDocumentationAndSymbolKind(typeChecker: Typ
     }
 }
 
+/**
+ * Determines if a given symbol is a local variable or function.
+ * @param {Symbol} symbol - The symbol to check.
+ * @returns {boolean} - True if the symbol is local, false if it is exported.
+ * @remarks - A symbol is considered local if it is a variable or function declaration within a function block, and its parent is not a source file or module block.
+ */
 function isLocalVariableOrFunction(symbol: Symbol) {
     if (symbol.parent) {
         return false; // This is exported symbol

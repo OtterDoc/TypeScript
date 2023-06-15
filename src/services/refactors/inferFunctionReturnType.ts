@@ -88,6 +88,13 @@ interface FunctionInfo {
     returnTypeNode: TypeNode;
 }
 
+/**
+ * Inserts a type annotation after the last parameter of a convertible declaration.
+ * @param sourceFile - The source file containing the declaration.
+ * @param changes - The change tracker to use for making edits.
+ * @param declaration - The convertible declaration to modify.
+ * @param typeNode - The type node to insert.
+ */
 function doChange(sourceFile: SourceFile, changes: textChanges.ChangeTracker, declaration: ConvertibleDeclaration, typeNode: TypeNode) {
     const closeParen = findChildOfKind(declaration, SyntaxKind.CloseParenToken, sourceFile);
     const needParens = isArrowFunction(declaration) && closeParen === undefined;
@@ -101,6 +108,11 @@ function doChange(sourceFile: SourceFile, changes: textChanges.ChangeTracker, de
     }
 }
 
+/**
+ * Retrieves information about a function's return type and declaration.
+ * @param {RefactorContext} context - The context in which the function is being refactored.
+ * @returns {FunctionInfo | RefactorErrorInfo | undefined} - An object containing the function's declaration and return type node, or an error message if the return type cannot be inferred.
+ */
 function getInfo(context: RefactorContext): FunctionInfo | RefactorErrorInfo | undefined {
     if (isInJSFile(context.file) || !refactorKindBeginsWith(inferReturnTypeAction.kind, context.kind)) return;
 
@@ -124,6 +136,11 @@ function getInfo(context: RefactorContext): FunctionInfo | RefactorErrorInfo | u
     }
 }
 
+/**
+ * Determines if a given Node is a ConvertibleDeclaration, which includes FunctionDeclaration, FunctionExpression, ArrowFunction, and MethodDeclaration.
+ * @param node The Node to check.
+ * @returns A boolean indicating if the Node is a ConvertibleDeclaration.
+ */
 function isConvertibleDeclaration(node: Node): node is ConvertibleDeclaration {
     switch (node.kind) {
         case SyntaxKind.FunctionDeclaration:
@@ -136,6 +153,12 @@ function isConvertibleDeclaration(node: Node): node is ConvertibleDeclaration {
     }
 }
 
+/**
+ * Tries to get the return type of a given ConvertibleDeclaration node using a TypeChecker.
+ * @param {TypeChecker} typeChecker - The TypeChecker instance to use.
+ * @param {ConvertibleDeclaration} node - The node to get the return type from.
+ * @returns {Type | undefined} - The return type of the node, or undefined if it cannot be determined.
+ */
 function tryGetReturnType(typeChecker: TypeChecker, node: ConvertibleDeclaration): Type | undefined {
     if (typeChecker.isImplementationOfOverload(node)) {
         const signatures = typeChecker.getTypeAtLocation(node).getCallSignatures();

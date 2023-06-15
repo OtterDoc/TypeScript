@@ -64,6 +64,13 @@ interface Info {
     readonly required: StringLiteralLike;
 }
 
+/**
+ * Retrieves information about a module import statement at a given position in a source file.
+ * @param sourceFile - The source file containing the import statement.
+ * @param program - The program containing the source file.
+ * @param pos - The position of the import statement in the source file.
+ * @returns An object containing information about the import statement, including the default import name, named imports, and the statement in which the import is declared.
+ */
 function getInfo(sourceFile: SourceFile, program: Program, pos: number): Info | undefined {
     const { parent } = getTokenAtPosition(sourceFile, pos);
     if (!isRequireCall(parent, /*requireStringLiteralLikeArgument*/ true)) {
@@ -84,6 +91,11 @@ function getInfo(sourceFile: SourceFile, program: Program, pos: number): Info | 
     }
 }
 
+/**
+ * Tries to create a NamedImports object from an ObjectBindingPattern node.
+ * @param {ObjectBindingPattern} node - The ObjectBindingPattern node to create NamedImports from.
+ * @returns {NamedImports | undefined} - The created NamedImports object or undefined if creation fails.
+ */
 function tryCreateNamedImportsFromObjectBindingPattern(node: ObjectBindingPattern): NamedImports | undefined {
     const importSpecifiers: ImportSpecifier[] = [];
     for (const element of node.elements) {

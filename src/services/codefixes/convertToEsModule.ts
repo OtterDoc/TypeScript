@@ -194,6 +194,19 @@ function forEachExportReference(sourceFile: SourceFile, cb: (node: (PropertyAcce
 /** Whether `module.exports =` was changed to `export default` */
 type ModuleExportsChanged = boolean;
 
+/**
+ * Converts a statement in a source file to a module export.
+ * @param {SourceFile} sourceFile - The source file containing the statement.
+ * @param {Statement} statement - The statement to convert.
+ * @param {TypeChecker} checker - The type checker for the source file.
+ * @param {textChanges.ChangeTracker} changes - The change tracker to record changes.
+ * @param {Identifiers} identifiers - The identifiers in the source file.
+ * @param {ScriptTarget} target - The target script version.
+ * @param {ExportRenames} exports - The export renames.
+ * @param {Map<Node, Node> | undefined} useSitesToUnqualify - The map of use sites to unqualify.
+ * @param {QuotePreference} quotePreference - The quote preference for the module export.
+ * @returns {boolean} - Whether the module exports have changed.
+ */
 function convertStatement(
     sourceFile: SourceFile,
     statement: Statement,
@@ -231,6 +244,17 @@ function convertStatement(
     }
 }
 
+/**
+ * Converts a VariableStatement to ES6 import statements and removes any unnecessary code.
+ * @param sourceFile - The source file containing the VariableStatement.
+ * @param statement - The VariableStatement to convert.
+ * @param changes - The text changes to apply to the source file.
+ * @param checker - The TypeChecker to use for type checking.
+ * @param identifiers - The Identifiers to use for generating unique names.
+ * @param target - The ScriptTarget to use for generating code.
+ * @param quotePreference - The QuotePreference to use for string literals.
+ * @returns A Map of nodes to their converted import statements, or undefined if no imports were found.
+ */
 function convertVariableStatement(
     sourceFile: SourceFile,
     statement: VariableStatement,
@@ -276,7 +300,15 @@ function convertVariableStatement(
     }
 }
 
-/** Converts `const name = require("moduleSpecifier").propertyName` */
+/**
+ * Converts a property access import statement to an ES module import statement.
+ * @param name The binding name of the import statement.
+ * @param propertyName The name of the property being imported.
+ * @param moduleSpecifier The module specifier of the import statement.
+ * @param identifiers An object containing unique identifiers.
+ * @param quotePreference The preferred quote style for the import statement.
+ * @returns An object containing the converted imports.
+ */
 function convertPropertyAccessImport(name: BindingName, propertyName: string, moduleSpecifier: StringLiteralLike, identifiers: Identifiers, quotePreference: QuotePreference): ConvertedImports {
     switch (name.kind) {
         case SyntaxKind.ObjectBindingPattern:
@@ -360,6 +392,14 @@ function tryChangeModuleExportsObject(object: ObjectLiteralExpression, useSitesT
     return statements && [statements, false];
 }
 
+/**
+ * Converts a named export in a source file to a new name using a change tracker.
+ * @param sourceFile - The source file containing the named export.
+ * @param assignment - The binary expression representing the named export.
+ * @param changes - The change tracker to use for making modifications.
+ * @param exports - The export renames object containing the new names for exports.
+ * @returns void
+ */
 function convertNamedExport(
     sourceFile: SourceFile,
     assignment: BinaryExpression & { left: PropertyAccessExpression },
@@ -385,6 +425,12 @@ function convertNamedExport(
     }
 }
 
+/**
+ * Converts a re-export of all exports from a module to the equivalent ES6 syntax.
+ * @param {StringLiteralLike} reExported - The module specifier for the re-export statement.
+ * @param {TypeChecker} checker - The type checker for the program.
+ * @returns {[readonly Statement[], ModuleExportsChanged]} An array containing the transformed statements and a boolean indicating if the module exports have changed.
+ */
 function convertReExportAll(reExported: StringLiteralLike, checker: TypeChecker): [readonly Statement[], ModuleExportsChanged] {
     // `module.exports = require("x");` ==> `export * from "x"; export { default } from "x";`
     const moduleSpecifier = reExported.text;
@@ -402,6 +448,15 @@ function reExportDefault(moduleSpecifier: string): ExportDeclaration {
     return makeExportDeclaration([factory.createExportSpecifier(/*isTypeOnly*/ false, /*propertyName*/ undefined, "default")], moduleSpecifier);
 }
 
+/**
+ * Converts an `exports` property assignment to an `export` statement.
+ * @param {object} param - An object containing the `left`, `right`, and `parent` properties.
+ * @param {BinaryExpression & { left: PropertyAccessExpression }} param.left - The left side of the assignment.
+ * @param {Node} param.right - The right side of the assignment.
+ * @param {SourceFile} param.sourceFile - The source file being modified.
+ * @param {textChanges.ChangeTracker} param.changes - The change tracker to use for modifying the source file.
+ * @returns {void}
+ */
 function convertExportsPropertyAssignment({ left, right, parent }: BinaryExpression & { left: PropertyAccessExpression }, sourceFile: SourceFile, changes: textChanges.ChangeTracker): void {
     const name = left.name.text;
     if ((isFunctionExpression(right) || isArrowFunction(right) || isClassExpression(right)) && (!right.name || right.name.text === name)) {
@@ -422,6 +477,13 @@ function convertExportsPropertyAssignment({ left, right, parent }: BinaryExpress
 }
 
 // TODO: GH#22492 this will cause an error if a change has been made inside the body of the node.
+/**
+ * Converts an exports assignment to an export statement.
+ * @param {string | undefined} name - The name of the export.
+ * @param {Expression} exported - The exported expression.
+ * @param {Map<Node, Node> | undefined} useSitesToUnqualify - A map of nodes to their unqualified versions.
+ * @returns {Statement} The converted export statement.
+ */
 function convertExportsDotXEquals_replaceNode(name: string | undefined, exported: Expression, useSitesToUnqualify: Map<Node, Node> | undefined): Statement {
     const modifiers = [factory.createToken(SyntaxKind.ExportKeyword)];
     switch (exported.kind) {
@@ -452,6 +514,13 @@ function convertExportsDotXEquals_replaceNode(name: string | undefined, exported
 
 function replaceImportUseSites<T extends Node>(node: T, useSitesToUnqualify: Map<Node, Node> | undefined): T;
 function replaceImportUseSites<T extends Node>(nodes: NodeArray<T>, useSitesToUnqualify: Map<Node, Node> | undefined): NodeArray<T>;
+/**
+ * Replaces import use sites with unqualified names.
+ * @template T - The type of the node to replace.
+ * @param {T | NodeArray<T>} nodeOrNodes - The node or nodes to replace.
+ * @param {Map<Node, Node> | undefined} useSitesToUnqualify - The map of use sites to unqualify.
+ * @returns {T | NodeArray<T>} - The replaced node or nodes.
+ */
 function replaceImportUseSites<T extends Node>(nodeOrNodes: T | NodeArray<T>, useSitesToUnqualify: Map<Node, Node> | undefined) {
     if (!useSitesToUnqualify || !some(arrayFrom(useSitesToUnqualify.keys()), original => rangeContainsRange(nodeOrNodes, original))) {
         return nodeOrNodes;
@@ -473,9 +542,14 @@ function replaceImportUseSites<T extends Node>(nodeOrNodes: T | NodeArray<T>, us
 }
 
 /**
- * Converts `const <<name>> = require("x");`.
- * Returns nodes that will replace the variable declaration for the commonjs import.
- * May also make use `changes` to remove qualifiers at the use sites of imports, to change `mod.x` to `x`.
+ * Converts a single commonjs import statement to an ES module import statement.
+ * @param {BindingName} name - The name of the imported variable.
+ * @param {StringLiteralLike} moduleSpecifier - The module specifier of the imported module.
+ * @param {TypeChecker} checker - The TypeChecker instance to use.
+ * @param {Identifiers} identifiers - The Identifiers instance to use.
+ * @param {ScriptTarget} target - The target script version.
+ * @param {QuotePreference} quotePreference - The preferred quote style for strings.
+ * @returns {ConvertedImports} An object containing the converted import statement.
  */
 function convertSingleImport(
     name: BindingName,
@@ -515,10 +589,15 @@ function convertSingleImport(
 }
 
 /**
- * Convert `import x = require("x").`
- * Also:
- * - Convert `x.default()` to `x()` to handle ES6 default export
- * - Converts uses like `x.y()` to `y()` and uses a named import.
+ * Converts a single identifier import statement from CommonJS to ES6 syntax.
+ *
+ * @param name - The identifier to be imported.
+ * @param moduleSpecifier - The module specifier string.
+ * @param checker - The TypeChecker object.
+ * @param identifiers - The Identifiers object.
+ * @param quotePreference - The QuotePreference enum.
+ *
+ * @returns An object containing the converted import statement and any necessary updates to the code.
  */
 function convertSingleIdentifierImport(name: Identifier, moduleSpecifier: StringLiteralLike, checker: TypeChecker, identifiers: Identifiers, quotePreference: QuotePreference): ConvertedImports {
     const nameSymbol = checker.getSymbolAtLocation(name);
@@ -608,6 +687,11 @@ function forEachFreeIdentifier(node: Node, cb: (id: Identifier) => void): void {
     node.forEachChild(child => forEachFreeIdentifier(child, cb));
 }
 
+/**
+ * Determines if a given node is a free identifier.
+ * @param node - The node to check.
+ * @returns {boolean} - True if the node is a free identifier, false otherwise.
+ */
 function isFreeIdentifier(node: Identifier): boolean {
     const { parent } = node;
     switch (parent.kind) {
@@ -624,6 +708,14 @@ function isFreeIdentifier(node: Identifier): boolean {
 
 // Node helpers
 
+/**
+ * Converts a function expression or arrow function to a function declaration.
+ * @param name - The name of the function.
+ * @param additionalModifiers - Additional modifiers for the function.
+ * @param fn - The function expression, arrow function, or method declaration to convert.
+ * @param useSitesToUnqualify - A map of nodes to their corresponding use sites for unqualifying imports.
+ * @returns The converted function declaration.
+ */
 function functionExpressionToDeclaration(name: string | undefined, additionalModifiers: readonly Modifier[], fn: FunctionExpression | ArrowFunction | MethodDeclaration, useSitesToUnqualify: Map<Node, Node> | undefined): FunctionDeclaration {
     return factory.createFunctionDeclaration(
         concatenate(additionalModifiers, getSynthesizedDeepClones(fn.modifiers)),

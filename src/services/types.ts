@@ -43,6 +43,25 @@ import {
 
 declare module "../compiler/types" {
     // Module transform: converted from interface augmentation
+    /**
+     * Interface representing a Node in the TypeScript AST.
+     * @returns {SourceFile} The source file that contains the Node.
+     * @returns {number} The number of child nodes the Node has.
+     * @returns {Node} The child Node at the specified index.
+     * @returns {Node[]} An array of all child Nodes.
+     * @returns {number} The starting position of the Node.
+     * @returns {number} The full starting position of the Node.
+     * @returns {number} The ending position of the Node.
+     * @returns {number} The width of the Node.
+     * @returns {number} The full width of the Node.
+     * @returns {number} The width of the leading trivia of the Node.
+     * @returns {string} The full text of the Node.
+     * @returns {string} The text of the Node.
+     * @returns {Node | undefined} The first token of the Node.
+     * @returns {Node | undefined} The last token of the Node.
+     * @param {function} cbNode - A callback function to be executed on each child Node.
+     * @param {function} cbNodeArray - A callback function to be executed on each child Node array.
+     */
     export interface Node {
         getSourceFile(): SourceFile;
         getChildCount(sourceFile?: SourceFile): number;
@@ -87,6 +106,18 @@ declare module "../compiler/types" {
 
 declare module "../compiler/types" {
     // Module transform: converted from interface augmentation
+    /**
+     * Represents a symbol, which is a named entity in a TypeScript program.
+     * @readonly
+     * @property {string} name - The name of the symbol.
+     * @returns {SymbolFlags} - The flags associated with the symbol.
+     * @returns {__String} - The escaped name of the symbol.
+     * @returns {string} - The name of the symbol.
+     * @returns {Declaration[] | undefined} - The declarations associated with the symbol.
+     * @param {TypeChecker | undefined} typeChecker - The type checker to use for getting the documentation comment.
+     * @returns {SymbolDisplayPart[]} - The documentation comment associated with the symbol.
+     * @remarks This interface also includes internal methods for getting contextual documentation comments and JSDoc tags.
+     */
     export interface Symbol {
         readonly name: string;
         getFlags(): SymbolFlags;
@@ -104,6 +135,36 @@ declare module "../compiler/types" {
 
 declare module "../compiler/types" {
     // Module transform: converted from interface augmentation
+    /**
+     * Interface representing a TypeScript type.
+     * @returns {TypeFlags} The flags associated with the type.
+     * @returns {Symbol | undefined} The symbol associated with the type, if any.
+     * @returns {Symbol[]} An array of symbols representing the properties of the type.
+     * @returns {Symbol | undefined} The symbol representing the specified property, if any.
+     * @returns {Symbol[]} An array of symbols representing the apparent properties of the type.
+     * @returns {readonly Signature[]} An array of signatures representing the call signatures of the type.
+     * @returns {readonly Signature[]} An array of signatures representing the construct signatures of the type.
+     * @returns {Type | undefined} The string index type associated with the type, if any.
+     * @returns {Type | undefined} The number index type associated with the type, if any.
+     * @returns {BaseType[] | undefined} An array of base types associated with the type, if any.
+     * @returns {Type} The non-nullable version of the type.
+     * @remarks This method is internal and should not be used directly.
+     * @returns {Type} The non-optional version of the type.
+     * @remarks This method is internal and should not be used directly.
+     * @returns {boolean} True if the type is nullable, false otherwise.
+     * @returns {Type | undefined} The constraint associated with the type, if any.
+     * @returns {Type | undefined} The default type associated with the type, if any.
+     * @returns {boolean} True if the type is a union type, false otherwise.
+     * @returns {boolean} True if the type is an intersection type, false otherwise.
+     * @returns {boolean} True if the type is a union or intersection type, false otherwise.
+     * @returns {boolean} True if the type is a literal type, false otherwise.
+     * @returns {boolean} True if the type is a string literal type, false otherwise.
+     * @returns {boolean} True if the type is a number literal type, false otherwise.
+     * @returns {boolean} True if the type is a type parameter, false otherwise.
+     * @returns {boolean} True if the type is a class or interface, false otherwise.
+     * @returns {boolean} True if the type is a class, false otherwise.
+     * @returns {boolean} True if the type is an index type, false otherwise.
+     */
     export interface Type {
         getFlags(): TypeFlags;
         getSymbol(): Symbol | undefined;
@@ -156,6 +217,10 @@ declare module "../compiler/types" {
 
 declare module "../compiler/types" {
     // Module transform: converted from interface augmentation
+    /**
+     * Represents a source file in the TypeScript language service.
+     * @interface
+     */
     export interface SourceFile {
         /** @internal */ version: string;
         /** @internal */ scriptSnapshot: IScriptSnapshot | undefined;
@@ -188,9 +253,10 @@ declare module "../compiler/types" {
 }
 
 /**
- * Represents an immutable snapshot of a script at a specified time.Once acquired, the
- * snapshot is observably immutable. i.e. the same calls with the same parameters will return
+ * Represents an immutable snapshot of a script at a specified time.
+ * Once acquired, the snapshot is observably immutable. i.e. the same calls with the same parameters will return
  * the same values.
+ * @interface
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export interface IScriptSnapshot {
@@ -214,6 +280,10 @@ export interface IScriptSnapshot {
 }
 
 export namespace ScriptSnapshot {
+    /**
+     * Class representing a string script snapshot.
+     * @implements {IScriptSnapshot}
+     */
     class StringScriptSnapshot implements IScriptSnapshot {
 
         constructor(private text: string) {
@@ -268,7 +338,10 @@ export const enum PackageJsonDependencyGroup {
     All = Dependencies | DevDependencies | PeerDependencies | OptionalDependencies,
 }
 
-/** @internal */
+/**
+ * Interface for information extracted from a project's package.json file.
+ * @internal
+ */
 export interface ProjectPackageJsonInfo {
     fileName: string;
     parseable: boolean;
@@ -312,6 +385,19 @@ export interface IncompleteCompletionsCache {
 //
 // Public interface of the host of a language service instance.
 //
+/**
+ * Represents a host for the LanguageService.
+ * @remarks
+ * This interface extends GetEffectiveTypeRootsHost and MinimalResolutionCacheHost.
+ * @remarks
+ * Includes methods for getting compilation settings, script file names, script versions and snapshots, and default library file name.
+ * @remarks
+ * Also includes methods for reading directories and files, resolving module and type references, and getting custom transformers for emit.
+ * @remarks
+ * Additionally includes methods for getting directories, installing packages, and writing files.
+ * @remarks
+ * Finally, includes methods for getting document position mapper, source file like, package JSONs, and parsed command line.
+ */
 export interface LanguageServiceHost extends GetEffectiveTypeRootsHost, MinimalResolutionCacheHost {
     getCompilationSettings(): CompilerOptions;
     getNewLine?(): string;
@@ -705,6 +791,14 @@ export interface OrganizeImportsArgs extends CombinedCodeFixScope {
 
 export type CompletionsTriggerCharacter = "." | '"' | "'" | "`" | "/" | "@" | "<" | "#" | " ";
 
+/**
+ * Represents the kind of completion trigger.
+ * @readonly
+ * @enum {number}
+ * @property {number} Invoked - Completion was triggered by typing an identifier, manual invocation (e.g Ctrl+Space) or via API.
+ * @property {number} TriggerCharacter - Completion was triggered by a trigger character.
+ * @property {number} TriggerForIncompleteCompletions - Completion was re-triggered as the current completion list is incomplete.
+ */
 export const enum CompletionTriggerKind {
     /** Completion was triggered by typing an identifier, manual invocation (e.g Ctrl+Space) or via API. */
     Invoked = 1,
@@ -716,6 +810,15 @@ export const enum CompletionTriggerKind {
     TriggerForIncompleteCompletions = 3,
 }
 
+/**
+ * Options for getting completions at a specific position in the code.
+ * @extends UserPreferences
+ * @remarks
+ * Use `triggerCharacter` and `triggerKind` to specify when the editor is requesting completions.
+ * Use `includeSymbol` to include a `symbol` property on each completion entry object, but be cautious when serializing or retaining completion entries retrieved with this option.
+ * @deprecated Use `includeCompletionsForModuleExports` instead of `includeExternalModuleExports`.
+ * @deprecated Use `includeCompletionsWithInsertText` instead of `includeInsertTextCompletions`.
+ */
 export interface GetCompletionsAtPositionOptions extends UserPreferences {
     /**
      * If the editor is asking for completions because a certain character was typed
@@ -803,10 +906,15 @@ export interface ClassifiedSpan2020 {
 }
 
 /**
- * Navigation bar interface designed for visual studio's dual-column layout.
- * This does not form a proper tree.
- * The navbar is returned as a list of top-level items, each of which has a list of child items.
- * Child items always have an empty array for their `childItems`.
+ * Interface for a navigation bar item.
+ * @param {string} text - The text displayed for the item.
+ * @param {ScriptElementKind} kind - The kind of script element represented by the item.
+ * @param {string} kindModifiers - The modifiers for the script element.
+ * @param {TextSpan[]} spans - The text spans of the script element.
+ * @param {NavigationBarItem[]} childItems - The child items of the navigation bar item.
+ * @param {number} indent - The indentation level of the item.
+ * @param {boolean} bolded - Whether the item should be displayed in bold.
+ * @param {boolean} grayed - Whether the item should be displayed in gray.
  */
 export interface NavigationBarItem {
     text: string;
@@ -820,8 +928,15 @@ export interface NavigationBarItem {
 }
 
 /**
- * Node in a tree of nested declarations in a file.
+ * Represents a node in a tree of nested declarations in a file.
  * The top node is always a script or module node.
+ * @interface
+ * @property {string} text - Name of the declaration, or a short description, e.g. "<class>".
+ * @property {ScriptElementKind} kind - The kind of the script element.
+ * @property {string} kindModifiers - ScriptElementKindModifier separated by commas, e.g. "public,abstract".
+ * @property {TextSpan[]} spans - Spans of the nodes that generated this declaration. There will be more than one if this is the result of merging.
+ * @property {TextSpan|undefined} nameSpan - The span of the name of the declaration, if present.
+ * @property {NavigationTree[]|undefined} childItems - An array of child NavigationTree nodes, if non-empty.
  */
 export interface NavigationTree {
     /** Name of the declaration, or a short description, e.g. "<class>". */
@@ -895,6 +1010,13 @@ export interface FileTextChanges {
     isNewFile?: boolean;
 }
 
+/**
+ * Represents a code action that can be displayed in the UI of the editor.
+ * @interface
+ * @property {string} description - Description of the code action to display in the UI of the editor.
+ * @property {FileTextChanges[]} changes - Text changes to apply to each file as part of the code action.
+ * @property {CodeActionCommand[]} [commands] - If the user accepts the code fix, the editor should send the action back in a `applyAction` request. This allows the language service to have side effects (e.g. installing dependencies) upon a code fix.
+ */
 export interface CodeAction {
     /** Description of the code action to display in the UI of the editor */
     description: string;
@@ -907,6 +1029,15 @@ export interface CodeAction {
     commands?: CodeActionCommand[];
 }
 
+/**
+ * Represents a code fix action that extends the CodeAction interface.
+ * @interface
+ * @extends CodeAction
+ * @property {string} fixName - Short name to identify the fix, for use by telemetry.
+ * @property {Object} [fixId] - If present, one may call 'getCombinedCodeFix' with this fixId.
+ * This may be omitted to indicate that the code fix can't be applied in a group.
+ * @property {string} [fixAllDescription] - Description of the fix when applied to all occurrences.
+ */
 export interface CodeFixAction extends CodeAction {
     /** Short name to identify the fix, for use by telemetry. */
     fixName: string;
@@ -934,7 +1065,8 @@ export interface InstallPackageAction {
 }
 
 /**
- * A set of one or more available refactoring actions, grouped under a parent refactoring.
+ * Represents a set of one or more available refactoring actions, grouped under a parent refactoring.
+ * @interface
  */
 export interface ApplicableRefactorInfo {
     /**
@@ -959,8 +1091,13 @@ export interface ApplicableRefactorInfo {
 }
 
 /**
- * Represents a single refactoring action - for example, the "Extract Method..." refactor might
- * offer several actions, each corresponding to a surround class or closure to extract into.
+ * Represents information about a single refactoring action.
+ * @interface
+ * @property {string} name - The programmatic name of the refactoring action.
+ * @property {string} description - A description of this refactoring action to show to the user.
+ * @property {string} [notApplicableReason] - A message to show to the user if the refactoring cannot be applied in the current context.
+ * @property {string} [kind] - The hierarchical dotted name of the refactor action.
+ * @property {boolean} [isInteractive] - Indicates that the action requires additional arguments to be passed when calling `getEditsForRefactor`.
  */
 export interface RefactorActionInfo {
     /**
@@ -1013,6 +1150,16 @@ export interface TextInsertion {
     caretOffset: number;
 }
 
+/**
+ * Represents a span of text within a document, along with relevant context information.
+ * @interface
+ * @property {TextSpan} textSpan - The span of text within the document.
+ * @property {string} fileName - The name of the file containing the text span.
+ * @property {TextSpan} [originalTextSpan] - If the span represents a location that was remapped, the original text span is specified here.
+ * @property {string} [originalFileName] - If the span represents a location that was remapped, the original file name is specified here.
+ * @property {TextSpan} [contextSpan] - If the text span is for the name of a declaration, this is the span for the relevant declaration.
+ * @property {TextSpan} [originalContextSpan] - If the text span is for the name of a declaration that was remapped, the original context span is specified here.
+ */
 export interface DocumentSpan {
     textSpan: TextSpan;
     fileName: string;
@@ -1062,6 +1209,18 @@ export interface HighlightSpan {
     kind: HighlightSpanKind;
 }
 
+/**
+ * Interface for navigating to a specific item.
+ * @param {string} name - The name of the item to navigate to.
+ * @param {ScriptElementKind} kind - The kind of script element.
+ * @param {string} kindModifiers - The modifiers of the script element.
+ * @param {"exact" | "prefix" | "substring" | "camelCase"} matchKind - The type of matching to use.
+ * @param {boolean} isCaseSensitive - Whether the matching is case sensitive.
+ * @param {string} fileName - The name of the file containing the item.
+ * @param {TextSpan} textSpan - The text span of the item.
+ * @param {string} containerName - The name of the container of the item.
+ * @param {ScriptElementKind} containerKind - The kind of the container of the item.
+ */
 export interface NavigateToItem {
     name: string;
     kind: ScriptElementKind;
@@ -1107,7 +1266,14 @@ export interface EditorSettings {
     trimTrailingWhitespace?: boolean;
 }
 
-/** @deprecated - consider using FormatCodeSettings instead */
+/**
+ * Interface for specifying options for formatting code.
+ * @extends EditorOptions
+ * @remarks
+ * This interface is used to specify options for formatting code. It extends the EditorOptions interface.
+ * @deprecated - consider using FormatCodeSettings instead
+ * @public
+ */
 export interface FormatCodeOptions extends EditorOptions {
     InsertSpaceAfterCommaDelimiter: boolean;
     InsertSpaceAfterSemicolonInForStatements: boolean;
@@ -1127,6 +1293,32 @@ export interface FormatCodeOptions extends EditorOptions {
     insertSpaceBeforeTypeAnnotation?: boolean;
 }
 
+/**
+ * Interface for settings related to formatting code.
+ * Extends EditorSettings interface.
+ * @readonly
+ * @interface
+ * @property {boolean} [insertSpaceAfterCommaDelimiter] - Whether to insert a space after a comma delimiter.
+ * @property {boolean} [insertSpaceAfterSemicolonInForStatements] - Whether to insert a space after a semicolon in for statements.
+ * @property {boolean} [insertSpaceBeforeAndAfterBinaryOperators] - Whether to insert a space before and after binary operators.
+ * @property {boolean} [insertSpaceAfterConstructor] - Whether to insert a space after a constructor.
+ * @property {boolean} [insertSpaceAfterKeywordsInControlFlowStatements] - Whether to insert a space after keywords in control flow statements.
+ * @property {boolean} [insertSpaceAfterFunctionKeywordForAnonymousFunctions] - Whether to insert a space after the function keyword for anonymous functions.
+ * @property {boolean} [insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis] - Whether to insert a space after opening and before closing non-empty parenthesis.
+ * @property {boolean} [insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets] - Whether to insert a space after opening and before closing non-empty brackets.
+ * @property {boolean} [insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces] - Whether to insert a space after opening and before closing non-empty braces.
+ * @property {boolean} [insertSpaceAfterOpeningAndBeforeClosingEmptyBraces] - Whether to insert a space after opening and before closing empty braces.
+ * @property {boolean} [insertSpaceAfterOpeningAndBeforeClosingTemplateStringBraces] - Whether to insert a space after opening and before closing template string braces.
+ * @property {boolean} [insertSpaceAfterOpeningAndBeforeClosingJsxExpressionBraces] - Whether to insert a space after opening and before closing JSX expression braces.
+ * @property {boolean} [insertSpaceAfterTypeAssertion] - Whether to insert a space after a type assertion.
+ * @property {boolean} [insertSpaceBeforeFunctionParenthesis] - Whether to insert a space before function parenthesis.
+ * @property {boolean} [placeOpenBraceOnNewLineForFunctions] - Whether to place an open brace on a new line for functions.
+ * @property {boolean} [placeOpenBraceOnNewLineForControlBlocks] - Whether to place an open brace on a new line for control blocks.
+ * @property {boolean} [insertSpaceBeforeTypeAnnotation] - Whether to insert a space before a type annotation.
+ * @property {boolean} [indentMultiLineObjectLiteralBeginningOnBlankLine] - Whether to indent multi-line object literal beginning on a blank line.
+ * @property {SemicolonPreference} [semicolons] - Semicolon preference.
+ * @property {boolean} [indentSwitchCase] - Whether to indent switch case.
+ */
 export interface FormatCodeSettings extends EditorSettings {
     readonly insertSpaceAfterCommaDelimiter?: boolean;
     readonly insertSpaceAfterSemicolonInForStatements?: boolean;
@@ -1150,6 +1342,11 @@ export interface FormatCodeSettings extends EditorSettings {
     readonly indentSwitchCase?: boolean;
 }
 
+/**
+ * Returns default format code settings.
+ * @param {string} [newLineCharacter] - The new line character to use. Defaults to "\n".
+ * @returns {FormatCodeSettings} - The default format code settings object.
+ */
 export function getDefaultFormatCodeSettings(newLineCharacter?: string): FormatCodeSettings {
     return {
         indentSize: 4,
@@ -1180,6 +1377,19 @@ export function getDefaultFormatCodeSettings(newLineCharacter?: string): FormatC
 /** @internal */
 export const testFormatSettings = getDefaultFormatCodeSettings("\n");
 
+/**
+ * Represents information about a definition in a TypeScript document.
+ * @interface
+ * @extends DocumentSpan
+ * @property {ScriptElementKind} kind - The kind of script element.
+ * @property {string} name - The name of the script element.
+ * @property {ScriptElementKind} containerKind - The kind of container for the script element.
+ * @property {string} containerName - The name of the container for the script element.
+ * @property {boolean} [unverified] - Indicates if the definition is unverified.
+ * @property {boolean} [isLocal] - Indicates if the definition is local.
+ * @property {boolean} [isAmbient] - Indicates if the definition is ambient.
+ * @property {boolean} [failedAliasResolution] - Indicates if the alias resolution failed.
+ */
 export interface DefinitionInfo extends DocumentSpan {
     kind: ScriptElementKind;
     name: string;
@@ -1214,6 +1424,36 @@ export interface ReferencedSymbolEntry extends ReferenceEntry {
     isDefinition?: boolean;
 }
 
+/**
+ * An enumeration of possible kinds of symbol display parts.
+ * @enum {number}
+ * @readonly
+ * @property {number} aliasName - The display part represents an alias name.
+ * @property {number} className - The display part represents a class name.
+ * @property {number} enumName - The display part represents an enum name.
+ * @property {number} fieldName - The display part represents a field name.
+ * @property {number} interfaceName - The display part represents an interface name.
+ * @property {number} keyword - The display part represents a keyword.
+ * @property {number} lineBreak - The display part represents a line break.
+ * @property {number} numericLiteral - The display part represents a numeric literal.
+ * @property {number} stringLiteral - The display part represents a string literal.
+ * @property {number} localName - The display part represents a local name.
+ * @property {number} methodName - The display part represents a method name.
+ * @property {number} moduleName - The display part represents a module name.
+ * @property {number} operator - The display part represents an operator.
+ * @property {number} parameterName - The display part represents a parameter name.
+ * @property {number} propertyName - The display part represents a property name.
+ * @property {number} punctuation - The display part represents a punctuation mark.
+ * @property {number} space - The display part represents a space.
+ * @property {number} text - The display part represents plain text.
+ * @property {number} typeParameterName - The display part represents a type parameter name.
+ * @property {number} enumMemberName - The display part represents an enum member name.
+ * @property {number} functionName - The display part represents a function name.
+ * @property {number} regularExpressionLiteral - The display part represents a regular expression literal.
+ * @property {number} link - The display part represents a link.
+ * @property {number} linkName - The display part represents a link name.
+ * @property {number} linkText - The display part represents link text.
+ */
 export enum SymbolDisplayPartKind {
     aliasName,
     className,
@@ -1266,6 +1506,17 @@ export interface QuickInfo {
 }
 
 export type RenameInfo = RenameInfoSuccess | RenameInfoFailure;
+/**
+ * Interface for successful rename information.
+ * @interface
+ * @property {boolean} canRename - Indicates if the rename operation can be performed.
+ * @property {string | undefined} fileToRename - File or directory to rename. If set, `getEditsForFileRename` should be called instead of `findRenameLocations`.
+ * @property {string} displayName - Display name of the renamed item.
+ * @property {string} fullDisplayName - Full display name of the renamed item.
+ * @property {ScriptElementKind} kind - Kind of the renamed item.
+ * @property {string} kindModifiers - Kind modifiers of the renamed item.
+ * @property {TextSpan} triggerSpan - Text span of the renamed item.
+ */
 export interface RenameInfoSuccess {
     canRename: true;
     /**
@@ -1351,6 +1602,16 @@ export const enum CompletionInfoFlags {
     MayIncludeMethodSnippets = 1 << 5,
 }
 
+/**
+ * Interface for completion information.
+ * @param {CompletionInfoFlags} [flags] - Flags for performance telemetry.
+ * @param {boolean} isGlobalCompletion - True if the enclosing scope matches a few syntax kinds.
+ * @param {boolean} isMemberCompletion - True if the completion is a member of an object.
+ * @param {TextSpan} [optionalReplacementSpan] - Optional replacement span for the completion entry.
+ * @param {boolean} isNewIdentifierLocation - True when the current location allows for a new identifier.
+ * @param {boolean} [isIncomplete] - Indicates to client to continue requesting completions on subsequent keystrokes.
+ * @param {CompletionEntry[]} entries - Array of completion entries.
+ */
 export interface CompletionInfo {
     /** For performance telemetry. */
     flags?: CompletionInfoFlags;
@@ -1374,6 +1635,16 @@ export interface CompletionInfo {
     entries: CompletionEntry[];
 }
 
+/**
+ * Represents data for an auto-import completion entry.
+ * @interface
+ * @property {string} exportName - The name of the property or export in the module's symbol table. Differs from the completion name in the case of InternalSymbolName.ExportEquals and InternalSymbolName.Default.
+ * @property {string} [exportMapKey] - The key used to map the export in the completion entry.
+ * @property {string} [moduleSpecifier] - The module specifier for the import statement.
+ * @property {string} [fileName] - The file name declaring the export's module symbol, if it was an external module.
+ * @property {string} [ambientModuleName] - The module name (with quotes stripped) of the export's module symbol, if it was an ambient module.
+ * @property {boolean} [isPackageJsonImport] - True if the export was found in the package.json AutoImportProvider.
+ */
 export interface CompletionEntryDataAutoImport {
     /**
      * The name of the property or export in the module's symbol table. Differs from the completion name
@@ -1401,6 +1672,28 @@ export interface CompletionEntryDataResolved extends CompletionEntryDataAutoImpo
 export type CompletionEntryData = CompletionEntryDataUnresolved | CompletionEntryDataResolved;
 
 // see comments in protocol.ts
+/**
+ * Represents a completion entry for an editor or IDE to display to the user.
+ * @interface
+ * @property {string} name - The name of the completion entry.
+ * @property {ScriptElementKind} kind - The kind of the completion entry.
+ * @property {string=} kindModifiers - The kind modifiers of the completion entry.
+ * @property {string} sortText - The sort text of the completion entry.
+ * @property {string=} insertText - The text to be inserted for the completion entry.
+ * @property {string=} filterText - The text to be used for filtering the completion entry.
+ * @property {boolean=} isSnippet - Indicates whether the completion entry is a snippet.
+ * @property {TextSpan=} replacementSpan - The span of the text to be replaced by the completion entry.
+ * @property {boolean=} hasAction - Indicates whether the completion entry has an action.
+ * @property {string=} source - The source of the completion entry.
+ * @property {SymbolDisplayPart[]=} sourceDisplay - The display parts of the source of the completion entry.
+ * @property {CompletionEntryLabelDetails=} labelDetails - The label details of the completion entry.
+ * @property {boolean=} isRecommended - Indicates whether the completion entry is recommended.
+ * @property {boolean=} isFromUncheckedFile - Indicates whether the completion entry is from an unchecked file.
+ * @property {boolean=} isPackageJsonImport - Indicates whether the completion entry is a package.json import.
+ * @property {boolean=} isImportStatementCompletion - Indicates whether the completion entry is an import statement completion.
+ * @property {Symbol=} symbol - The symbol of the completion entry.
+ * @property {CompletionEntryData=} data - The data of the completion entry.
+ */
 export interface CompletionEntry {
     name: string;
     kind: ScriptElementKind;
@@ -1445,6 +1738,18 @@ export interface CompletionEntryLabelDetails {
     description?: string;
 }
 
+/**
+ * Represents detailed information about a completion entry.
+ * @interface
+ * @property {string} name - The name of the completion entry.
+ * @property {ScriptElementKind} kind - The kind of the completion entry.
+ * @property {string} kindModifiers - The modifiers of the completion entry.
+ * @property {SymbolDisplayPart[]} displayParts - The display parts of the completion entry.
+ * @property {SymbolDisplayPart[] | undefined} documentation - The documentation of the completion entry.
+ * @property {JSDocTagInfo[] | undefined} tags - The JSDoc tags of the completion entry.
+ * @property {CodeAction[] | undefined} codeActions - The code actions of the completion entry.
+ * @property {SymbolDisplayPart[] | undefined} sourceDisplay - The source display of the completion entry.
+ */
 export interface CompletionEntryDetails {
     name: string;
     kind: ScriptElementKind;
@@ -1458,6 +1763,15 @@ export interface CompletionEntryDetails {
     sourceDisplay?: SymbolDisplayPart[];
 }
 
+/**
+ * Represents a collapsible region within a document.
+ * @interface
+ * @property {TextSpan} textSpan - The span of the document to actually collapse.
+ * @property {TextSpan} hintSpan - The span of the document to display when the user hovers over the collapsed span.
+ * @property {string} bannerText - The text to display in the editor for the collapsed region.
+ * @property {boolean} autoCollapse - Whether or not this region should be automatically collapsed when the 'Collapse to Definitions' command is invoked.
+ * @property {OutliningSpanKind} kind - Classification of the contents of the span.
+ */
 export interface OutliningSpan {
     /** The span of the document to actually collapse. */
     textSpan: TextSpan;
@@ -1480,6 +1794,15 @@ export interface OutliningSpan {
     kind: OutliningSpanKind;
 }
 
+/**
+ * Enum representing different kinds of outlining spans.
+ * @readonly
+ * @enum {string}
+ * @property {string} Comment - Single or multi-line comments.
+ * @property {string} Region - Sections marked by '// #region' and '// #endregion' comments.
+ * @property {string} Code - Declarations and expressions.
+ * @property {string} Imports - Contiguous blocks of import declarations.
+ */
 export const enum OutliningSpanKind {
     /** Single or multi-line comments */
     Comment = "comment",
@@ -1510,6 +1833,21 @@ export const enum EndOfLineState {
     InTemplateSubstitutionPosition,
 }
 
+/**
+ * Represents the different classes of tokens in a programming language.
+ * @enum {number}
+ * @readonly
+ * @property {number} Punctuation - Represents punctuation tokens.
+ * @property {number} Keyword - Represents keyword tokens.
+ * @property {number} Operator - Represents operator tokens.
+ * @property {number} Comment - Represents comment tokens.
+ * @property {number} Whitespace - Represents whitespace tokens.
+ * @property {number} Identifier - Represents identifier tokens.
+ * @property {number} NumberLiteral - Represents number literal tokens.
+ * @property {number} BigIntLiteral - Represents big integer literal tokens.
+ * @property {number} StringLiteral - Represents string literal tokens.
+ * @property {number} RegExpLiteral - Represents regular expression literal tokens.
+ */
 export enum TokenClass {
     Punctuation,
     Keyword,
@@ -1533,6 +1871,9 @@ export interface ClassificationInfo {
     classification: TokenClass;
 }
 
+/**
+ * Interface for a classifier that gives lexical classifications of tokens on a line without any syntactic context.
+ */
 export interface Classifier {
     /**
      * Gives lexical classifications of tokens on a line without any syntactic context.
@@ -1558,6 +1899,49 @@ export interface Classifier {
     getEncodedLexicalClassifications(text: string, endOfLineState: EndOfLineState, syntacticClassifierAbsent: boolean): Classifications;
 }
 
+/**
+ * Represents the different kinds of script elements.
+ * @readonly
+ * @enum {string}
+ * @property {string} unknown - Empty string.
+ * @property {string} warning - Warning message.
+ * @property {string} keyword - Predefined type (void) or keyword (class).
+ * @property {string} scriptElement - Top level script node.
+ * @property {string} moduleElement - Module foo {}.
+ * @property {string} classElement - Class X {}.
+ * @property {string} localClassElement - Var x = class X {}.
+ * @property {string} interfaceElement - Interface Y {}.
+ * @property {string} typeElement - Type T = ...
+ * @property {string} enumElement - Enum E.
+ * @property {string} enumMemberElement - Enum member.
+ * @property {string} variableElement - Inside module and script only. Const v = ...
+ * @property {string} localVariableElement - Inside function.
+ * @property {string} functionElement - Inside module and script only. Function f() { }.
+ * @property {string} localFunctionElement - Inside function.
+ * @property {string} memberFunctionElement - Class X { [public|private]* foo() {} }.
+ * @property {string} memberGetAccessorElement - Class X { [public|private]* [get|set] foo:number; }.
+ * @property {string} memberSetAccessorElement - Class X { [public|private]* [get|set] foo:number; }.
+ * @property {string} memberVariableElement - Class X { [public|private]* foo:number; }.
+ * @property {string} memberAccessorVariableElement - Class X { [public|private]* accessor foo: number; }.
+ * @property {string} constructorImplementationElement - Class X { constructor() { } }.
+ * @property {string} callSignatureElement - Interface Y { ():number; }.
+ * @property {string} indexSignatureElement - Interface Y { []:number; }.
+ * @property {string} constructSignatureElement - Interface Y { new():Y; }.
+ * @property {string} parameterElement - Function foo(*Y*: string).
+ * @property {string} typeParameterElement - Type parameter.
+ * @property {string} primitiveType - Primitive type.
+ * @property {string} label - Label.
+ * @property {string} alias - Alias.
+ * @property {string} constElement - Const.
+ * @property {string} letElement - Let.
+ * @property {string} directory - Directory.
+ * @property {string} externalModuleName - External module name.
+ * @property {string} jsxAttribute - JSX attribute. Deprecated.
+ * @property {string} string - String literal.
+ * @property {string} link - Jsdoc @link.
+ * @property {string} linkName - Jsdoc @link entity name.
+ * @property {string} linkText - Jsdoc @link link text.
+ */
 export const enum ScriptElementKind {
     unknown = "",
     warning = "warning",
@@ -1674,6 +2058,33 @@ export const enum ScriptElementKind {
     linkText = "link text",
 }
 
+/**
+ * Enum representing various modifiers for script element kinds.
+ * @readonly
+ * @enum {string}
+ * @property {string} none - Empty string.
+ * @property {string} publicMemberModifier - Modifier for public members.
+ * @property {string} privateMemberModifier - Modifier for private members.
+ * @property {string} protectedMemberModifier - Modifier for protected members.
+ * @property {string} exportedModifier - Modifier for exported elements.
+ * @property {string} ambientModifier - Modifier for ambient declarations.
+ * @property {string} staticModifier - Modifier for static members.
+ * @property {string} abstractModifier - Modifier for abstract classes.
+ * @property {string} optionalModifier - Modifier for optional parameters.
+ * @property {string} deprecatedModifier - Modifier for deprecated elements.
+ * @property {string} dtsModifier - Modifier for declaration files.
+ * @property {string} tsModifier - Modifier for TypeScript files.
+ * @property {string} tsxModifier - Modifier for TypeScript JSX files.
+ * @property {string} jsModifier - Modifier for JavaScript files.
+ * @property {string} jsxModifier - Modifier for JavaScript JSX files.
+ * @property {string} jsonModifier - Modifier for JSON files.
+ * @property {string} dmtsModifier - Modifier for declaration files with multiple type scripts.
+ * @property {string} mtsModifier - Modifier for multiple type scripts.
+ * @property {string} mjsModifier - Modifier for multiple JavaScript files.
+ * @property {string} dctsModifier - Modifier for declaration files with multiple type scripts.
+ * @property {string} ctsModifier - Modifier for multiple type scripts.
+ * @property {string} cjsModifier - Modifier for multiple JavaScript files.
+ */
 export const enum ScriptElementKindModifier {
     none = "",
     publicMemberModifier = "public",
@@ -1701,6 +2112,35 @@ export const enum ScriptElementKindModifier {
     cjsModifier = ".cjs",
 }
 
+/**
+ * Enum representing the different types of classification names.
+ * @readonly
+ * @enum {string}
+ * @property {string} comment - Represents a comment.
+ * @property {string} identifier - Represents an identifier.
+ * @property {string} keyword - Represents a keyword.
+ * @property {string} numericLiteral - Represents a numeric literal.
+ * @property {string} bigintLiteral - Represents a bigint literal.
+ * @property {string} operator - Represents an operator.
+ * @property {string} stringLiteral - Represents a string literal.
+ * @property {string} whiteSpace - Represents whitespace.
+ * @property {string} text - Represents text.
+ * @property {string} punctuation - Represents punctuation.
+ * @property {string} className - Represents a class name.
+ * @property {string} enumName - Represents an enum name.
+ * @property {string} interfaceName - Represents an interface name.
+ * @property {string} moduleName - Represents a module name.
+ * @property {string} typeParameterName - Represents a type parameter name.
+ * @property {string} typeAliasName - Represents a type alias name.
+ * @property {string} parameterName - Represents a parameter name.
+ * @property {string} docCommentTagName - Represents a doc comment tag name.
+ * @property {string} jsxOpenTagName - Represents a JSX open tag name.
+ * @property {string} jsxCloseTagName - Represents a JSX close tag name.
+ * @property {string} jsxSelfClosingTagName - Represents a JSX self closing tag name.
+ * @property {string} jsxAttribute - Represents a JSX attribute.
+ * @property {string} jsxText - Represents JSX text.
+ * @property {string} jsxAttributeStringLiteralValue - Represents a JSX attribute string literal value.
+ */
 export const enum ClassificationTypeNames {
     comment = "comment",
     identifier = "identifier",
@@ -1730,6 +2170,40 @@ export const enum ClassificationTypeNames {
     jsxAttributeStringLiteralValue = "jsx attribute string literal value",
 }
 
+/**
+ * An enumeration of all possible types of tokens in a TypeScript source file.
+ *
+ * @remarks
+ * This enum is used by the TypeScript compiler to categorize tokens in a source file.
+ *
+ * @enum {number}
+ * @readonly
+ * @property {number} comment - A comment token.
+ * @property {number} identifier - An identifier token.
+ * @property {number} keyword - A keyword token.
+ * @property {number} numericLiteral - A numeric literal token.
+ * @property {number} operator - An operator token.
+ * @property {number} stringLiteral - A string literal token.
+ * @property {number} regularExpressionLiteral - A regular expression literal token.
+ * @property {number} whiteSpace - A whitespace token.
+ * @property {number} text - A text token.
+ * @property {number} punctuation - A punctuation token.
+ * @property {number} className - A class name token.
+ * @property {number} enumName - An enum name token.
+ * @property {number} interfaceName - An interface name token.
+ * @property {number} moduleName - A module name token.
+ * @property {number} typeParameterName - A type parameter name token.
+ * @property {number} typeAliasName - A type alias name token.
+ * @property {number} parameterName - A parameter name token.
+ * @property {number} docCommentTagName - A JSDoc tag name token.
+ * @property {number} jsxOpenTagName - A JSX opening tag name token.
+ * @property {number} jsxCloseTagName - A JSX closing tag name token.
+ * @property {number} jsxSelfClosingTagName - A JSX self-closing tag name token.
+ * @property {number} jsxAttribute - A JSX attribute token.
+ * @property {number} jsxText - A JSX text token.
+ * @property {number} jsxAttributeStringLiteralValue - A JSX attribute string literal value token.
+ * @property {number} bigintLiteral - A bigint literal token.
+ */
 export const enum ClassificationType {
     comment = 1,
     identifier = 2,
@@ -1798,7 +2272,19 @@ export interface Refactor {
     getAvailableActions(context: RefactorContext, includeInteractive?: boolean, interactiveRefactorArguments?: InteractiveRefactorArguments): readonly ApplicableRefactorInfo[];
 }
 
-/** @internal */
+/**
+ * Represents the context for a refactoring operation.
+ * @extends textChanges.TextChangesContext
+ * @interface
+ * @property {SourceFile} file - The source file being refactored.
+ * @property {number} startPosition - The starting position of the refactoring operation.
+ * @property {number | undefined} endPosition - The ending position of the refactoring operation, if applicable.
+ * @property {Program} program - The program being used for the refactoring operation.
+ * @property {CancellationToken | undefined} cancellationToken - The cancellation token for the refactoring operation, if applicable.
+ * @property {UserPreferences} preferences - The user preferences for the refactoring operation.
+ * @property {RefactorTriggerReason | undefined} triggerReason - The reason for triggering the refactoring operation, if applicable.
+ * @property {string | undefined} kind - The kind of refactoring operation being performed, if applicable.
+ */
 export interface RefactorContext extends textChanges.TextChangesContext {
     file: SourceFile;
     startPosition: number;

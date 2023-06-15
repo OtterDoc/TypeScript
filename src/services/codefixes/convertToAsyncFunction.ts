@@ -134,6 +134,13 @@ interface PromiseReturningCallExpression<Name extends string> extends CallExpres
     };
 }
 
+/**
+ * Converts a given function declaration to an async function by adding the 'async' keyword and transforming all return statements to return promises.
+ * @param changes - The text changes to be made.
+ * @param sourceFile - The source file containing the function declaration.
+ * @param position - The position of the function declaration.
+ * @param checker - The type checker.
+ */
 function convertToAsyncFunction(changes: textChanges.ChangeTracker, sourceFile: SourceFile, position: number, checker: TypeChecker): void {
     // get the function declaration - returns a promise
     const tokenAtPosition = getTokenAtPosition(sourceFile, position);
@@ -202,6 +209,12 @@ function getReturnStatementsWithPromiseHandlers(body: Block, checker: TypeChecke
 /*
     Finds all of the expressions of promise type that should not be saved in a variable during the refactor
 */
+/**
+ * Returns a Set of all promise expressions to be returned.
+ * @param {FunctionLikeDeclaration} func - The function to analyze.
+ * @param {TypeChecker} checker - The type checker to use.
+ * @returns {Set<number>} - A Set of node IDs for all promise expressions to be returned.
+ */
 function getAllPromiseExpressionsToReturn(func: FunctionLikeDeclaration, checker: TypeChecker): Set<number> {
     if (!func.body) {
         return new Set();
@@ -245,6 +258,13 @@ function isReferenceToType(type: Type, target: Type) {
         && (type as TypeReference).target === target;
 }
 
+/**
+ * Determines the explicit promised type of a promise returning call expression.
+ * @param node The promise returning call expression.
+ * @param callback The expression callback.
+ * @param checker The type checker.
+ * @returns The type argument that is safe to use as an annotation or undefined if there is no type argument.
+ */
 function getExplicitPromisedTypeOfPromiseReturningCallExpression(node: PromiseReturningCallExpression<"then" | "catch" | "finally">, callback: Expression, checker: TypeChecker) {
     if (node.expression.name.escapedText === "finally") {
         // for a `finally`, there's no type argument
@@ -414,6 +434,13 @@ function createUniqueSynthName(prevArgName: SynthIdentifier): SynthIdentifier {
     return createSynthIdentifier(renamedPrevArg);
 }
 
+/**
+ * Returns a possible name for a variable declaration based on the provided PromiseReturningCallExpression, Transformer, and optional SynthBindingName. If there is another call in the chain after the .catch() or .finally() we are transforming, we will need to save the result of both paths (try block and catch/finally block). To do this, we will need to synthesize a variable that we were not aware of while we were adding identifiers to the synthNamesMap. We will use the continuationArgName and then update the synthNamesMap with a new variable name for the next transformation step.
+ * @param node The PromiseReturningCallExpression to base the possible name on.
+ * @param transformer The Transformer to use for synthesizing the name.
+ * @param continuationArgName Optional SynthBindingName to use as a continuation argument.
+ * @returns A SynthIdentifier that represents a possible name for the variable declaration.
+ */
 function getPossibleNameForVarDecl(node: PromiseReturningCallExpression<"then" | "catch" | "finally">, transformer: Transformer, continuationArgName?: SynthBindingName) {
     let possibleNameForVarDecl: SynthIdentifier | undefined;
 
@@ -445,6 +472,17 @@ function getPossibleNameForVarDecl(node: PromiseReturningCallExpression<"then" |
     return possibleNameForVarDecl;
 }
 
+/**
+ * Generates an array of statements to finish the transformation of a PromiseReturningCallExpression node with a "then", "catch", or "finally" method call.
+ *
+ * @param node The PromiseReturningCallExpression node to transform.
+ * @param transformer The transformer object.
+ * @param tryStatement The TryStatement node to push to the statements array.
+ * @param possibleNameForVarDecl An optional SynthIdentifier object to use as the name for a synthesized variable declaration.
+ * @param continuationArgName An optional SynthBindingName object to use as the name for a continuation argument.
+ *
+ * @returns An array of Statement objects.
+ */
 function finishCatchOrFinallyTransform(node: PromiseReturningCallExpression<"then" | "catch" | "finally">, transformer: Transformer, tryStatement: TryStatement, possibleNameForVarDecl: SynthIdentifier | undefined, continuationArgName?: SynthBindingName) {
     const statements: Statement[] = [];
 
@@ -480,8 +518,13 @@ function finishCatchOrFinallyTransform(node: PromiseReturningCallExpression<"the
 }
 
 /**
- * @param hasContinuation Whether another `then`, `catch`, or `finally` continuation follows this continuation.
+ * Transforms a PromiseReturningCallExpression with a 'finally' method call into an array of inlined statements for the try block and the finally block.
+ * @param node The PromiseReturningCallExpression node to transform.
+ * @param onFinally The callback function to execute after the try block and before the finally block.
+ * @param transformer The transformer to use for the transformation.
+ * @param hasContinuation Whether another 'then', 'catch', or 'finally' continuation follows this continuation.
  * @param continuationArgName The argument name for the continuation that follows this call.
+ * @returns An array of inlined statements for the try block and the finally block.
  */
 function transformFinally(node: PromiseReturningCallExpression<"finally">, onFinally: Expression | undefined, transformer: Transformer, hasContinuation: boolean, continuationArgName?: SynthBindingName): readonly Statement[] {
     if (!onFinally || isNullOrUndefined(transformer, onFinally)) {
@@ -507,8 +550,15 @@ function transformFinally(node: PromiseReturningCallExpression<"finally">, onFin
 }
 
 /**
+ * Transforms a PromiseReturningCallExpression with an optional onRejected callback into an array of inlined statements for the left-hand-side of `.then`/`.catch` and the callback argument.
+ *
+ * @param node The PromiseReturningCallExpression to transform.
+ * @param onRejected The optional onRejected callback to transform.
+ * @param transformer The transformer to use for the transformation.
  * @param hasContinuation Whether another `then`, `catch`, or `finally` continuation follows this continuation.
  * @param continuationArgName The argument name for the continuation that follows this call.
+ *
+ * @returns An array of inlined statements for the left-hand-side of `.then`/`.catch` and the callback argument.
  */
 function transformCatch(node: PromiseReturningCallExpression<"then" | "catch">, onRejected: Expression | undefined, transformer: Transformer, hasContinuation: boolean, continuationArgName?: SynthBindingName): readonly Statement[] {
     if (!onRejected || isNullOrUndefined(transformer, onRejected)) {
@@ -535,8 +585,14 @@ function transformCatch(node: PromiseReturningCallExpression<"then" | "catch">, 
 }
 
 /**
+ * Transforms a `.then` call expression into an array of inlined statements. If `onFulfilled` is not provided, it will be treated as a `.catch` call expression. If both `onFulfilled` and `onRejected` are provided, it will return a silent fail.
+ * @param node The `PromiseReturningCallExpression` node to transform.
+ * @param onFulfilled The `Expression` to be used as the `onFulfilled` callback.
+ * @param onRejected The `Expression` to be used as the `onRejected` callback.
+ * @param transformer The `Transformer` instance to use for transforming the expressions.
  * @param hasContinuation Whether another `then`, `catch`, or `finally` continuation follows this continuation.
  * @param continuationArgName The argument name for the continuation that follows this call.
+ * @returns An array of inlined statements.
  */
 function transformThen(node: PromiseReturningCallExpression<"then">, onFulfilled: Expression | undefined, onRejected: Expression | undefined, transformer: Transformer, hasContinuation: boolean, continuationArgName?: SynthBindingName): readonly Statement[] {
     if (!onFulfilled || isNullOrUndefined(transformer, onFulfilled)) {
@@ -564,7 +620,13 @@ function transformThen(node: PromiseReturningCallExpression<"then">, onFulfilled
 }
 
 /**
- * Transforms the 'x' part of `x.then(...)`, or the 'y()' part of `y().catch(...)`, where 'x' and 'y()' are Promises.
+ * Transforms the Promise expression of a property access, such as the 'x' part of `x.then(...)` or the 'y()' part of `y().catch(...)`.
+ * @param returnContextNode The context node to return.
+ * @param node The expression node to transform.
+ * @param transformer The transformer to use.
+ * @param hasContinuation A boolean indicating if there is a continuation.
+ * @param continuationArgName The name of the continuation argument.
+ * @returns An array of statements.
  */
 function transformPromiseExpressionOfPropertyAccess(returnContextNode: Expression, node: Expression, transformer: Transformer, hasContinuation: boolean, continuationArgName?: SynthBindingName): readonly Statement[] {
     if (shouldReturn(returnContextNode, transformer)) {
@@ -578,6 +640,13 @@ function transformPromiseExpressionOfPropertyAccess(returnContextNode: Expressio
     return createVariableOrAssignmentOrExpressionStatement(continuationArgName, factory.createAwaitExpression(node), /*typeAnnotation*/ undefined);
 }
 
+/**
+ * Creates a variable or assignment or expression statement based on the provided parameters.
+ * @param variableName - The name of the variable to be created or assigned to. Can be undefined.
+ * @param rightHandSide - The expression to be assigned to the variable or used as the expression statement.
+ * @param typeAnnotation - The type annotation for the variable, if any.
+ * @returns An array of Statement objects representing the created variable or assignment or expression statement.
+ */
 function createVariableOrAssignmentOrExpressionStatement(variableName: SynthBindingName | undefined, rightHandSide: Expression, typeAnnotation: TypeNode | undefined): readonly Statement[] {
     if (!variableName || isEmptyBindingName(variableName)) {
         // if there's no argName to assign to, there still might be side effects
@@ -601,6 +670,14 @@ function createVariableOrAssignmentOrExpressionStatement(variableName: SynthBind
                 NodeFlags.Const))];
 }
 
+/**
+ * Takes in an expressionToReturn of type Expression or undefined and a typeAnnotation of type TypeNode or undefined.
+ * If both parameters are defined, creates a unique name and returns an array of statements including a variable or assignment or expression statement, and a return statement.
+ * If only expressionToReturn is defined, returns an array with a single return statement.
+ * @param expressionToReturn - The expression to return.
+ * @param typeAnnotation - The type annotation.
+ * @returns An array of statements.
+ */
 function maybeAnnotateAndReturn(expressionToReturn: Expression | undefined, typeAnnotation: TypeNode | undefined): Statement[] {
     if (typeAnnotation && expressionToReturn) {
         const name = factory.createUniqueName("result", GeneratedIdentifierFlags.Optimistic);
@@ -767,6 +844,14 @@ function getLastCallSignature(type: Type, checker: TypeChecker): Signature | und
     return lastOrUndefined(callSignatures);
 }
 
+/**
+ * Removes return statements from an array of statements and returns a new array without the return statements.
+ * @param stmts An array of statements to remove return statements from.
+ * @param prevArgName The name of the previous argument.
+ * @param transformer A transformer object.
+ * @param seenReturnStatement A boolean indicating whether a return statement has been seen.
+ * @returns A new array of statements without return statements.
+ */
 function removeReturns(stmts: readonly Statement[], prevArgName: SynthBindingName | undefined, transformer: Transformer, seenReturnStatement: boolean): readonly Statement[] {
     const ret: Statement[] = [];
     for (const stmt of stmts) {
@@ -800,8 +885,12 @@ function removeReturns(stmts: readonly Statement[], prevArgName: SynthBindingNam
 }
 
 /**
+ * Transforms a return statement with a fixable promise handler.
+ * @param transformer The transformer to use for transformation.
+ * @param innerRetStmt The return statement to transform.
  * @param hasContinuation Whether another `then`, `catch`, or `finally` continuation follows the continuation to which this statement belongs.
  * @param continuationArgName The argument name for the continuation that follows this call.
+ * @returns An array of transformed statements.
  */
 function transformReturnStatementWithFixablePromiseHandler(transformer: Transformer, innerRetStmt: ReturnStatement, hasContinuation: boolean, continuationArgName?: SynthBindingName) {
     let innerCbBody: Statement[] = [];
@@ -820,6 +909,12 @@ function transformReturnStatementWithFixablePromiseHandler(transformer: Transfor
     return innerCbBody;
 }
 
+/**
+ * Returns the binding name of the first parameter of a given function node or the binding name of an identifier or property access expression node. If the argument is null or undefined, returns undefined.
+ * @param {Expression} funcNode - The function node to get the binding name from.
+ * @param {Transformer} transformer - The transformer object.
+ * @returns {SynthBindingName | undefined} The binding name of the first parameter of the function node or the binding name of the identifier or property access expression node, or undefined if the argument is null or undefined.
+ */
 function getArgBindingName(funcNode: Expression, transformer: Transformer): SynthBindingName | undefined {
     const types: Type[] = [];
     let name: SynthBindingName | undefined;
@@ -855,6 +950,11 @@ function getArgBindingName(funcNode: Expression, transformer: Transformer): Synt
         return createSynthBindingPattern(bindingName, elements);
     }
 
+    /**
+     * Returns a SynthIdentifier object based on the provided Identifier object. If the symbol associated with the original node of the identifier is not found, a new SynthIdentifier object is created using the provided types. Otherwise, the function retrieves the corresponding SynthIdentifier object from the transformer's synthNamesMap using the symbol's ID as the key. If the map entry is not found, a new SynthIdentifier object is created using the provided types.
+     * @param {Identifier} identifier - The identifier object to retrieve the SynthIdentifier object for.
+     * @returns {SynthIdentifier} - The SynthIdentifier object associated with the provided identifier object.
+     */
     function getMapEntryOrDefault(identifier: Identifier): SynthIdentifier {
         const originalNode = getOriginalNode(identifier);
         const symbol = getSymbol(originalNode);

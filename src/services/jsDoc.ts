@@ -178,7 +178,16 @@ const jsDocTagNames = [
 let jsDocTagNameCompletionEntries: CompletionEntry[];
 let jsDocTagCompletionEntries: CompletionEntry[];
 
-/** @internal */
+/**
+ * Retrieves JSDoc comments from an array of declarations, skipping duplicates.
+ *
+ * @internal
+ *
+ * @param declarations - An array of declarations to retrieve JSDoc comments from.
+ * @param checker - Optional TypeChecker to use for retrieving display parts from comments.
+ *
+ * @returns An array of SymbolDisplayParts representing the JSDoc comments.
+ */
 export function getJsDocCommentsFromDeclarations(declarations: readonly Declaration[], checker?: TypeChecker): SymbolDisplayPart[] {
     // Only collect doc comments from duplicate declarations once:
     // In case of a union property there might be same declaration multiple times
@@ -218,6 +227,14 @@ function isIdenticalListOfDisplayParts(parts1: SymbolDisplayPart[], parts2: Symb
     return arraysEqual(parts1, parts2, (p1, p2) => p1.kind === p2.kind && p1.text === p2.text);
 }
 
+/**
+ * Returns an array of JSDoc comments and tags for a given declaration.
+ * @param {Declaration} declaration - The declaration to get comments and tags for.
+ * @returns {readonly (JSDoc | JSDocTag)[]} - An array of JSDoc comments and tags.
+ * If the declaration is a JSDocParameterTag or JSDocPropertyTag, returns an array containing only that tag.
+ * If the declaration is a JSDocCallbackTag or JSDocTypedefTag, returns an array containing both the tag and its parent.
+ * Otherwise, returns all JSDoc comments and tags associated with the declaration.
+ */
 function getCommentHavingNodes(declaration: Declaration): readonly (JSDoc | JSDocTag)[] {
     switch (declaration.kind) {
         case SyntaxKind.JSDocParameterTag:
@@ -231,7 +248,15 @@ function getCommentHavingNodes(declaration: Declaration): readonly (JSDoc | JSDo
     }
 }
 
-/** @internal */
+/**
+ * Retrieves JSDoc tags from an array of declarations.
+ *
+ * @param declarations - An optional array of Declaration objects.
+ * @param checker - An optional TypeChecker object.
+ * @returns An array of JSDocTagInfo objects containing the name and text of each JSDoc tag found in the declarations.
+ *
+ * @internal
+ */
 export function getJsDocTagsFromDeclarations(declarations?: Declaration[], checker?: TypeChecker): JSDocTagInfo[] {
     // Only collect doc comments from duplicate declarations once.
     const infos: JSDocTagInfo[] = [];
@@ -261,6 +286,12 @@ function getDisplayPartsFromComment(comment: string | readonly JSDocComment[], c
     ) as SymbolDisplayPart[];
 }
 
+/**
+ * Returns an array of SymbolDisplayPart objects based on the provided JSDoc tag and TypeChecker. The function handles different kinds of JSDoc tags and returns the appropriate SymbolDisplayPart array. If the JSDoc tag has a comment, it is included in the output.
+ * @param tag The JSDoc tag to generate SymbolDisplayPart array for.
+ * @param checker Optional TypeChecker to use for getting display parts from comment.
+ * @returns An array of SymbolDisplayPart objects.
+ */
 function getCommentDisplayParts(tag: JSDocTag, checker?: TypeChecker): SymbolDisplayPart[] | undefined {
     const { comment, kind } = tag;
     const namePart = getTagNameDisplayPart(kind);
@@ -315,6 +346,11 @@ function getCommentDisplayParts(tag: JSDocTag, checker?: TypeChecker): SymbolDis
         return addComment(node.getText());
     }
 
+    /**
+     * Adds a comment to the current context.
+     * @param s - The string to be added as a comment.
+     * @returns An array of display parts from the comment and the added string.
+     */
     function addComment(s: string) {
         if (comment) {
             if (s.match(/^https?$/)) {
@@ -330,6 +366,11 @@ function getCommentDisplayParts(tag: JSDocTag, checker?: TypeChecker): SymbolDis
     }
 }
 
+/**
+ * Returns a function that takes in a string and returns a SymbolDisplayPart based on the provided SyntaxKind.
+ * @param {SyntaxKind} kind - The SyntaxKind to determine the type of SymbolDisplayPart to return.
+ * @returns {(text: string) => SymbolDisplayPart} - A function that takes in a string and returns a SymbolDisplayPart.
+ */
 function getTagNameDisplayPart(kind: SyntaxKind): (text: string) => SymbolDisplayPart {
     switch (kind) {
         case SyntaxKind.JSDocParameterTag:
@@ -346,7 +387,11 @@ function getTagNameDisplayPart(kind: SyntaxKind): (text: string) => SymbolDispla
     }
 }
 
-/** @internal */
+/**
+ * Retrieves an array of completion entries for JSDoc tag names.
+ * @returns {CompletionEntry[]} An array of completion entries.
+ * @remarks This function is intended for internal use only.
+ */
 export function getJSDocTagNameCompletions(): CompletionEntry[] {
     return jsDocTagNameCompletionEntries || (jsDocTagNameCompletionEntries = map(jsDocTagNames, tagName => {
         return {
@@ -361,7 +406,11 @@ export function getJSDocTagNameCompletions(): CompletionEntry[] {
 /** @internal */
 export const getJSDocTagNameCompletionDetails = getJSDocTagCompletionDetails;
 
-/** @internal */
+/**
+ * Retrieves an array of completion entries for JSDoc tags.
+ * @returns {CompletionEntry[]} An array of completion entries.
+ * @remarks This function is marked as internal and should not be used outside of its module.
+ */
 export function getJSDocTagCompletions(): CompletionEntry[] {
     return jsDocTagCompletionEntries || (jsDocTagCompletionEntries = map(jsDocTagNames, tagName => {
         return {
@@ -373,7 +422,11 @@ export function getJSDocTagCompletions(): CompletionEntry[] {
     }));
 }
 
-/** @internal */
+/**
+ * Retrieves completion details for a JSDoc tag.
+ * @param name - The name of the JSDoc tag.
+ * @returns An object containing completion entry details.
+ */
 export function getJSDocTagCompletionDetails(name: string): CompletionEntryDetails {
     return {
         name,
@@ -386,7 +439,12 @@ export function getJSDocTagCompletionDetails(name: string): CompletionEntryDetai
     };
 }
 
-/** @internal */
+/**
+ * Retrieves completion entries for JSDoc parameter names.
+ * @internal
+ * @param {JSDocParameterTag} tag - The JSDoc parameter tag.
+ * @returns {CompletionEntry[]} An array of completion entries.
+ */
 export function getJSDocParameterNameCompletions(tag: JSDocParameterTag): CompletionEntry[] {
     if (!isIdentifier(tag.name)) {
         return emptyArray;
@@ -409,7 +467,12 @@ export function getJSDocParameterNameCompletions(tag: JSDocParameterTag): Comple
     });
 }
 
-/** @internal */
+/**
+ * Returns completion details for a JSDoc parameter name.
+ * @param {string} name - The name of the JSDoc parameter.
+ * @returns {CompletionEntryDetails} - The completion details for the JSDoc parameter name.
+ * @internal
+ */
 export function getJSDocParameterNameCompletionDetails(name: string): CompletionEntryDetails {
     return {
         name,
@@ -423,27 +486,12 @@ export function getJSDocParameterNameCompletionDetails(name: string): Completion
 }
 
 /**
- * Checks if position points to a valid position to add JSDoc comments, and if so,
- * returns the appropriate template. Otherwise returns an empty string.
- * Valid positions are
- *      - outside of comments, statements, and expressions, and
- *      - preceding a:
- *          - function/constructor/method declaration
- *          - class declarations
- *          - variable statements
- *          - namespace declarations
- *          - interface declarations
- *          - method signatures
- *          - type alias declarations
+ * Returns a JSDoc comment template if the provided position is valid for adding comments, otherwise returns an empty string. Valid positions include those preceding function/constructor/method declarations, class declarations, variable statements, namespace declarations, interface declarations, method signatures, and type alias declarations. Hosts should ensure that the line is all whitespace up to the provided position before inserting the comment, and if the keystroke sequence "/\*\*" induced the call, also check that the next non-whitespace character is '*', which indicates whether the second '*' was added to complete an existing JSDoc comment.
  *
- * Hosts should ideally check that:
- * - The line is all whitespace up to 'position' before performing the insertion.
- * - If the keystroke sequence "/\*\*" induced the call, we also check that the next
- * non-whitespace character is '*', which (approximately) indicates whether we added
- * the second '*' to complete an existing (JSDoc) comment.
  * @param fileName The file in which to perform the check.
- * @param position The (character-indexed) position in the file where the check should
- * be performed.
+ * @param position The (character-indexed) position in the file where the check should be performed.
+ *
+ * @returns A TextInsertion object containing the JSDoc comment template and the caret offset, or undefined if no template can be provided.
  *
  * @internal
  */
@@ -531,6 +579,12 @@ interface CommentOwnerInfo {
 function getCommentOwnerInfo(tokenAtPos: Node, options: DocCommentTemplateOptions | undefined): CommentOwnerInfo | undefined {
     return forEachAncestor(tokenAtPos, n => getCommentOwnerInfoWorker(n, options));
 }
+/**
+ * Returns information about the comment owner, including parameters and whether it has a return value.
+ * @param commentOwner - The node to get information about.
+ * @param options - Optional options for the comment template.
+ * @returns An object with the comment owner, parameters, and whether it has a return value, or "quit" if the comment owner is a source file.
+ */
 function getCommentOwnerInfoWorker(commentOwner: Node, options: DocCommentTemplateOptions | undefined): CommentOwnerInfo | undefined | "quit" {
     switch (commentOwner.kind) {
         case SyntaxKind.FunctionDeclaration:
@@ -604,6 +658,11 @@ function hasReturn(node: Node, options: DocCommentTemplateOptions | undefined) {
             || isFunctionLikeDeclaration(node) && node.body && isBlock(node.body) && !!forEachReturnStatement(node.body, n => n));
 }
 
+/**
+ * Returns the right hand side of an assignment expression.
+ * @param rightHandSide - The right hand side of the assignment expression.
+ * @returns A FunctionExpression, ArrowFunction, ConstructorDeclaration or undefined.
+ */
 function getRightHandSideOfAssignment(rightHandSide: Expression): FunctionExpression | ArrowFunction | ConstructorDeclaration | undefined {
     while (rightHandSide.kind === SyntaxKind.ParenthesizedExpression) {
         rightHandSide = (rightHandSide as ParenthesizedExpression).expression;

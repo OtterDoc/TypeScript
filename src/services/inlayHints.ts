@@ -178,6 +178,11 @@ export function provideInlayHints(context: InlayHintsContext): InlayHint[] {
         });
     }
 
+    /**
+     * Visits an enum member and adds hints for its value if it is a constant.
+     * @param {EnumMember} member - The enum member to visit.
+     * @remarks This function uses the TypeScript checker to get the constant value of the enum member and adds hints for its value if it is defined.
+     */
     function visitEnumMember(member: EnumMember) {
         if (member.initializer) {
             return;
@@ -193,6 +198,10 @@ export function provideInlayHints(context: InlayHintsContext): InlayHint[] {
         return type.symbol && (type.symbol.flags & SymbolFlags.Module);
     }
 
+    /**
+     * Visits a VariableDeclaration or PropertyDeclaration and adds type hints if applicable.
+     * @param decl - The VariableDeclaration or PropertyDeclaration to visit.
+     */
     function visitVariableLikeDeclaration(decl: VariableDeclaration | PropertyDeclaration) {
         if (!decl.initializer || isBindingPattern(decl.name) || isVariableDeclaration(decl) && !isHintableDeclaration(decl)) {
             return;
@@ -218,6 +227,10 @@ export function provideInlayHints(context: InlayHintsContext): InlayHint[] {
         }
     }
 
+    /**
+     * Visits a CallExpression or NewExpression and adds parameter hints for the function signature.
+     * @param expr The CallExpression or NewExpression to visit.
+     */
     function visitCallOrNewExpression(expr: CallExpression | NewExpression) {
         const args = expr.arguments;
         if (!args || !args.length) {
@@ -282,6 +295,12 @@ export function provideInlayHints(context: InlayHintsContext): InlayHint[] {
         return false;
     }
 
+    /**
+     * Checks if the leading comments of a given node contain a specific parameter name.
+     * @param node - The node to check the leading comments of.
+     * @param name - The name of the parameter to search for.
+     * @returns {boolean} - True if the leading comments contain the parameter name, false otherwise.
+     */
     function leadingCommentsContainsParameterName(node: Node, name: string) {
         if (!isIdentifierText(name, compilerOptions.target, getLanguageVariant(file.scriptKind))) {
             return false;
@@ -296,6 +315,11 @@ export function provideInlayHints(context: InlayHintsContext): InlayHint[] {
         return some(ranges, range => regex.test(sourceFileText.substring(range.pos, range.end)));
     }
 
+    /**
+     * Determines if a given node is a hintable literal.
+     * @param {Node} node - The node to check.
+     * @returns {boolean} - Returns true if the node is a hintable literal, otherwise false.
+     */
     function isHintableLiteral(node: Node) {
         switch (node.kind) {
             case SyntaxKind.PrefixUnaryExpression: {
@@ -316,6 +340,11 @@ export function provideInlayHints(context: InlayHintsContext): InlayHint[] {
         return isLiteralExpression(node);
     }
 
+    /**
+     * Determines the effective return type of a given function declaration, arrow function, function expression, method declaration, or get accessor declaration.
+     * @param decl The function declaration, arrow function, function expression, method declaration, or get accessor declaration to analyze.
+     * @returns void
+     */
     function visitFunctionDeclarationLikeForReturnType(decl: FunctionDeclaration | ArrowFunction | FunctionExpression | MethodDeclaration | GetAccessorDeclaration) {
         if (isArrowFunction(decl)) {
             if (!findChildOfKind(decl, SyntaxKind.OpenParenToken, file)) {
@@ -354,6 +383,13 @@ export function provideInlayHints(context: InlayHintsContext): InlayHint[] {
         return decl.parameters.end;
     }
 
+    /**
+     * Visits a FunctionLikeDeclaration node to extract parameter types and add type hints.
+     * @param {FunctionLikeDeclaration} node - The node to visit.
+     * @remarks This function uses the TypeScript checker to get the signature of the function and extract parameter types.
+     * It then checks each parameter for hintability and if it has an effective type annotation.
+     * If not, it adds a type hint using the type display string of the corresponding signature parameter.
+     */
     function visitFunctionLikeForParameterType(node: FunctionLikeDeclaration) {
         const signature = checker.getSignatureFromDeclaration(node);
         if (!signature) {
@@ -380,6 +416,11 @@ export function provideInlayHints(context: InlayHintsContext): InlayHint[] {
         }
     }
 
+    /**
+     * Returns a string representation of the type of a parameter declaration.
+     * @param {Symbol} symbol - The symbol representing the parameter declaration.
+     * @returns {string | undefined} - A string representation of the type of the parameter declaration, or undefined if the symbol is not a parameter declaration or has a module reference type.
+     */
     function getParameterDeclarationTypeDisplayString(symbol: Symbol) {
         const valueDeclaration = symbol.valueDeclaration;
         if (!valueDeclaration || !isParameter(valueDeclaration)) {
@@ -401,6 +442,11 @@ export function provideInlayHints(context: InlayHintsContext): InlayHint[] {
         return text;
     }
 
+    /**
+     * Prints the given type in a single line format.
+     * @param {Type} type - The type to print.
+     * @returns {string} The string representation of the type.
+     */
     function printTypeInSingleLine(type: Type) {
         const flags = NodeBuilderFlags.IgnoreErrors | TypeFormatFlags.AllowUniqueESSymbolType | TypeFormatFlags.UseAliasDefinedOutsideCurrentScope;
         const printer = createPrinterWithRemoveComments();

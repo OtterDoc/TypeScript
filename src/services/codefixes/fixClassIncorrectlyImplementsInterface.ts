@@ -54,6 +54,11 @@ registerCodeFix({
         });
     },
     fixIds: [fixId],
+    /**
+     * Returns all code actions for a given context.
+     * @param {Context} context - The context object.
+     * @returns {CodeAction[]} - An array of code actions.
+     */
     getAllCodeActions(context) {
         const seenClassDeclarations = new Map<number, true>();
         return codeFixAll(context, errorCodes, (changes, diag) => {
@@ -75,6 +80,15 @@ function symbolPointsToNonPrivateMember(symbol: Symbol) {
     return !symbol.valueDeclaration || !(getEffectiveModifierFlags(symbol.valueDeclaration) & ModifierFlags.Private);
 }
 
+/**
+ * Adds missing declarations to a class based on an implemented interface type.
+ * @param context - The TypeConstructionContext object.
+ * @param implementedTypeNode - The ExpressionWithTypeArguments object representing the implemented interface type.
+ * @param sourceFile - The SourceFile object.
+ * @param classDeclaration - The ClassLikeDeclaration object.
+ * @param changeTracker - The textChanges.ChangeTracker object.
+ * @param preferences - The UserPreferences object.
+ */
 function addMissingDeclarations(
     context: TypeConstructionContext,
     implementedTypeNode: ExpressionWithTypeArguments,

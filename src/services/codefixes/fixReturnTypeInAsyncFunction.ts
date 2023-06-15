@@ -55,6 +55,17 @@ registerCodeFix({
     })
 });
 
+/**
+ * Retrieves information about a function declaration at a given position in a TypeScript source file.
+ * @param sourceFile - The source file to search in.
+ * @param checker - The type checker to use.
+ * @param pos - The position of the function declaration.
+ * @returns An object containing information about the function declaration, or undefined if not found.
+ * - `returnTypeNode`: The type node of the function's return type.
+ * - `returnType`: The type of the function's return type.
+ * - `promisedTypeNode`: The type node of the awaited type of the function's return type, or void if not awaitable.
+ * - `promisedType`: The awaited type of the function's return type, or void if not awaitable.
+ */
 function getInfo(sourceFile: SourceFile, checker: TypeChecker, pos: number): Info | undefined {
     if (isInJSFile(sourceFile)) {
         return undefined;

@@ -38,7 +38,10 @@ export interface SourceMapper {
     clearCache(): void;
 }
 
-/** @internal */
+/**
+ * Interface for a host that provides information needed to map generated code back to its original source.
+ * @internal
+ */
 export interface SourceMapperHost {
     useCaseSensitiveFileNames(): boolean;
     getCurrentDirectory(): string;
@@ -62,6 +65,12 @@ export function getSourceMapper(host: SourceMapperHost): SourceMapper {
         return ts_toPath(fileName, currentDirectory, getCanonicalFileName);
     }
 
+    /**
+     * Returns the DocumentPositionMapper for the given generatedFileName and sourceFileName.
+     * @param {string} generatedFileName - The name of the generated file.
+     * @param {string} [sourceFileName] - The name of the source file.
+     * @returns {DocumentPositionMapper} The DocumentPositionMapper for the given files.
+     */
     function getDocumentPositionMapper(generatedFileName: string, sourceFileName?: string) {
         const path = toPath(generatedFileName);
         const value = documentPositionMappers.get(path);
@@ -94,6 +103,11 @@ export function getSourceMapper(host: SourceMapperHost): SourceMapper {
         return !newLoc || newLoc === info ? undefined : tryGetSourcePosition(newLoc) || newLoc;
     }
 
+    /**
+     * Tries to get the generated position of a given DocumentPosition.
+     * @param {DocumentPosition} info - The DocumentPosition to get the generated position for.
+     * @returns {DocumentPosition | undefined} - The generated position or undefined if it cannot be found.
+     */
     function tryGetGeneratedPosition(info: DocumentPosition): DocumentPosition | undefined {
         if (isDeclarationFileName(info.fileName)) return undefined;
 
@@ -128,6 +142,11 @@ export function getSourceMapper(host: SourceMapperHost): SourceMapper {
         return file && file.resolvedPath === path ? file : undefined;
     }
 
+    /**
+     * Retrieves a SourceFileLike object for the given file name, creating one if it doesn't exist.
+     * @param {string} fileName - The name of the file to retrieve or create.
+     * @returns {SourceFileLike | undefined} - The retrieved or created SourceFileLike object, or undefined if it could not be created.
+     */
     function getOrCreateSourceFileLike(fileName: string): SourceFileLike | undefined {
         const path = toPath(fileName);
         const fileFromCache = sourceFileLike.get(path);
@@ -171,7 +190,15 @@ export function getSourceMapper(host: SourceMapperHost): SourceMapper {
  */
 export type ReadMapFile = (mapFileName: string, mapFileNameFromDts: string | undefined) => string | undefined | DocumentPositionMapper | false;
 
-/** @internal */
+/**
+ * Returns a DocumentPositionMapper function based on the provided parameters.
+ * @param {DocumentPositionMapperHost} host - The host object for the DocumentPositionMapper.
+ * @param {string} generatedFileName - The name of the generated file.
+ * @param {LineInfo} generatedFileLineInfo - The line information for the generated file.
+ * @param {ReadMapFile} readMapFile - The function used to read the map file.
+ * @returns {DocumentPositionMapper | undefined} - The DocumentPositionMapper function or undefined if it cannot be created.
+ * @remarks This function first attempts to get the map file name from the generated file line information. If it is a data URL, it decodes the base64 object and converts it to a source mapper. If it is not a data URL, it attempts to read the map file from possible locations. If the map file contents are a string, it converts it to a source mapper. If the map file contents are undefined, it returns undefined. If none of the attempts are successful, it returns undefined.
+ */
 export function getDocumentPositionMapper(
     host: DocumentPositionMapperHost,
     generatedFileName: string,

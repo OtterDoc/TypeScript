@@ -53,7 +53,15 @@ import {
     UserPreferences,
 } from "./_namespaces/ts";
 
-/** @internal */
+/**
+ * Retrieves rename information for a given position in a source file.
+ * @param program - The TypeScript program.
+ * @param sourceFile - The source file containing the position.
+ * @param position - The position to retrieve rename information for.
+ * @param preferences - The user preferences for renaming.
+ * @returns The rename information for the given position, or an error message if renaming is not possible.
+ * @remarks This function is intended for internal use only.
+ */
 export function getRenameInfo(program: Program, sourceFile: SourceFile, position: number, preferences: UserPreferences): RenameInfo {
     const node = getAdjustedRenameLocation(getTouchingPropertyName(sourceFile, position));
     if (nodeIsEligibleForRename(node)) {
@@ -65,6 +73,15 @@ export function getRenameInfo(program: Program, sourceFile: SourceFile, position
     return getRenameInfoError(Diagnostics.You_cannot_rename_this_element);
 }
 
+/**
+ * Returns information necessary for renaming a node in a TypeScript program.
+ * @param node The node to be renamed.
+ * @param typeChecker The TypeChecker instance for the program.
+ * @param sourceFile The SourceFile containing the node.
+ * @param program The Program instance for the program.
+ * @param preferences User preferences for the program.
+ * @returns RenameInfo object if renaming is allowed, undefined otherwise.
+ */
 function getRenameInfoForNode(
     node: Node,
     typeChecker: TypeChecker,
@@ -125,6 +142,14 @@ function isDefinedInLibraryFile(program: Program, declaration: Node) {
     return program.isSourceFileDefaultLibrary(sourceFile) && fileExtensionIs(sourceFile.fileName, Extension.Dts);
 }
 
+/**
+ * Checks if renaming a symbol defined in a node_modules folder would cause conflicts with other packages.
+ * @param {SourceFile} originalFile - The original source file.
+ * @param {Symbol} symbol - The symbol to be renamed.
+ * @param {TypeChecker} checker - The type checker.
+ * @param {UserPreferences} preferences - The user preferences.
+ * @returns {DiagnosticMessage | undefined} - A diagnostic message if renaming the symbol would cause conflicts, otherwise undefined.
+ */
 function wouldRenameInOtherNodeModules(
     originalFile: SourceFile,
     symbol: Symbol,
@@ -174,6 +199,13 @@ function getPackagePathComponents(filePath: Path): string[] | undefined {
     return components.slice(0, nodeModulesIdx + 2);
 }
 
+/**
+ * Returns information necessary for renaming a module.
+ * @param node - The StringLiteralLike node representing the module to be renamed.
+ * @param sourceFile - The SourceFile containing the module to be renamed.
+ * @param moduleSymbol - The Symbol representing the module to be renamed.
+ * @returns Either a RenameInfo object or undefined if the module cannot be renamed.
+ */
 function getRenameInfoForModule(node: StringLiteralLike, sourceFile: SourceFile, moduleSymbol: Symbol): RenameInfo | undefined {
     if (!isExternalModuleNameRelative(node.text)) {
         return getRenameInfoError(Diagnostics.You_cannot_rename_a_module_via_a_global_import);

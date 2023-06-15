@@ -45,6 +45,15 @@ registerCodeFix({
     }),
 });
 
+/**
+ * Generates an accessor from a property in a TypeScript source file.
+ * @param file The source file containing the property.
+ * @param start The starting position of the property.
+ * @param length The length of the property.
+ * @param code The error code.
+ * @param context The code fix context.
+ * @returns An array of generated accessors.
+ */
 function doChange(file: SourceFile, start: number, length: number, code: number, context: CodeFixContext | CodeFixAllContext) {
     let startPosition: number;
     let endPosition: number;

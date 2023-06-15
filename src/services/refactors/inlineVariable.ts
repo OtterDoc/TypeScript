@@ -55,6 +55,12 @@ interface InliningInfo {
 registerRefactor(refactorName, {
     kinds: [inlineVariableAction.kind],
 
+    /**
+     * Returns an array of available actions for inlining a variable in the current context.
+     * @param {Object} context - The context object containing information about the current file, program, preferences, start position, and trigger reason.
+     * @returns {Array} An array of objects representing available actions for inlining a variable. Each object contains a name, description, and actions array.
+     * @remarks The tryWithReferenceToken variable is set to true when triggerReason is "invoked", since the refactor should always be provided in the declaration site but only shown in references when explicitly invoked.
+     */
     getAvailableActions(context) {
         const {
             file,
@@ -94,6 +100,12 @@ registerRefactor(refactorName, {
         return emptyArray;
     },
 
+    /**
+     * Retrieves edits for a given action name.
+     * @param {ts.RefactorContext} context - The context for the refactor.
+     * @param {string} actionName - The name of the action to retrieve edits for.
+     * @returns {{edits: ts.TextChange[]}} - An object containing an array of text changes.
+     */
     getEditsForAction(context, actionName) {
         Debug.assert(actionName === refactorName, "Unexpected refactor invoked");
 
@@ -118,6 +130,14 @@ registerRefactor(refactorName, {
     }
 });
 
+/**
+ * Returns information about inlining a variable declaration in a TypeScript source file.
+ * @param file - The source file containing the variable declaration.
+ * @param startPosition - The position of the variable declaration in the source file.
+ * @param tryWithReferenceToken - Whether to try finding the declaration and nodes to replace via the reference token.
+ * @param program - The TypeScript program.
+ * @returns An object containing information about inlining the variable declaration, or undefined if the variable should not be inlined.
+ */
 function getInliningInfo(file: SourceFile, startPosition: number, tryWithReferenceToken: boolean, program: Program): InliningInfo | RefactorErrorInfo | undefined {
     const checker = program.getTypeChecker();
     const token = getTouchingPropertyName(file, startPosition);
@@ -180,6 +200,13 @@ function isDeclarationExported(declaration: InitializedVariableDeclaration): boo
     return some(variableStatement.modifiers, isExportModifier);
 }
 
+/**
+ * Returns an array of Identifier nodes that reference the given InitializedVariableDeclaration, if they can be safely inlined.
+ * @param declaration - The InitializedVariableDeclaration to find references for.
+ * @param checker - The TypeChecker instance to use for type checking.
+ * @param file - The SourceFile instance to search for references in.
+ * @returns An array of Identifier nodes that reference the given declaration, or undefined if they cannot be safely inlined.
+ */
 function getReferenceNodes(declaration: InitializedVariableDeclaration, checker: TypeChecker, file: SourceFile): Identifier[] | undefined {
     const references: Identifier[] = [];
     const cannotInline = FindAllReferences.Core.eachSymbolReferenceInFile(declaration.name as Identifier, checker, file, ref => {
@@ -210,6 +237,18 @@ function getReferenceNodes(declaration: InitializedVariableDeclaration, checker:
     return references.length === 0 || cannotInline ? undefined : references;
 }
 
+/**
+ * Returns a new expression node that replaces a reference node with a given replacement node.
+ *
+ * @param {Node} reference - The reference node to be replaced.
+ * @param {Expression} replacement - The replacement node.
+ * @returns {Expression} - The new expression node that replaces the reference node.
+ *
+ * @remarks
+ * Each reference site gets its own copy of the replacement node to avoid unintended side effects.
+ * If the replacement node has lower precedence than its parent node or needs parentheses, it will be wrapped in a new parenthesized expression node.
+ * Functions also need to be parenthesized when used as arguments in a call expression.
+ */
 function getReplacementExpression(reference: Node, replacement: Expression): Expression {
     // Make sure each reference site gets its own copy of the replacement node.
     replacement = getSynthesizedDeepClone(replacement);

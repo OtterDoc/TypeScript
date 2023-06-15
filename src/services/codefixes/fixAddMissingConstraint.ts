@@ -85,6 +85,13 @@ interface Info {
     token: Node;
 }
 
+/**
+ * Returns information about a type parameter declaration that might need an extends constraint.
+ * @param program - The program containing the source file.
+ * @param sourceFile - The source file containing the type parameter declaration.
+ * @param span - The text span of the type parameter declaration.
+ * @returns An object containing the constraint type, declaration, and token if the type parameter declaration needs an extends constraint, otherwise undefined.
+ */
 function getInfo(program: Program, sourceFile: SourceFile, span: TextSpan): Info | undefined {
     const diag = find(program.getSemanticDiagnostics(sourceFile), diag => diag.start === span.start && diag.length === span.length);
     if (diag === undefined || diag.relatedInformation === undefined) return;
@@ -112,6 +119,16 @@ function getInfo(program: Program, sourceFile: SourceFile, span: TextSpan): Info
     return undefined;
 }
 
+/**
+ * Adds a missing constraint to a type parameter declaration.
+ * @param changes - The text changes to be made.
+ * @param program - The TypeScript program.
+ * @param preferences - The user preferences.
+ * @param host - The language service host.
+ * @param sourceFile - The source file.
+ * @param info - The type parameter declaration information.
+ * @remarks If the constraint is a string, it is inserted into the declaration. Otherwise, the constraint is converted to an auto-importable type node and replaces the existing declaration.
+ */
 function addMissingConstraint(changes: textChanges.ChangeTracker, program: Program, preferences: UserPreferences, host: LanguageServiceHost, sourceFile: SourceFile, info: Info): void {
     const { declaration, constraint } = info;
     const checker = program.getTypeChecker();

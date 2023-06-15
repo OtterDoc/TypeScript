@@ -113,6 +113,12 @@ interface ExportInfo {
     readonly exportingModuleSymbol: Symbol;
 }
 
+/**
+ * Returns export information for a given RefactorContext and considers partial spans by default.
+ * @param context - RefactorContext object
+ * @param considerPartialSpans - boolean value indicating whether to consider partial spans or not (default is true)
+ * @returns ExportInfo object, RefactorErrorInfo object, or undefined
+ */
 function getInfo(context: RefactorContext, considerPartialSpans = true): ExportInfo | RefactorErrorInfo | undefined {
     const { file, program } = context;
     const span = getRefactorContextSpan(context);
@@ -176,6 +182,15 @@ function doChange(exportingSourceFile: SourceFile, program: Program, info: Expor
     changeImports(program, info, changes, cancellationToken);
 }
 
+/**
+ * Converts an export statement in a TypeScript file to a default export statement.
+ * @param exportingSourceFile The source file containing the export statement.
+ * @param wasDefault A boolean indicating whether the export statement was a default export.
+ * @param exportNode The node representing the export statement.
+ * @param exportName The name of the export.
+ * @param changes The text changes to be made to the source file.
+ * @param checker The type checker for the source file.
+ */
 function changeExport(exportingSourceFile: SourceFile, { wasDefault, exportNode, exportName }: ExportInfo, changes: textChanges.ChangeTracker, checker: TypeChecker): void {
     if (wasDefault) {
         if (isExportAssignment(exportNode) && !exportNode.isExportEquals) {
@@ -217,6 +232,17 @@ function changeExport(exportingSourceFile: SourceFile, { wasDefault, exportNode,
     }
 }
 
+/**
+ * Changes the imports of a program based on the provided export information.
+ * @param program - The program to modify imports in.
+ * @param exportInfo - An object containing information about the export to modify.
+ * @param exportInfo.wasDefault - A boolean indicating if the export was originally a default export.
+ * @param exportInfo.exportName - The export name to modify.
+ * @param exportInfo.exportingModuleSymbol - The symbol of the module exporting the export to modify.
+ * @param changes - A text change tracker to record changes made to the program.
+ * @param cancellationToken - An optional cancellation token.
+ * @remarks This function uses the TypeScript checker to find all references to the export and modifies them accordingly.
+ */
 function changeImports(program: Program, { wasDefault, exportName, exportingModuleSymbol }: ExportInfo, changes: textChanges.ChangeTracker, cancellationToken: CancellationToken | undefined): void {
     const checker = program.getTypeChecker();
     const exportSymbol = Debug.checkDefined(checker.getSymbolAtLocation(exportName), "Export name should resolve to a symbol");
@@ -232,6 +258,14 @@ function changeImports(program: Program, { wasDefault, exportName, exportingModu
     });
 }
 
+/**
+ * Changes a default import to a named import.
+ * @param importingSourceFile - The source file containing the import statement.
+ * @param ref - The identifier node representing the default import.
+ * @param changes - The text changes to apply to the source file.
+ * @param exportName - The name of the export to use as the new named import.
+ * @remarks This function handles various cases of default imports and updates them to named imports.
+ */
 function changeDefaultToNamedImport(importingSourceFile: SourceFile, ref: Identifier, changes: textChanges.ChangeTracker, exportName: string): void {
     const { parent } = ref;
     switch (parent.kind) {
@@ -278,6 +312,13 @@ function changeDefaultToNamedImport(importingSourceFile: SourceFile, ref: Identi
     }
 }
 
+/**
+ * Changes a named import to a default import in a TypeScript source file.
+ * @param importingSourceFile - The source file containing the import statement.
+ * @param ref - The identifier of the named import to be changed.
+ * @param changes - The text changes to be made to the source file.
+ * @returns void
+ */
 function changeNamedToDefaultImport(importingSourceFile: SourceFile, ref: Identifier, changes: textChanges.ChangeTracker): void {
     const parent = ref.parent as PropertyAccessExpression | ImportSpecifier | ExportSpecifier;
     switch (parent.kind) {
@@ -320,6 +361,12 @@ function makeExportSpecifier(propertyName: string, name: string): ExportSpecifie
     return factory.createExportSpecifier(/*isTypeOnly*/ false, propertyName === name ? undefined : factory.createIdentifier(propertyName), factory.createIdentifier(name));
 }
 
+/**
+ * Retrieves the exporting module symbol from a given parent SourceFile or ModuleBlock and TypeChecker.
+ * @param {SourceFile | ModuleBlock} parent - The parent SourceFile or ModuleBlock.
+ * @param {TypeChecker} checker - The TypeChecker to use.
+ * @returns The exporting module symbol.
+ */
 function getExportingModuleSymbol(parent: SourceFile | ModuleBlock, checker: TypeChecker) {
     if (isSourceFile(parent)) {
         return parent.symbol;

@@ -389,7 +389,11 @@ export const enum SemanticMeaning {
     All = Value | Type | Namespace
 }
 
-/** @internal */
+/**
+ * Determines the semantic meaning of a given node.
+ * @param {Node} node - The node to determine the semantic meaning of.
+ * @returns {SemanticMeaning} - The semantic meaning of the node.
+ */
 export function getMeaningFromDeclaration(node: Node): SemanticMeaning {
     switch (node.kind) {
         case SyntaxKind.VariableDeclaration:
@@ -455,7 +459,12 @@ export function getMeaningFromDeclaration(node: Node): SemanticMeaning {
     return SemanticMeaning.All;
 }
 
-/** @internal */
+/**
+ * Determines the semantic meaning of a given node based on its location in the code.
+ * @param {Node} node - The node to determine the semantic meaning of.
+ * @returns {SemanticMeaning} - The semantic meaning of the node.
+ * @internal
+ */
 export function getMeaningFromLocation(node: Node): SemanticMeaning {
     node = getAdjustedReferenceLocation(node);
     const parent = node.parent;
@@ -518,6 +527,11 @@ function isNamespaceReference(node: Node): boolean {
     return isQualifiedNameNamespaceReference(node) || isPropertyAccessNamespaceReference(node);
 }
 
+/**
+ * Determines if a given node is a qualified name namespace reference.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is a qualified name namespace reference, false otherwise.
+ */
 function isQualifiedNameNamespaceReference(node: Node): boolean {
     let root = node;
     let isLastClause = true;
@@ -532,6 +546,11 @@ function isQualifiedNameNamespaceReference(node: Node): boolean {
     return root.parent.kind === SyntaxKind.TypeReference && !isLastClause;
 }
 
+/**
+ * Determines if a given node is a property access namespace reference.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is a property access namespace reference, false otherwise.
+ */
 function isPropertyAccessNamespaceReference(node: Node): boolean {
     let root = node;
     let isLastClause = true;
@@ -552,6 +571,11 @@ function isPropertyAccessNamespaceReference(node: Node): boolean {
     return false;
 }
 
+/**
+ * Determines if a given node is a type reference.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is a type reference, false otherwise.
+ */
 function isTypeReference(node: Node): boolean {
     if (isRightSideOfQualifiedNameOrPropertyAccess(node)) {
         node = node.parent;
@@ -701,7 +725,12 @@ export function isNameOfFunctionDeclaration(node: Node): boolean {
     return isIdentifier(node) && tryCast(node.parent, isFunctionLike)?.name === node;
 }
 
-/** @internal */
+/**
+ * Determines if a given string literal, numeric literal, or no substitution template literal is the name of a property declaration or index access.
+ * @internal
+ * @param node - The node to check.
+ * @returns True if the node is the name of a property declaration or index access, false otherwise.
+ */
 export function isLiteralNameOfPropertyDeclarationOrIndexAccess(node: StringLiteral | NumericLiteral | NoSubstitutionTemplateLiteral): boolean {
     switch (node.parent.kind) {
         case SyntaxKind.PropertyDeclaration:
@@ -731,7 +760,12 @@ export function isExpressionOfExternalModuleImportEqualsDeclaration(node: Node) 
         getExternalModuleImportEqualsDeclarationExpression(node.parent.parent) === node;
 }
 
-/** @internal */
+/**
+ * Returns the container node of a given node.
+ * @param {Node} node - The node to get the container node for.
+ * @returns {Declaration | undefined} - The container node or undefined if not found.
+ * @remarks This function traverses up the parent chain of the given node until it finds a node that can contain declarations.
+ */
 export function getContainerNode(node: Node): Declaration | undefined {
     if (isJSDocTypeAlias(node)) {
         // This doesn't just apply to the node immediately under the comment, but to everything in its parent's scope.
@@ -762,7 +796,11 @@ export function getContainerNode(node: Node): Declaration | undefined {
     }
 }
 
-/** @internal */
+/**
+ * Determines the ScriptElementKind of a given Node.
+ * @param node The Node to determine the ScriptElementKind of.
+ * @returns The ScriptElementKind of the given Node.
+ */
 export function getNodeKind(node: Node): ScriptElementKind {
     switch (node.kind) {
         case SyntaxKind.SourceFile:
@@ -860,7 +898,12 @@ export function getNodeKind(node: Node): ScriptElementKind {
     }
 }
 
-/** @internal */
+/**
+ * Determines if a given node is the 'this' keyword.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is the 'this' keyword, false otherwise.
+ * @internal
+ */
 export function isThis(node: Node): boolean {
     switch (node.kind) {
         case SyntaxKind.ThisKeyword:
@@ -947,6 +990,12 @@ export function positionBelongsToNode(candidate: Node, position: number, sourceF
     return position < candidate.end || !isCompletedNode(candidate, sourceFile);
 }
 
+/**
+ * Determines if a given node is completed in a TypeScript source file.
+ * @param {Node | undefined} n - The node to check for completion.
+ * @param {SourceFile} sourceFile - The source file containing the node.
+ * @returns {boolean} - True if the node is completed, false otherwise.
+ */
 function isCompletedNode(n: Node | undefined, sourceFile: SourceFile): boolean {
     if (n === undefined || nodeIsMissing(n)) {
         return false;
@@ -1086,6 +1135,13 @@ function isCompletedNode(n: Node | undefined, sourceFile: SourceFile): boolean {
  * Checks if node ends with 'expectedLastToken'.
  * If child at position 'length - 1' is 'SemicolonToken' it is skipped and 'expectedLastToken' is compared with child at position 'length - 2'.
  */
+/**
+ * Checks if a given Node ends with a specific SyntaxKind token.
+ * @param {Node} n - The Node to check.
+ * @param {SyntaxKind} expectedLastToken - The expected last token.
+ * @param {SourceFile} sourceFile - The SourceFile containing the Node.
+ * @returns {boolean} - True if the Node ends with the expected token, false otherwise.
+ */
 function nodeEndsWith(n: Node, expectedLastToken: SyntaxKind, sourceFile: SourceFile): boolean {
     const children = n.getChildren(sourceFile);
     if (children.length) {
@@ -1100,7 +1156,12 @@ function nodeEndsWith(n: Node, expectedLastToken: SyntaxKind, sourceFile: Source
     return false;
 }
 
-/** @internal */
+/**
+ * Finds the index of a list item and its containing list based on a given node.
+ * @param {Node} node - The node to search for in the list.
+ * @returns {ListItemInfo | undefined} An object containing the index of the list item and its containing list, or undefined if the node is not found in a list.
+ * @remarks It is possible for the syntaxList to be undefined if the node's parent has no list child or if none of its list children contained the span of the node. The caller should handle this case.
+ */
 export function findListItemInfo(node: Node): ListItemInfo | undefined {
     const list = findContainingList(node);
 
@@ -1131,7 +1192,15 @@ export function findChildOfKind<T extends Node>(n: Node, kind: T["kind"], source
     return find(n.getChildren(sourceFile), (c): c is T => c.kind === kind);
 }
 
-/** @internal */
+/**
+ * Finds the containing SyntaxList for a given node.
+ * @param node The node to find the containing SyntaxList for.
+ * @returns The SyntaxList containing the node, or undefined if not found.
+ * @remarks The node might be a list element (nonsynthetic) or a comma (synthetic). Either way, it will
+ * be parented by the container of the SyntaxList, not the SyntaxList itself.
+ * In order to find the list item index, we first need to locate SyntaxList itself and then search
+ * for the position of the relevant node (or comma).
+ */
 export function findContainingList(node: Node): SyntaxList | undefined {
     // The node might be a list element (nonsynthetic) or a comma (synthetic). Either way, it will
     // be parented by the container of the SyntaxList, not the SyntaxList itself.
@@ -1155,6 +1224,14 @@ function isFunctionKeyword(node: Node) {
     return node.kind === SyntaxKind.FunctionKeyword;
 }
 
+/**
+ * Returns the adjusted location for a given class node.
+ * @param {ClassDeclaration | ClassExpression} node - The class node to adjust the location for.
+ * @returns {Identifier | DefaultKeyword | Node | undefined} - The adjusted location for the class node.
+ * If the node is a named declaration, returns the node's name.
+ * If the node is a class declaration or function declaration, returns the `default` modifier when the declaration is unnamed.
+ * If the node is a class expression, returns the `class` keyword when the class is unnamed.
+ */
 function getAdjustedLocationForClass(node: ClassDeclaration | ClassExpression) {
     if (isNamedDeclaration(node)) {
         return node.name;
@@ -1172,6 +1249,12 @@ function getAdjustedLocationForClass(node: ClassDeclaration | ClassExpression) {
     }
 }
 
+/**
+ * Returns the adjusted location for a given function node.
+ * @param {FunctionDeclaration | FunctionExpression} node - The function node to adjust the location for.
+ * @returns {Identifier | DefaultKeyword | FunctionKeyword | undefined} - The adjusted location as an Identifier, DefaultKeyword, FunctionKeyword or undefined if not found.
+ * @remarks - For named function declarations, returns the node name. For unnamed class and function declarations, returns the `default` modifier. For unnamed function expressions, returns the `function` keyword.
+ */
 function getAdjustedLocationForFunction(node: FunctionDeclaration | FunctionExpression) {
     if (isNamedDeclaration(node)) {
         return node.name;
@@ -1189,6 +1272,11 @@ function getAdjustedLocationForFunction(node: FunctionDeclaration | FunctionExpr
     }
 }
 
+/**
+ * Returns the last TypeNode ancestor of the given Node.
+ * @param node - The Node to search for TypeNode ancestors.
+ * @returns {TypeNode | undefined} The last TypeNode ancestor of the given Node, or undefined if none found.
+ */
 function getAncestorTypeNode(node: Node) {
     let lastTypeNode: TypeNode | undefined;
     findAncestor(node, a => {
@@ -1211,6 +1299,12 @@ export function getContextualTypeFromParentOrAncestorTypeNode(node: Expression, 
     return ancestorTypeNode && checker.getTypeAtLocation(ancestorTypeNode);
 }
 
+/**
+ * Returns the adjusted location for a given declaration node.
+ * @param node The node to adjust the location for.
+ * @param forRename A boolean indicating whether the adjustment is for a rename operation.
+ * @returns The adjusted location for the declaration node.
+ */
 function getAdjustedLocationForDeclaration(node: Node, forRename: boolean) {
     if (!forRename) {
         switch (node.kind) {
@@ -1229,6 +1323,12 @@ function getAdjustedLocationForDeclaration(node: Node, forRename: boolean) {
     }
 }
 
+/**
+ * Returns the adjusted location for an import declaration.
+ * @param node The import declaration node.
+ * @param forRename A boolean indicating if the import is for renaming.
+ * @returns The name of the import if it exists, otherwise null.
+ */
 function getAdjustedLocationForImportDeclaration(node: ImportDeclaration, forRename: boolean) {
     if (node.importClause) {
         if (node.importClause.name && node.importClause.namedBindings) {
@@ -1270,6 +1370,12 @@ function getAdjustedLocationForImportDeclaration(node: ImportDeclaration, forRen
     }
 }
 
+/**
+ * Returns the adjusted location for an export declaration.
+ * @param node - The export declaration node.
+ * @param forRename - A boolean indicating if the export is for renaming.
+ * @returns The name of the export if it is a named export or a namespace export, or the module specifier if it is an export all or export type all.
+ */
 function getAdjustedLocationForExportDeclaration(node: ExportDeclaration, forRename: boolean) {
     if (node.exportClause) {
         // /**/export { [|name|] } ...
@@ -1297,6 +1403,11 @@ function getAdjustedLocationForExportDeclaration(node: ExportDeclaration, forRen
     }
 }
 
+/**
+ * Returns the adjusted location for a HeritageClause node.
+ * @param node The HeritageClause node to adjust the location for.
+ * @returns The adjusted location as an expression.
+ */
 function getAdjustedLocationForHeritageClause(node: HeritageClause) {
     // /**/extends [|name|]
     // /**/implements [|name|]
@@ -1308,6 +1419,12 @@ function getAdjustedLocationForHeritageClause(node: HeritageClause) {
     // /**/implements name1, name2 ...
 }
 
+/**
+ * Returns the adjusted location of a given node for a potential rename operation.
+ * @param node The node to adjust the location of.
+ * @param forRename Whether or not the adjustment is for a rename operation.
+ * @returns The adjusted location of the node, or the node itself if no adjustment is needed.
+ */
 function getAdjustedLocation(node: Node, forRename: boolean): Node {
     const { parent } = node;
     // /**/<modifier> [|name|] ...
@@ -1542,7 +1659,15 @@ export function getTokenAtPosition(sourceFile: SourceFile, position: number): No
     return getTokenAtPositionWorker(sourceFile, position, /*allowPositionInLeadingTrivia*/ true, /*includePrecedingTokenAtEndPosition*/ undefined, /*includeEndPosition*/ false);
 }
 
-/** Get the token whose text contains the position */
+/**
+ * Returns the token whose text contains the given position.
+ * @param sourceFile - The source file to search in.
+ * @param position - The position to search for.
+ * @param allowPositionInLeadingTrivia - Whether to consider positions in leading trivia.
+ * @param includePrecedingTokenAtEndPosition - Optional function to determine whether to include the preceding token at the end position.
+ * @param includeEndPosition - Whether to include the end position.
+ * @returns The found token or undefined if not found.
+ */
 function getTokenAtPositionWorker(sourceFile: SourceFile, position: number, allowPositionInLeadingTrivia: boolean, includePrecedingTokenAtEndPosition: ((n: Node) => boolean) | undefined, includeEndPosition: boolean): Node {
     let current: Node = sourceFile;
     let foundToken: Node | undefined;
@@ -1614,6 +1739,13 @@ function getTokenAtPositionWorker(sourceFile: SourceFile, position: number, allo
         return current;
     }
 
+    /**
+     * Determines if a given node contains a specific position within its range.
+     * @param node The node to check.
+     * @param start Optional start position of the node's range. If not provided, the node's start position will be used.
+     * @param end Optional end position of the node's range. If not provided, the node's end position will be used.
+     * @returns A boolean indicating whether the node contains the given position.
+     */
     function nodeContainsPosition(node: Node, start?: number, end?: number) {
         end ??= node.getEnd();
         if (end < position) {
@@ -1655,12 +1787,17 @@ export function findFirstNonJsxWhitespaceToken(sourceFile: SourceFile, position:
 }
 
 /**
- * The token on the left of the position is the token that strictly includes the position
- * or sits to the left of the cursor if it is on a boundary. For example
+ * Finds the token on the left of the given position in the provided SourceFile.
+ * If the position is on a boundary, the token to the left of the cursor is returned.
  *
- *   fo|o               -> will return foo
- *   foo <comment> |bar -> will return foo
+ * @param {SourceFile} file - The SourceFile to search in.
+ * @param {number} position - The position to search for.
  *
+ * @returns {Node | undefined} - The token on the left of the position, or undefined if not found.
+ *
+ * @remarks
+ * This function checks if the result of getTokenAtPosition is a token, as the function is currently broken.
+ * If the result is not a token, findPrecedingToken is used to find the preceding token.
  *
  * @internal
  */
@@ -1675,10 +1812,22 @@ export function findTokenOnLeftOfPosition(file: SourceFile, position: number): N
     return findPrecedingToken(position, file);
 }
 
-/** @internal */
+/**
+ * Finds the next token in a given parent node after a specified previous token.
+ * @param previousToken - The previous token to search after.
+ * @param parent - The parent node to search within.
+ * @param sourceFile - The source file to search within.
+ * @returns The next token if found, otherwise undefined.
+ * @internal
+ */
 export function findNextToken(previousToken: Node, parent: Node, sourceFile: SourceFileLike): Node | undefined {
     return find(parent);
 
+    /**
+     * Finds a Node that contains a specific token.
+     * @param {Node} n - The Node to search.
+     * @returns {Node | undefined} - The Node that contains the token, or undefined if not found.
+     */
     function find(n: Node): Node | undefined {
         if (isToken(n) && n.pos === previousToken.end) {
             // this is token that starts at the end of previous token - return it
@@ -1704,12 +1853,25 @@ export function findNextToken(previousToken: Node, parent: Node, sourceFile: Sou
 export function findPrecedingToken(position: number, sourceFile: SourceFileLike, startNode: Node, excludeJsdoc?: boolean): Node | undefined;
 /** @internal */
 export function findPrecedingToken(position: number, sourceFile: SourceFile, startNode?: Node, excludeJsdoc?: boolean): Node | undefined;
-/** @internal */
+/**
+ * Finds the preceding token of a given position in a source file.
+ * @param position The position to search for.
+ * @param sourceFile The source file to search in.
+ * @param startNode Optional starting node to search from.
+ * @param excludeJsdoc Optional flag to exclude JSDoc comments.
+ * @returns The preceding token node, if found.
+ * @internal
+ */
 export function findPrecedingToken(position: number, sourceFile: SourceFileLike, startNode?: Node, excludeJsdoc?: boolean): Node | undefined {
     const result = find((startNode || sourceFile) as Node);
     Debug.assert(!(result && isWhiteSpaceOnlyJsxText(result)));
     return result;
 
+    /**
+     * Finds the node in the AST that corresponds to the given position in the source file.
+     * @param n The root node of the AST to search.
+     * @returns The node in the AST that corresponds to the given position, or undefined if no such node exists.
+     */
     function find(n: Node): Node | undefined {
         if (isNonWhitespaceToken(n) && n.kind !== SyntaxKind.EndOfFileToken) {
             return n;
@@ -1778,6 +1940,12 @@ function isNonWhitespaceToken(n: Node): boolean {
     return isToken(n) && !isWhiteSpaceOnlyJsxText(n);
 }
 
+/**
+ * Finds the rightmost token in a given Node or its children.
+ * @param n The Node to search.
+ * @param sourceFile The SourceFileLike object to search within.
+ * @returns The rightmost Node with non-whitespace tokens, or undefined if none found.
+ */
 function findRightmostToken(n: Node, sourceFile: SourceFileLike): Node | undefined {
     if (isNonWhitespaceToken(n)) {
         return n;
@@ -1793,7 +1961,12 @@ function findRightmostToken(n: Node, sourceFile: SourceFileLike): Node | undefin
 }
 
 /**
- * Finds the rightmost child to the left of `children[exclusiveStartPosition]` which is a non-all-whitespace token or has constituent tokens.
+ * Finds the rightmost child node to the left of `children[exclusiveStartPosition]` which is a non-all-whitespace token or has constituent tokens.
+ * @param {Node[]} children - The array of child nodes to search through.
+ * @param {number} exclusiveStartPosition - The index of the child node to the right of the node we want to find.
+ * @param {SourceFileLike} sourceFile - The source file containing the nodes.
+ * @param {SyntaxKind} parentKind - The syntax kind of the parent node.
+ * @returns {Node | undefined} The rightmost child node with tokens, or undefined if none are found.
  */
 function findRightmostChildNodeWithTokens(children: Node[], exclusiveStartPosition: number, sourceFile: SourceFileLike, parentKind: SyntaxKind): Node | undefined {
     for (let i = exclusiveStartPosition - 1; i >= 0; i--) {
@@ -1810,7 +1983,13 @@ function findRightmostChildNodeWithTokens(children: Node[], exclusiveStartPositi
     }
 }
 
-/** @internal */
+/**
+ * Determines if the given position is within a string literal in the provided source file.
+ * @param sourceFile - The source file to check.
+ * @param position - The position to check.
+ * @param previousToken - The token preceding the position, if any.
+ * @returns A boolean indicating if the position is within a string literal.
+ */
 export function isInString(sourceFile: SourceFile, position: number, previousToken = findPrecedingToken(position, sourceFile)): boolean {
     if (previousToken && isStringTextContainingNode(previousToken)) {
         const start = previousToken.getStart(sourceFile);
@@ -1833,8 +2012,10 @@ export function isInString(sourceFile: SourceFile, position: number, previousTok
 }
 
 /**
- *
- * @internal
+ * Determines if the given position is inside a JSX element or attribute.
+ * @param {SourceFile} sourceFile - The source file to check.
+ * @param {number} position - The position to check.
+ * @returns {boolean} - True if the position is inside a JSX element or attribute, false otherwise.
  */
 export function isInsideJsxElementOrAttribute(sourceFile: SourceFile, position: number) {
     const token = getTokenAtPosition(sourceFile, position);
@@ -1882,7 +2063,13 @@ export function isInTemplateString(sourceFile: SourceFile, position: number) {
     return isTemplateLiteralKind(token.kind) && position > token.getStart(sourceFile);
 }
 
-/** @internal */
+/**
+ * Determines if the given position is within a JSX text or expression.
+ * @param {SourceFile} sourceFile - The source file to check.
+ * @param {number} position - The position to check.
+ * @returns {boolean} - True if the position is within a JSX text or expression, false otherwise.
+ * @internal
+ */
 export function isInJSXText(sourceFile: SourceFile, position: number) {
     const token = getTokenAtPosition(sourceFile, position);
     if (isJsxText(token)) {
@@ -1897,8 +2084,18 @@ export function isInJSXText(sourceFile: SourceFile, position: number) {
     return false;
 }
 
-/** @internal */
+/**
+ * Determines if the given position is inside a JSX element in the provided source file.
+ * @param sourceFile - The source file to check.
+ * @param position - The position to check.
+ * @returns {boolean} - True if the position is inside a JSX element, false otherwise.
+ */
 export function isInsideJsxElement(sourceFile: SourceFile, position: number): boolean {
+    /**
+     * Determines if a given node is inside a JSX element traversal.
+     * @param {Node} node - The node to check.
+     * @returns {boolean} - True if the node is inside a JSX element traversal, false otherwise.
+     */
     function isInsideJsxElementTraversal(node: Node): boolean {
         while (node) {
             if (node.kind >= SyntaxKind.JsxSelfClosingElement && node.kind <= SyntaxKind.JsxExpression
@@ -1927,7 +2124,13 @@ export function isInsideJsxElement(sourceFile: SourceFile, position: number): bo
     return isInsideJsxElementTraversal(getTokenAtPosition(sourceFile, position));
 }
 
-/** @internal */
+/**
+ * Finds the preceding matching token of a given token in a source file.
+ * @param token - The token to find the preceding matching token for.
+ * @param matchingTokenKind - The kind of matching token to look for (OpenBraceToken, OpenParenToken, or OpenBracketToken).
+ * @param sourceFile - The source file to search in.
+ * @returns The preceding matching token if found, otherwise undefined.
+ */
 export function findPrecedingMatchingToken(token: Node, matchingTokenKind: SyntaxKind.OpenBraceToken | SyntaxKind.OpenParenToken | SyntaxKind.OpenBracketToken, sourceFile: SourceFile) {
     const closeTokenText = tokenToString(token.kind)!;
     const matchingTokenText = tokenToString(matchingTokenKind)!;
@@ -2005,7 +2208,13 @@ export interface PossibleProgramFileInfo {
 }
 
 // Get info for an expression like `f <` that may be the start of type arguments.
-/** @internal */
+/**
+ * Determines if the provided node could be a type argument position. Scans the previous identifier followed by "<" before the current node to give a better result. Note that it also balances out the already provided type arguments, arrays, and object literals while doing so.
+ * @internal
+ * @param {Node | undefined} tokenIn - The node to check if it could be a type argument position.
+ * @param {SourceFile} sourceFile - The source file to search for the node in.
+ * @returns {PossibleTypeArgumentInfo | undefined} - An object containing the called identifier and number of type arguments, or undefined if the node is not a type argument position.
+ */
 export function getPossibleTypeArgumentsInfo(tokenIn: Node | undefined, sourceFile: SourceFile): PossibleTypeArgumentInfo | undefined {
     // This is a rare case, but one that saves on a _lot_ of work if true - if the source file has _no_ `<` character,
     // then there obviously can't be any type arguments - no expensive brace-matching backwards scanning required
@@ -2134,7 +2343,12 @@ function nodeHasTokens(n: Node, sourceFile: SourceFileLike): boolean {
     return n.kind === SyntaxKind.EndOfFileToken ? !!(n as EndOfFileToken).jsDoc : n.getWidth(sourceFile) !== 0;
 }
 
-/** @internal */
+/**
+ * Returns a string of modifiers for a given node, excluding specified flags.
+ * @param node The node to get modifiers for.
+ * @param excludeFlags The flags to exclude from the result. Default is ModifierFlags.None.
+ * @returns A string of modifiers, separated by commas. If no modifiers are found, returns ScriptElementKindModifier.none.
+ */
 export function getNodeModifiers(node: Node, excludeFlags = ModifierFlags.None): string {
     const result: string[] = [];
     const flags = isDeclaration(node)
@@ -2154,7 +2368,11 @@ export function getNodeModifiers(node: Node, excludeFlags = ModifierFlags.None):
     return result.length > 0 ? result.join(",") : ScriptElementKindModifier.none;
 }
 
-/** @internal */
+/**
+ * Returns the type argument or type parameter list of a given node.
+ * @param {Node} node - The node to retrieve the type argument or type parameter list from.
+ * @returns {(NodeArray<Node> | undefined)} - The type argument or type parameter list of the given node, or undefined if none exists.
+ */
 export function getTypeArgumentOrTypeParameterList(node: Node): NodeArray<Node> | undefined {
     if (node.kind === SyntaxKind.TypeReference || node.kind === SyntaxKind.CallExpression) {
         return (node as CallExpression).typeArguments;
@@ -2203,7 +2421,12 @@ export function isInsideTemplateLiteral(node: TemplateLiteralToken, position: nu
         && (node.getStart(sourceFile) < position && position < node.end) || (!!node.isUnterminated && position === node.end);
 }
 
-/** @internal */
+/**
+ * Determines if a given SyntaxKind is an accessibility modifier.
+ * @param kind - The SyntaxKind to check.
+ * @returns {boolean} - True if the SyntaxKind is an accessibility modifier, false otherwise.
+ * @internal
+ */
 export function isAccessibilityModifier(kind: SyntaxKind) {
     switch (kind) {
         case SyntaxKind.PublicKeyword:
@@ -2222,7 +2445,12 @@ export function cloneCompilerOptions(options: CompilerOptions): CompilerOptions 
     return result;
 }
 
-/** @internal */
+/**
+ * Determines if a given node is an array or object literal destructuring pattern.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is an array or object literal destructuring pattern, false otherwise.
+ * @internal
+ */
 export function isArrayLiteralOrObjectLiteralDestructuringPattern(node: Node) {
     if (node.kind === SyntaxKind.ArrayLiteralExpression ||
         node.kind === SyntaxKind.ObjectLiteralExpression) {
@@ -2421,7 +2649,13 @@ export function compilerOptionsIndicateEsModules(compilerOptions: CompilerOption
     return !!compilerOptions.module || getEmitScriptTarget(compilerOptions) >= ScriptTarget.ES2015 || !!compilerOptions.noEmit;
 }
 
-/** @internal */
+/**
+ * Creates a ModuleSpecifierResolutionHost object.
+ * @param program A Program object.
+ * @param host A LanguageServiceHost object.
+ * @returns A ModuleSpecifierResolutionHost object.
+ * @remarks This function mixes in `getSymlinkCache` from Program when host doesn't have it in order for non-Project hosts to have a symlinks cache.
+ */
 export function createModuleSpecifierResolutionHost(program: Program, host: LanguageServiceHost): ModuleSpecifierResolutionHost {
     // Mix in `getSymlinkCache` from Program when host doesn't have it
     // in order for non-Project hosts to have a symlinks cache.
@@ -2486,7 +2720,13 @@ export function quotePreferenceFromString(str: StringLiteral, sourceFile: Source
     return isStringDoubleQuoted(str, sourceFile) ? QuotePreference.Double : QuotePreference.Single;
 }
 
-/** @internal */
+/**
+ * Returns the preferred quote style for a given source file based on user preferences.
+ * @param {SourceFile} sourceFile - The source file to check for quote preference.
+ * @param {UserPreferences} preferences - The user preferences to use for determining quote preference.
+ * @returns {QuotePreference} - The preferred quote style for the source file.
+ * @remarks - Ignores synthetic import added when importHelpers: true and falls back to double quotes if no module specifier is found.
+ */
 export function getQuotePreference(sourceFile: SourceFile, preferences: UserPreferences): QuotePreference {
     if (preferences.quotePreference && preferences.quotePreference !== "auto") {
         return preferences.quotePreference === "single" ? QuotePreference.Single : QuotePreference.Double;
@@ -2514,7 +2754,12 @@ export function symbolNameNoDefault(symbol: Symbol): string | undefined {
     return escaped === undefined ? undefined : unescapeLeadingUnderscores(escaped);
 }
 
-/** @internal */
+/**
+ * Returns the escaped name of a symbol if it is not the default symbol.
+ * @param {Symbol} symbol - The symbol to get the escaped name from.
+ * @returns {__String | undefined} - The escaped name of the symbol or undefined.
+ * @remarks This function is marked as internal and should not be used outside of the module it is defined in.
+ */
 export function symbolEscapedNameNoDefault(symbol: Symbol): __String | undefined {
     if (symbol.escapedName !== InternalSymbolName.Default) {
         return symbol.escapedName;
@@ -2552,7 +2797,13 @@ export function getPropertySymbolFromBindingElement(checker: TypeChecker, bindin
     return typeOfPattern && checker.getPropertyOfType(typeOfPattern, bindingElement.name.text);
 }
 
-/** @internal */
+/**
+ * Returns the parent node of a given node that is not contained within a specified text span in a source file.
+ * @param node - The node to start searching from.
+ * @param file - The source file containing the node.
+ * @param span - The text span to check for containment.
+ * @returns The parent node of the given node that is not contained within the specified text span, or undefined if none is found.
+ */
 export function getParentNodeInSpan(node: Node | undefined, file: SourceFile, span: TextSpan): Node | undefined {
     if (!node) return undefined;
 
@@ -2575,7 +2826,14 @@ export function findModifier(node: Node, kind: Modifier["kind"]): Modifier | und
     return canHaveModifiers(node) ? find(node.modifiers, (m): m is Modifier => m.kind === kind) : undefined;
 }
 
-/** @internal */
+/**
+ * Inserts import statements into a source file and sorts them according to user preferences.
+ * @param changes - The change tracker to use for making modifications to the source file.
+ * @param sourceFile - The source file to modify.
+ * @param imports - The import statements to insert.
+ * @param blankLineBetween - Whether to insert a blank line between the new imports and existing imports.
+ * @param preferences - The user preferences for sorting the imports.
+ */
 export function insertImports(changes: textChanges.ChangeTracker, sourceFile: SourceFile, imports: AnyImportOrRequireStatement | readonly AnyImportOrRequireStatement[], blankLineBetween: boolean, preferences: UserPreferences): void {
     const decl = isArray(imports) ? imports[0] : imports;
     const importKindPredicate: (node: Node) => node is AnyImportOrRequireStatement = decl.kind === SyntaxKind.VariableStatement ? isRequireVariableStatement : isAnyImportSyntax;
@@ -2629,9 +2887,15 @@ export function documentSpansEqual(a: DocumentSpan, b: DocumentSpan): boolean {
 }
 
 /**
- * Iterates through 'array' by index and performs the callback on each element of array until the callback
+ * Iterates through 'array' by index and performs the 'callback' on each element of 'array' until the 'callback'
  * returns a truthy value, then returns that value.
- * If no such value is found, the callback is applied to each element of array and undefined is returned.
+ * If no such value is found, the 'callback' is applied to each element of 'array' and undefined is returned.
+ *
+ * @template T - the type of elements in the 'array'
+ * @template U - the type of the return value of the 'callback'
+ * @param {readonly T[] | undefined} array - the array to iterate through
+ * @param {(element: T, index: number) => U} callback - the function to apply to each element of 'array'
+ * @returns {U | undefined} - the first truthy value returned by 'callback', or undefined if no such value is found
  *
  * @internal
  */
@@ -2666,7 +2930,13 @@ export function getMappedLocation(location: DocumentPosition, sourceMapper: Sour
     return mapsTo && (!fileExists || fileExists(normalizePath(mapsTo.fileName)) ? mapsTo : undefined);
 }
 
-/** @internal */
+/**
+ * Maps a given DocumentSpan to a new DocumentSpan using the provided SourceMapper.
+ * @param documentSpan - The DocumentSpan to map.
+ * @param sourceMapper - The SourceMapper to use for mapping.
+ * @param fileExists - Optional function to check if a file exists.
+ * @returns The mapped DocumentSpan, or undefined if it could not be mapped.
+ */
 export function getMappedDocumentSpan(documentSpan: DocumentSpan, sourceMapper: SourceMapper, fileExists?: (path: string) => boolean): DocumentSpan | undefined {
     const { fileName, textSpan } = documentSpan;
     const newPosition = getMappedLocation({ fileName, pos: textSpan.start }, sourceMapper, fileExists);
@@ -2688,7 +2958,14 @@ export function getMappedDocumentSpan(documentSpan: DocumentSpan, sourceMapper: 
     };
 }
 
-/** @internal */
+/**
+ * Retrieves a mapped context span based on a document span and a source mapper.
+ * @param {DocumentSpan} documentSpan - The document span to retrieve the context span from.
+ * @param {SourceMapper} sourceMapper - The source mapper used to map the location of the context span.
+ * @param {function} [fileExists] - Optional function to check if a file exists.
+ * @returns {TextSpan|undefined} - The mapped context span or undefined if it could not be retrieved.
+ * @internal
+ */
 export function getMappedContextSpan(documentSpan: DocumentSpan, sourceMapper: SourceMapper, fileExists?: (path: string) => boolean): TextSpan | undefined {
     const contextSpanStart = documentSpan.contextSpan && getMappedLocation(
         { fileName: documentSpan.fileName, pos: documentSpan.contextSpan.start },
@@ -2717,6 +2994,11 @@ export function isFirstDeclarationOfSymbolParameter(symbol: Symbol) {
 }
 
 const displayPartWriter = getDisplayPartWriter();
+/**
+ * Returns a DisplayPartsSymbolWriter object with various methods for writing different kinds of symbol display parts.
+ * @returns {DisplayPartsSymbolWriter} The DisplayPartsSymbolWriter object.
+ * @remarks The returned object can be used to write symbol display parts such as keywords, operators, punctuation, string literals, parameters, properties, symbols, and lines. The object also has methods for getting and manipulating the current indentation level, clearing the writer, and getting the current display parts as an array.
+ */
 function getDisplayPartWriter(): DisplayPartsSymbolWriter {
     const absoluteMaximumLength = defaultMaximumTruncationLength * 10; // A hard cutoff to avoid overloading the messaging channel in worst-case scenarios
     let displayParts: SymbolDisplayPart[];
@@ -2764,6 +3046,16 @@ function getDisplayPartWriter(): DisplayPartsSymbolWriter {
         clear: resetWriter,
     };
 
+    /**
+     * Writes an indentation string to the display parts array if the length is less than the absolute maximum length.
+     * Uses the current indent level to generate the string.
+     *
+     * @returns {void}
+     *
+     * @remarks
+     * - If the length is greater than the absolute maximum length, the function does nothing.
+     * - The generated indentation string is added to the display parts array as a space symbol display part.
+     */
     function writeIndent() {
         if (length > absoluteMaximumLength) return;
         if (lineStart) {
@@ -2805,10 +3097,20 @@ function getDisplayPartWriter(): DisplayPartsSymbolWriter {
     }
 }
 
-/** @internal */
+/**
+ * Returns the SymbolDisplayPartKind of a given symbol based on its flags.
+ * @param symbol - The symbol to determine the SymbolDisplayPartKind of.
+ * @returns The SymbolDisplayPartKind of the given symbol.
+ * @internal
+ */
 export function symbolPart(text: string, symbol: Symbol) {
     return displayPart(text, displayPartKind(symbol));
 
+    /**
+     * Returns the SymbolDisplayPartKind of a given Symbol.
+     * @param {Symbol} symbol - The symbol to get the display part kind for.
+     * @returns {SymbolDisplayPartKind} The SymbolDisplayPartKind of the given symbol.
+     */
     function displayPartKind(symbol: Symbol): SymbolDisplayPartKind {
         const flags = symbol.flags;
 
@@ -2896,7 +3198,13 @@ export function linkTextPart(text: string) {
     return displayPart(text, SymbolDisplayPartKind.linkText);
 }
 
-/** @internal */
+/**
+ * Links a name part to a JSDoc link display part.
+ * @param {string} text - The name part to link.
+ * @param {Declaration} target - The target declaration to link to.
+ * @returns {JSDocLinkDisplayPart} The linked JSDoc link display part.
+ * @internal
+ */
 export function linkNamePart(text: string, target: Declaration): JSDocLinkDisplayPart {
     return {
         text,
@@ -2913,7 +3221,12 @@ export function linkPart(text: string) {
     return displayPart(text, SymbolDisplayPartKind.link);
 }
 
-/** @internal */
+/**
+ * Builds an array of SymbolDisplayPart objects for a given JSDocLink, JSDocLinkCode, or JSDocLinkPlain object.
+ * @param link - The JSDocLink, JSDocLinkCode, or JSDocLinkPlain object to build the link parts for.
+ * @param checker - Optional TypeChecker object to use for resolving the link's symbol.
+ * @returns An array of SymbolDisplayPart objects representing the link parts.
+ */
 export function buildLinkParts(link: JSDocLink | JSDocLinkCode | JSDocLinkPlain, checker?: TypeChecker): SymbolDisplayPart[] {
     const prefix = isJSDocLink(link) ? "link"
         : isJSDocLinkCode(link) ? "linkcode"
@@ -2951,6 +3264,11 @@ function skipSeparatorFromLinkText(text: string) {
     return text;
 }
 
+/**
+ * Finds the end position of a link name in a given text.
+ * @param {string} text - The text to search for link name.
+ * @returns {number} - The end position of the link name in the text.
+ */
 function findLinkNameEnd(text: string) {
     let pos = text.indexOf("://");
     if (pos === 0) {
@@ -3042,7 +3360,13 @@ export function getScriptKind(fileName: string, host: LanguageServiceHost): Scri
     return ensureScriptKind(fileName, host.getScriptKind && host.getScriptKind(fileName));
 }
 
-/** @internal */
+/**
+ * Returns the target symbol of the given symbol, resolving any aliases or transient symbols.
+ * @param {Symbol} symbol - The symbol to get the target of.
+ * @param {TypeChecker} checker - The TypeChecker instance to use for resolving aliases.
+ * @returns {Symbol} - The target symbol.
+ * @internal
+ */
 export function getSymbolTarget(symbol: Symbol, checker: TypeChecker): Symbol {
     let next: Symbol = symbol;
     while (isAliasSymbol(next) || (isTransientSymbol(next) && next.links.target)) {
@@ -3095,7 +3419,15 @@ export function getSynthesizedDeepClone<T extends Node | undefined>(node: T, inc
     return clone;
 }
 
-/** @internal */
+/**
+ * Returns a deep clone of the provided node with optional replacements.
+ * @template T - The type of the node being cloned.
+ * @param node - The node to be cloned.
+ * @param includeTrivia - Whether to include trivia in the cloned node.
+ * @param replaceNode - A function that can be used to replace a node during cloning.
+ * @returns A deep clone of the provided node with optional replacements.
+ * @internal
+ */
 export function getSynthesizedDeepCloneWithReplacements<T extends Node>(
     node: T,
     includeTrivia: boolean,
@@ -3113,6 +3445,13 @@ export function getSynthesizedDeepCloneWithReplacements<T extends Node>(
     return clone as T;
 }
 
+/**
+ * Returns a deep clone of the provided node, including all its descendants. Optionally replaces nodes using the provided replaceNode function.
+ * @template T - The type of the node being cloned.
+ * @param {T} node - The node to clone.
+ * @param {(node: Node) => Node | undefined} [replaceNode] - Optional function to replace nodes during cloning.
+ * @returns {T} - The cloned node.
+ */
 function getSynthesizedDeepCloneWorker<T extends Node>(node: T, replaceNode?: (node: Node) => Node | undefined): T {
     const nodeClone: <T extends Node>(n: T) => T = replaceNode
         ? n => getSynthesizedDeepCloneWithReplacements(n, /*includeTrivia*/ true, replaceNode)
@@ -3190,7 +3529,13 @@ export function suppressTrailingTrivia(node: Node) {
     addEmitFlagsRecursively(node, EmitFlags.NoTrailingComments, getLastChild);
 }
 
-/** @internal */
+/**
+ * Copies comments from sourceNode to targetNode.
+ * @param {Node} sourceNode - The node to copy comments from.
+ * @param {Node} targetNode - The node to copy comments to.
+ * @returns {void}
+ * @remarks This function copies both leading and trailing comments from the sourceNode to the targetNode.
+ */
 export function copyComments(sourceNode: Node, targetNode: Node) {
     const sourceFile = sourceNode.getSourceFile();
     const text = sourceFile.text;
@@ -3232,11 +3577,12 @@ export function getUniqueName(baseName: string, sourceFile: SourceFile): string 
 }
 
 /**
- * @return The index of the (only) reference to the extracted symbol.  We want the cursor
- * to be on the reference, rather than the declaration, because it's closer to where the
- * user was before extracting it.
- *
- * @internal
+ * Returns the index of the (only) reference to the extracted symbol.
+ * @param edits - An array of FileTextChanges.
+ * @param renameFilename - The name of the file being renamed.
+ * @param name - The name of the symbol being renamed.
+ * @param preferLastLocation - A boolean indicating whether to prefer the last occurrence of the symbol.
+ * @returns The index of the reference to the symbol.
  */
 export function getRenameLocation(edits: readonly FileTextChanges[], renameFilename: string, name: string, preferLastLocation: boolean): number {
     let delta = 0;
@@ -3288,6 +3634,15 @@ export function copyTrailingAsLeadingComments(sourceNode: Node, targetNode: Node
     forEachTrailingCommentRange(sourceFile.text, sourceNode.pos, getAddCommentsFunction(targetNode, sourceFile, commentKind, hasTrailingNewLine, addSyntheticLeadingComment));
 }
 
+/**
+ * Returns a function that extracts comments from a given node in a source file.
+ * @param {Node} targetNode - The node to extract comments from.
+ * @param {SourceFile} sourceFile - The source file containing the target node.
+ * @param {CommentKind} commentKind - The kind of comment to extract.
+ * @param {boolean} hasTrailingNewLine - Whether the comment has a trailing new line.
+ * @param {function} cb - The callback function to execute with the extracted comment.
+ * @returns {function} - A function that extracts comments from a given node in a source file.
+ */
 function getAddCommentsFunction(targetNode: Node, sourceFile: SourceFile, commentKind: CommentKind | undefined, hasTrailingNewLine: boolean | undefined, cb: (node: Node, kind: CommentKind, text: string, hasTrailingNewLine?: boolean) => void) {
     return (pos: number, end: number, kind: CommentKind, htnl: boolean) => {
         if (kind === SyntaxKind.MultiLineCommentTrivia) {
@@ -3320,7 +3675,13 @@ export function needsParentheses(expression: Expression): boolean {
         || isAsExpression(expression) && isObjectLiteralExpression(expression.expression);
 }
 
-/** @internal */
+/**
+ * Retrieves the contextual type from the parent node of the given expression.
+ * @param node - The expression node to retrieve the contextual type from.
+ * @param checker - The TypeChecker instance to use for type checking.
+ * @param contextFlags - Optional flags to use for context.
+ * @returns The contextual type of the parent node, or undefined if not found.
+ */
 export function getContextualTypeFromParent(node: Expression, checker: TypeChecker, contextFlags?: ContextFlags): Type | undefined {
     const parent = walkUpParenthesizedExpressions(node.parent);
     switch (parent.kind) {
@@ -3347,7 +3708,11 @@ export function quote(sourceFile: SourceFile, preferences: UserPreferences, text
     return quotePreference === QuotePreference.Single ? `'${stripQuotes(quoted).replace(/'/g, "\\'").replace(/\\"/g, '"')}'` : quoted;
 }
 
-/** @internal */
+/**
+ * Checks if the provided SyntaxKind is an EqualityOperator.
+ * @param {SyntaxKind} kind - The SyntaxKind to check.
+ * @returns {boolean} - True if the SyntaxKind is an EqualityOperator, false otherwise.
+ */
 export function isEqualityOperatorKind(kind: SyntaxKind): kind is EqualityOperator {
     switch (kind) {
         case SyntaxKind.EqualsEqualsEqualsToken:
@@ -3360,7 +3725,11 @@ export function isEqualityOperatorKind(kind: SyntaxKind): kind is EqualityOperat
     }
 }
 
-/** @internal */
+/**
+ * Determines if a given node is a string literal, template expression, or tagged template expression.
+ * @param node The node to check.
+ * @returns True if the node is a string literal, template expression, or tagged template expression, false otherwise.
+ */
 export function isStringLiteralOrTemplate(node: Node): node is StringLiteralLike | TemplateExpression | TaggedTemplateExpression {
     switch (node.kind) {
         case SyntaxKind.StringLiteral:
@@ -3386,7 +3755,14 @@ export function getSwitchedType(caseClause: CaseClause, checker: TypeChecker): T
 /** @internal */
 export const ANONYMOUS = "anonymous function";
 
-/** @internal */
+/**
+ * Returns the TypeNode if the given Type is accessible in the enclosing scope, otherwise returns undefined.
+ * @param {Type} type - The Type to check accessibility for.
+ * @param {Node} enclosingScope - The enclosing scope to check accessibility in.
+ * @param {Program} program - The Program to use for type checking.
+ * @param {LanguageServiceHost} host - The LanguageServiceHost to use for module resolution.
+ * @returns {TypeNode | undefined} - The TypeNode if the Type is accessible, otherwise undefined.
+ */
 export function getTypeNodeIfAccessible(type: Type, enclosingScope: Node, program: Program, host: LanguageServiceHost): TypeNode | undefined {
     const checker = program.getTypeChecker();
     let typeIsAccessible = true;
@@ -3424,7 +3800,12 @@ function syntaxRequiresTrailingModuleBlockOrSemicolonOrASI(kind: SyntaxKind) {
     return kind === SyntaxKind.ModuleDeclaration;
 }
 
-/** @internal */
+/**
+ * Determines if a given syntax kind requires a trailing semicolon or Automatic Semicolon Insertion (ASI).
+ * @internal
+ * @param {SyntaxKind} kind - The syntax kind to check.
+ * @returns {boolean} - True if the syntax kind requires a trailing semicolon or ASI, false otherwise.
+ */
 export function syntaxRequiresTrailingSemicolonOrASI(kind: SyntaxKind) {
     return kind === SyntaxKind.VariableStatement
         || kind === SyntaxKind.ExpressionStatement
@@ -3450,6 +3831,12 @@ export const syntaxMayBeASICandidate = or(
     syntaxRequiresTrailingModuleBlockOrSemicolonOrASI,
     syntaxRequiresTrailingSemicolonOrASI);
 
+/**
+ * Determines if a given node is a candidate for Automatic Semicolon Insertion (ASI) based on its syntax and position in the source file.
+ * @param {Node} node - The node to check.
+ * @param {SourceFileLike} sourceFile - The source file containing the node.
+ * @returns {boolean} - True if the node is a candidate for ASI, false otherwise.
+ */
 function nodeIsASICandidate(node: Node, sourceFile: SourceFileLike): boolean {
     const lastToken = node.getLastToken(sourceFile);
     if (lastToken && lastToken.kind === SyntaxKind.SemicolonToken) {
@@ -3493,7 +3880,14 @@ function nodeIsASICandidate(node: Node, sourceFile: SourceFileLike): boolean {
     return startLine !== endLine;
 }
 
-/** @internal */
+/**
+ * Determines if a given position is a candidate for Automatic Semicolon Insertion (ASI).
+ * @param {number} pos - The position to check.
+ * @param {Node} context - The context node.
+ * @param {SourceFileLike} sourceFile - The source file to check.
+ * @returns {boolean} - Whether the position is a candidate for ASI.
+ * @internal
+ */
 export function positionIsASICandidate(pos: number, context: Node, sourceFile: SourceFileLike): boolean {
     const contextAncestor = findAncestor(context, ancestor => {
         if (ancestor.end !== pos) {
@@ -3505,7 +3899,12 @@ export function positionIsASICandidate(pos: number, context: Node, sourceFile: S
     return !!contextAncestor && nodeIsASICandidate(contextAncestor, sourceFile);
 }
 
-/** @internal */
+/**
+ * Determines whether a given source file probably uses semicolons based on a heuristic analysis of the first 5 statements.
+ * @internal
+ * @param sourceFile - The source file to analyze.
+ * @returns A boolean indicating whether the source file probably uses semicolons.
+ */
 export function probablyUsesSemicolons(sourceFile: SourceFile): boolean {
     let withSemicolon = 0;
     let withoutSemicolon = 0;
@@ -3588,7 +3987,14 @@ export function tryIOAndConsumeErrors<T>(host: unknown, toApply: ((...a: any[]) 
     return tryAndIgnoreErrors(() => toApply && toApply.apply(host, args));
 }
 
-/** @internal */
+/**
+ * Finds all package.json files in ancestor directories of a given starting directory.
+ * @param startDirectory - The directory to start searching from.
+ * @param host - An object containing a fileExists function to check if a file exists.
+ * @param stopDirectory - Optional directory to stop searching at.
+ * @returns An array of paths to package.json files found.
+ * @internal
+ */
 export function findPackageJsons(startDirectory: string, host: Pick<LanguageServiceHost, "fileExists">, stopDirectory?: string): string[] {
     const paths: string[] = [];
     forEachAncestorDirectory(startDirectory, ancestor => {
@@ -3603,7 +4009,13 @@ export function findPackageJsons(startDirectory: string, host: Pick<LanguageServ
     return paths;
 }
 
-/** @internal */
+/**
+ * Finds the path to the nearest package.json file by searching ancestor directories.
+ * @param {string} directory - The starting directory to search from.
+ * @param {LanguageServiceHost} host - The LanguageServiceHost object.
+ * @returns {string | undefined} - The path to the package.json file, or undefined if not found.
+ * @internal
+ */
 export function findPackageJson(directory: string, host: LanguageServiceHost): string | undefined {
     let packageJson: string | undefined;
     forEachAncestorDirectory(directory, ancestor => {
@@ -3616,7 +4028,12 @@ export function findPackageJson(directory: string, host: LanguageServiceHost): s
     return packageJson;
 }
 
-/** @internal */
+/**
+ * Retrieves an array of ProjectPackageJsonInfo objects for all package.json files in ancestor directories of the given file.
+ * @param fileName - The name of the file to search ancestor directories for package.json files.
+ * @param host - The LanguageServiceHost object used to access the file system.
+ * @returns An array of ProjectPackageJsonInfo objects representing the package.json files found in ancestor directories of the given file.
+ */
 export function getPackageJsonsVisibleToFile(fileName: string, host: LanguageServiceHost): readonly ProjectPackageJsonInfo[] {
     if (!host.fileExists) {
         return [];
@@ -3636,7 +4053,12 @@ export function getPackageJsonsVisibleToFile(fileName: string, host: LanguageSer
     return packageJsons;
 }
 
-/** @internal */
+/**
+ * Creates a ProjectPackageJsonInfo object based on the provided file name and host object.
+ * @param fileName - The name of the file to read.
+ * @param host - An object with a readFile method that takes a file name and returns a string or undefined.
+ * @returns A ProjectPackageJsonInfo object or undefined if host.readFile is not defined.
+ */
 export function createPackageJsonInfo(fileName: string, host: { readFile?(fileName: string): string | undefined }): ProjectPackageJsonInfo | undefined {
     if (!host.readFile) {
         return undefined;
@@ -3678,6 +4100,12 @@ export function createPackageJsonInfo(fileName: string, host: { readFile?(fileNa
         },
     };
 
+    /**
+     * Retrieves a dependency by name from the dependencyGroups object.
+     * @param {string} dependencyName - The name of the dependency to retrieve.
+     * @param {PackageJsonDependencyGroup} [inGroups=PackageJsonDependencyGroup.All] - The group(s) to search for the dependency in.
+     * @returns {any} The dependency object if found, otherwise undefined.
+     */
     function get(dependencyName: string, inGroups = PackageJsonDependencyGroup.All) {
         for (const [group, deps] of dependencyGroups) {
             if (deps && (inGroups & group)) {
@@ -3690,7 +4118,10 @@ export function createPackageJsonInfo(fileName: string, host: { readFile?(fileNa
     }
 }
 
-/** @internal */
+/**
+ * Interface for filtering allowed imports from a package.json file.
+ * @internal
+ */
 export interface PackageJsonImportFilter {
     allowsImportingAmbientModule: (moduleSymbol: Symbol, moduleSpecifierResolutionHost: ModuleSpecifierResolutionHost) => boolean;
     allowsImportingSourceFile: (sourceFile: SourceFile, moduleSpecifierResolutionHost: ModuleSpecifierResolutionHost) => boolean;
@@ -3727,6 +4158,12 @@ export function createPackageJsonImportFilter(fromFile: SourceFile, preferences:
         return false;
     }
 
+    /**
+     * Determines whether importing an ambient module is allowed.
+     * @param {Symbol} moduleSymbol - The symbol representing the module being imported.
+     * @param {ModuleSpecifierResolutionHost} moduleSpecifierResolutionHost - The host for module specifier resolution.
+     * @returns {boolean} - Whether importing the ambient module is allowed.
+     */
     function allowsImportingAmbientModule(moduleSymbol: Symbol, moduleSpecifierResolutionHost: ModuleSpecifierResolutionHost): boolean {
         if (!packageJsons.length || !moduleSymbol.valueDeclaration) {
             return true;
@@ -3798,6 +4235,11 @@ export function createPackageJsonImportFilter(fromFile: SourceFile, preferences:
         return moduleSpecifierIsCoveredByPackageJson(moduleSpecifier);
     }
 
+    /**
+     * Determines whether a given module specifier is allowed to be imported as a Node core module.
+     * @param {string} moduleSpecifier - The module specifier to check.
+     * @returns {boolean} - Returns true if the module specifier is allowed to be imported as a Node core module, false otherwise.
+     */
     function isAllowedCoreNodeModulesImport(moduleSpecifier: string) {
         // If we're in JavaScript, it can be difficult to tell whether the user wants to import
         // from Node core modules or not. We can start by seeing if the user is actually using
@@ -3814,6 +4256,12 @@ export function createPackageJsonImportFilter(fromFile: SourceFile, preferences:
         return false;
     }
 
+    /**
+     * Returns the package name of a node module from a given file name.
+     * @param {string} importedFileName - The name of the imported file.
+     * @param {ModuleSpecifierResolutionHost} moduleSpecifierResolutionHost - The module specifier resolution host.
+     * @returns {string | undefined} - The package name of the node module or undefined if not found.
+     */
     function getNodeModulesPackageNameFromFileName(importedFileName: string, moduleSpecifierResolutionHost: ModuleSpecifierResolutionHost): string | undefined {
         if (!stringContains(importedFileName, "node_modules")) {
             return undefined;
@@ -3881,7 +4329,13 @@ export function findDiagnosticForNode(node: Node, sortedFileDiagnostics: readonl
     }
 }
 
-/** @internal */
+/**
+ * Returns an array of DiagnosticWithLocation objects that are within the given TextSpan.
+ * @param span - The TextSpan to search within.
+ * @param sortedFileDiagnostics - An array of Diagnostic objects sorted by start position.
+ * @returns An array of DiagnosticWithLocation objects that are within the given TextSpan.
+ * @internal
+ */
 export function getDiagnosticsWithinSpan(span: TextSpan, sortedFileDiagnostics: readonly Diagnostic[]): readonly DiagnosticWithLocation[] {
     let index = binarySearchKey(sortedFileDiagnostics, span.start, diag => diag.start, compareValues);
     if (index < 0) {
@@ -3912,7 +4366,13 @@ export function getRefactorContextSpan({ startPosition, endPosition }: RefactorC
     return createTextSpanFromBounds(startPosition, endPosition === undefined ? startPosition : endPosition);
 }
 
-/** @internal */
+/**
+ * Returns the expression that exactly matches up with the diagnostic range of a fixable error span.
+ * @param {SourceFile} sourceFile - The source file containing the error span.
+ * @param {TextSpan} span - The error span.
+ * @returns {Expression | undefined} The expression that matches the diagnostic range, or undefined if not found.
+ * @remarks This function assumes that the checker has already done work to determine that await might be possible, and has attached related info to the node.
+ */
 export function getFixableErrorSpanExpression(sourceFile: SourceFile, span: TextSpan): Expression | undefined {
     const token = getTokenAtPosition(sourceFile, span.start);
     // Checker has already done work to determine that await might be possible, and has attached
@@ -3955,7 +4415,13 @@ export function firstOrOnly<T>(valueOrArray: T | readonly T[]): T {
     return isArray(valueOrArray) ? first(valueOrArray) : valueOrArray;
 }
 
-/** @internal */
+/**
+ * Retrieves the names for an exported symbol.
+ * @param symbol - The symbol to retrieve names for.
+ * @param scriptTarget - The target script version.
+ * @returns Either the symbol name or an array containing a lowercase and capitalized version of the parent symbol's name.
+ * @remarks This function is intended for internal use only.
+ */
 export function getNamesForExportedSymbol(symbol: Symbol, scriptTarget: ScriptTarget | undefined): string | [lowercase: string, capitalized: string] {
     if (needsNameFromDeclaration(symbol)) {
         const fromDeclaration = getDefaultLikeExportNameFromDeclaration(symbol);
@@ -4004,24 +4470,13 @@ function getSymbolParentOrFail(symbol: Symbol) {
 }
 
 /**
- * Useful to check whether a string contains another string at a specific index
- * without allocating another string or traversing the entire contents of the outer string.
- *
- * This function is useful in place of either of the following:
- *
- * ```ts
- * // Allocates
- * haystack.substr(startIndex, needle.length) === needle
- *
- * // Full traversal
- * haystack.indexOf(needle, startIndex) === startIndex
- * ```
+ * Checks whether a string contains another string at a specific index without allocating another string or traversing the entire contents of the outer string.
  *
  * @param haystack The string that potentially contains `needle`.
  * @param needle The string whose content might sit within `haystack`.
  * @param startIndex The index within `haystack` to start searching for `needle`.
  *
- * @internal
+ * @returns {boolean} Whether `needle` is found at `startIndex` within `haystack`.
  */
 export function stringContainsAt(haystack: string, needle: string, startIndex: number) {
     const needleLength = needle.length;
@@ -4167,6 +4622,11 @@ export function newCaseClauseTracker(checker: TypeChecker, clauses: readonly (Ca
         }
     }
 
+    /**
+     * Determines if a value exists in a set of existing strings, numbers, or PseudoBigInts.
+     * @param value - The value to check for existence.
+     * @returns {boolean} - True if the value exists, false otherwise.
+     */
     function hasValue(value: string | number | PseudoBigInt): boolean {
         switch (typeof value) {
             case "string":

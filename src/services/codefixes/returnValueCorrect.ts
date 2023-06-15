@@ -177,6 +177,15 @@ function getFixInfo(checker: TypeChecker, declaration: FunctionLikeDeclaration, 
     return undefined;
 }
 
+/**
+ * Checks if a given type is assignable to another type based on a function declaration.
+ * @param checker - The TypeChecker object.
+ * @param declaration - The FunctionLikeDeclaration object.
+ * @param exprType - The expression type to be checked.
+ * @param type - The type to check against.
+ * @param isFunctionType - A boolean indicating whether the declaration is a function type.
+ * @returns A boolean indicating whether the given type is assignable to the other type.
+ */
 function checkFixedAssignableTo(checker: TypeChecker, declaration: FunctionLikeDeclaration, exprType: Type, type: Type, isFunctionType: boolean) {
     if (isFunctionType) {
         const sig = checker.getSignatureFromDeclaration(declaration);
@@ -207,6 +216,14 @@ function checkFixedAssignableTo(checker: TypeChecker, declaration: FunctionLikeD
     return checker.isTypeAssignableTo(exprType, type);
 }
 
+/**
+ * Retrieves information about a function declaration at a specific position in a source file.
+ * @param checker - The TypeChecker instance to use for type checking.
+ * @param sourceFile - The SourceFile instance to search for the function declaration.
+ * @param position - The position in the source file to search for the function declaration.
+ * @param errorCode - The error code to use for retrieving the fix information.
+ * @returns An Info object containing the fix information, or undefined if no fix information is available.
+ */
 function getInfo(checker: TypeChecker, sourceFile: SourceFile, position: number, errorCode: number): Info | undefined {
     const node = getTokenAtPosition(sourceFile, position);
     if (!node.parent) return undefined;
@@ -231,6 +248,11 @@ function getInfo(checker: TypeChecker, sourceFile: SourceFile, position: number,
     return undefined;
 }
 
+/**
+ * Returns the initializer expression of a given VariableLikeDeclaration, if it exists.
+ * @param declaration The VariableLikeDeclaration to retrieve the initializer from.
+ * @returns The initializer expression, or undefined if it does not exist.
+ */
 function getVariableLikeInitializer(declaration: VariableLikeDeclaration): Expression | undefined {
     switch (declaration.kind) {
         case SyntaxKind.VariableDeclaration:

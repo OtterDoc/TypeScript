@@ -420,17 +420,19 @@ export const SortText = {
 };
 
 /**
- * Special values for `CompletionInfo['source']` used to disambiguate
- * completion items with the same `name`. (Each completion item must
- * have a unique name/source combination, because those two fields
- * comprise `CompletionEntryIdentifier` in `getCompletionEntryDetails`.
+ * An enumeration of special values for `CompletionInfo['source']` used to disambiguate
+ * completion items with the same `name`. Each completion item must have a unique name/source combination, because those two fields comprise `CompletionEntryIdentifier` in `getCompletionEntryDetails`.
  *
- * When the completion item is an auto-import suggestion, the source
- * is the module specifier of the suggestion. To avoid collisions,
- * the values here should not be a module specifier we would ever
- * generate for an auto-import.
+ * @remarks
+ * When the completion item is an auto-import suggestion, the source is the module specifier of the suggestion. To avoid collisions, the values here should not be a module specifier we would ever generate for an auto-import.
  *
- * @internal
+ * @enum {string}
+ * @readonly
+ * @property {string} ThisProperty - Completions that require `this.` insertion text
+ * @property {string} ClassMemberSnippet - Auto-import that comes attached to a class member snippet
+ * @property {string} TypeOnlyAlias - A type-only import that needs to be promoted in order to be used at the completion location
+ * @property {string} ObjectLiteralMethodSnippet - Auto-import that comes attached to an object literal method snippet
+ * @property {string} SwitchCases - Case completions for switch statements
  */
 export enum CompletionSource {
     /** Completions that require `this.` insertion text */
@@ -445,7 +447,10 @@ export enum CompletionSource {
     SwitchCases = "SwitchCases/",
 }
 
-/** @internal */
+/**
+ * An enumeration representing the different kinds of symbol origin information.
+ * @internal
+ */
 export const enum SymbolOriginInfoKind {
     ThisType             = 1 << 0,
     SymbolMember         = 1 << 1,
@@ -568,6 +573,20 @@ export type SymbolOriginInfoMap = Record<number, SymbolOriginInfo>;
  */
 export type SymbolSortTextMap = (SortText | undefined)[];
 
+/**
+ * Enum representing different keyword completion filters.
+ * @enum {number}
+ * @property {number} None - No keywords.
+ * @property {number} All - Every possible keyword. (Note: This is never appropriate)
+ * @property {number} ClassElementKeywords - Keywords inside class body.
+ * @property {number} InterfaceElementKeywords - Keywords inside interface body.
+ * @property {number} ConstructorParameterKeywords - Keywords at constructor parameter.
+ * @property {number} FunctionLikeBodyKeywords - Keywords at function like body.
+ * @property {number} TypeAssertionKeywords - Keywords for type assertion.
+ * @property {number} TypeKeywords - Keywords for types.
+ * @property {number} TypeKeyword - Literally just `type`.
+ * @property {number} Last - Last keyword.
+ */
 const enum KeywordCompletionFilters {
     None,                           // No keywords
     All,                            // Every possible keyword (TODO: This is never appropriate)
@@ -595,6 +614,20 @@ type ModuleSpecifierResolutionResult = "skipped" | "failed" | {
     moduleSpecifier: string;
 };
 
+/**
+ * Resolves module specifiers for a given context.
+ * @template TReturn - The return type of the callback function.
+ * @param {string} logPrefix - The prefix to use for logging.
+ * @param {LanguageServiceHost} host - The language service host.
+ * @param {codefix.ImportSpecifierResolver} resolver - The import specifier resolver.
+ * @param {Program} program - The program.
+ * @param {number} position - The position.
+ * @param {UserPreferences} preferences - The user preferences.
+ * @param {boolean} isForImportStatementCompletion - Indicates whether the resolution is for an import statement completion.
+ * @param {boolean} isValidTypeOnlyUseSite - Indicates whether the resolution is for a valid type-only use site.
+ * @param {(context: ModuleSpecifierResolutionContext) => TReturn} cb - The callback function.
+ * @returns {TReturn} The result of the callback function.
+ */
 function resolvingModuleSpecifiers<TReturn>(
     logPrefix: string,
     host: LanguageServiceHost,
@@ -632,6 +665,12 @@ function resolvingModuleSpecifiers<TReturn>(
     host.log?.(`${logPrefix}: ${timestamp() - start}`);
     return result;
 
+    /**
+     * Tries to resolve the module specifier for the given SymbolExportInfo array and returns the ModuleSpecifierResolutionResult.
+     * @param {readonly SymbolExportInfo[]} exportInfo - The SymbolExportInfo array to resolve the module specifier for.
+     * @param {boolean} isFromAmbientModule - A boolean indicating whether the export is from an ambient module.
+     * @returns {ModuleSpecifierResolutionResult} The resolved module specifier or "failed" if resolution failed.
+     */
     function tryResolve(exportInfo: readonly SymbolExportInfo[], isFromAmbientModule: boolean): ModuleSpecifierResolutionResult {
         if (isFromAmbientModule) {
             const result = resolver.getModuleSpecifierForBestExportInfo(exportInfo, position, isValidTypeOnlyUseSite);
@@ -660,7 +699,21 @@ function resolvingModuleSpecifiers<TReturn>(
     }
 }
 
-/** @internal */
+/**
+ * Retrieves completion information for a given position in a source file.
+ * @param host - The LanguageServiceHost object.
+ * @param program - The Program object.
+ * @param log - The Log object.
+ * @param sourceFile - The SourceFile object.
+ * @param position - The position in the source file.
+ * @param preferences - The UserPreferences object.
+ * @param triggerCharacter - The CompletionsTriggerCharacter object or undefined.
+ * @param completionKind - The CompletionTriggerKind object or undefined.
+ * @param cancellationToken - The CancellationToken object.
+ * @param formatContext - The optional FormatContext object.
+ * @param includeSymbol - Whether to include symbols in the completion info. Defaults to false.
+ * @returns The CompletionInfo object or undefined.
+ */
 export function getCompletionsAtPosition(
     host: LanguageServiceHost,
     program: Program,
@@ -763,6 +816,12 @@ export function getCompletionsAtPosition(
 // by the language service consistent with what TS Server does and what editors typically do. This also makes
 // completions tests make more sense. We used to sort only alphabetically and only in the server layer, but
 // this made tests really weird, since most fourslash tests don't use the server.
+/**
+ * Compares two completion entries and returns a Comparison value.
+ * @param {CompletionEntry} entryInArray - The entry in the array to compare.
+ * @param {CompletionEntry} entryToInsert - The entry to insert and compare.
+ * @returns {Comparison} - The result of the comparison.
+ */
 function compareCompletionEntries(entryInArray: CompletionEntry, entryToInsert: CompletionEntry): Comparison {
     let result = compareStringsCaseSensitiveUI(entryInArray.sortText, entryToInsert.sortText);
     if (result === Comparison.EqualTo) {
@@ -786,6 +845,18 @@ function completionEntryDataIsResolved(data: CompletionEntryDataAutoImport | und
     return !!data?.moduleSpecifier;
 }
 
+/**
+ * Continues a previous incomplete response by resolving module specifiers for auto imports.
+ * @param cache - The cache containing the previous incomplete response.
+ * @param file - The source file.
+ * @param location - The identifier location.
+ * @param program - The program.
+ * @param host - The language service host.
+ * @param preferences - The user preferences.
+ * @param cancellationToken - The cancellation token.
+ * @param position - The position.
+ * @returns The completion info or undefined.
+ */
 function continuePreviousIncompleteResponse(
     cache: IncompleteCompletionsCache,
     file: SourceFile,
@@ -863,6 +934,16 @@ function jsdocCompletionInfo(entries: CompletionEntry[]): CompletionInfo {
     return { isGlobalCompletion: false, isMemberCompletion: false, isNewIdentifierLocation: false, entries };
 }
 
+/**
+ * Returns an array of completion entries for JSDoc parameters at a given position in a source file.
+ * @param sourceFile - The source file to get completions for.
+ * @param position - The position in the source file to get completions for.
+ * @param checker - The type checker to use for type information.
+ * @param options - The compiler options to use.
+ * @param preferences - The user preferences to use.
+ * @param tagNameOnly - Whether to only include the tag name in the completion entry.
+ * @returns An array of completion entries for JSDoc parameters.
+ */
 function getJSDocParameterCompletions(
     sourceFile: SourceFile,
     position: number,
@@ -971,6 +1052,19 @@ function getJSDocParameterCompletions(
     });
 }
 
+/**
+ * Generates JSDoc param tags for destructuring.
+ * @param {string} path - The path to the binding pattern.
+ * @param {BindingPattern} pattern - The binding pattern.
+ * @param {Expression | undefined} initializer - The initializer.
+ * @param {DotDotDotToken | undefined} dotDotDotToken - The dot dot dot token.
+ * @param {boolean} isJs - Whether or not it is a JS file.
+ * @param {boolean} isSnippet - Whether or not it is a snippet.
+ * @param {TypeChecker} checker - The type checker.
+ * @param {CompilerOptions} options - The compiler options.
+ * @param {UserPreferences} preferences - The user preferences.
+ * @returns {string[]} An array of JSDoc param tags.
+ */
 function generateJSDocParamTagsForDestructuring(
     path: string,
     pattern: BindingPattern,
@@ -998,6 +1092,15 @@ function generateJSDocParamTagsForDestructuring(
     }
     return patternWorker(path, pattern, initializer, dotDotDotToken, { tabstop: 1 });
 
+    /**
+     * Generates an array of JSDoc comments for a given pattern, path, and counter.
+     * @param {string} path - The path to the pattern.
+     * @param {BindingPattern} pattern - The pattern to generate comments for.
+     * @param {Expression | undefined} initializer - The initializer for the pattern.
+     * @param {DotDotDotToken | undefined} dotDotDotToken - The dotDotDotToken for the pattern.
+     * @param {TabStopCounter} counter - The counter for the pattern.
+     * @returns {string[]} - An array of JSDoc comments for the pattern.
+     */
     function patternWorker(
         path: string,
         pattern: BindingPattern,
@@ -1052,6 +1155,13 @@ function generateJSDocParamTagsForDestructuring(
 
     // Assumes binding element is inside object binding pattern.
     // We can't really deeply annotate an array binding pattern.
+    /**
+     * Processes a BindingElement and returns an array of string or undefined.
+     * @param {string} path - The path of the BindingElement.
+     * @param {BindingElement} element - The BindingElement to process.
+     * @param {TabStopCounter} counter - The TabStopCounter object.
+     * @returns {string[]|undefined} - An array of string or undefined.
+     */
     function elementWorker(path: string, element: BindingElement, counter: TabStopCounter): string[] | undefined {
         if ((!element.propertyName && isIdentifier(element.name)) || isIdentifier(element.name)) { // `{ b }` or `{ b: newB }`
             const propertyName = element.propertyName ? tryGetTextOfPropertyName(element.propertyName) : element.name.text;
@@ -1085,6 +1195,20 @@ interface TabStopCounter {
     tabstop: number;
 }
 
+/**
+ * Returns a JSDoc parameter annotation string based on the provided parameters.
+ * @param {string} paramName - The name of the parameter.
+ * @param {Expression | undefined} initializer - The initializer expression for the parameter.
+ * @param {DotDotDotToken | undefined} dotDotDotToken - The dotDotDotToken for the parameter.
+ * @param {boolean} isJs - Whether the parameter is a JSDoc parameter.
+ * @param {boolean} isObject - Whether the parameter is an object.
+ * @param {boolean} isSnippet - Whether the parameter is a snippet.
+ * @param {TypeChecker} checker - The TypeChecker instance.
+ * @param {CompilerOptions} options - The CompilerOptions instance.
+ * @param {UserPreferences} preferences - The UserPreferences instance.
+ * @param {TabStopCounter} [tabstopCounter] - The TabStopCounter instance.
+ * @returns {string} - The JSDoc parameter annotation string.
+ */
 function getJSDocParamAnnotation(
     paramName: string,
     initializer: Expression | undefined,
@@ -1196,6 +1320,20 @@ function getOptionalReplacementSpan(location: Node | undefined) {
     return location?.kind === SyntaxKind.Identifier ? createTextSpanFromNode(location) : undefined;
 }
 
+/**
+ * Generates completion information for a given position in a source file.
+ * @param sourceFile - The source file being edited.
+ * @param host - The language service host.
+ * @param program - The program being edited.
+ * @param compilerOptions - The compiler options.
+ * @param log - The logger.
+ * @param completionData - The completion data.
+ * @param preferences - The user preferences.
+ * @param formatContext - The format context.
+ * @param position - The position in the source file.
+ * @param includeSymbol - Whether to include symbol information.
+ * @returns The completion information.
+ */
 function completionInfoFromData(
     sourceFile: SourceFile,
     host: LanguageServiceHost,
@@ -1347,6 +1485,17 @@ function isCheckedFile(sourceFile: SourceFile, compilerOptions: CompilerOptions)
     return !isSourceFileJS(sourceFile) || !!isCheckJsEnabledForFile(sourceFile, compilerOptions);
 }
 
+/**
+ * Generates an array of completion entries for all possible cases in a switch statement.
+ * @param caseBlock The case block of the switch statement.
+ * @param sourceFile The source file containing the switch statement.
+ * @param preferences The user preferences for the language service.
+ * @param options The compiler options for the program.
+ * @param host The language service host.
+ * @param program The program containing the switch statement.
+ * @param formatContext The format context for the switch statement.
+ * @returns An object containing the completion entry and import adder, or undefined if no completion entry is found.
+ */
 function getExhaustiveCaseSnippets(
     caseBlock: CaseBlock,
     sourceFile: SourceFile,
@@ -1445,6 +1594,13 @@ function getExhaustiveCaseSnippets(
     return undefined;
 }
 
+/**
+ * Converts a TypeNode to an Expression.
+ * @param {TypeNode} typeNode - The TypeNode to convert.
+ * @param {ScriptTarget} languageVersion - The language version.
+ * @param {QuotePreference} quotePreference - The quote preference.
+ * @returns {Expression | undefined} The converted Expression, or undefined if conversion fails.
+ */
 function typeNodeToExpression(typeNode: TypeNode, languageVersion: ScriptTarget, quotePreference: QuotePreference): Expression | undefined {
     switch (typeNode.kind) {
         case SyntaxKind.TypeReference:
@@ -1479,6 +1635,13 @@ function typeNodeToExpression(typeNode: TypeNode, languageVersion: ScriptTarget,
     return undefined;
 }
 
+/**
+ * Converts an entity name to an expression.
+ * @param {EntityName} entityName - The entity name to convert.
+ * @param {ScriptTarget} languageVersion - The language version to use.
+ * @param {QuotePreference} quotePreference - The quote preference to use.
+ * @returns {Expression} The resulting expression.
+ */
 function entityNameToExpression(entityName: EntityName, languageVersion: ScriptTarget, quotePreference: QuotePreference): Expression {
     if (isIdentifier(entityName)) {
         return entityName;
@@ -1496,6 +1659,11 @@ function entityNameToExpression(entityName: EntityName, languageVersion: ScriptT
     }
 }
 
+/**
+ * Determines if the given CompletionKind is a member completion kind.
+ * @param {CompletionKind} kind - The CompletionKind to check.
+ * @returns {boolean} - True if the CompletionKind is a member completion kind, false otherwise.
+ */
 function isMemberCompletionKind(kind: CompletionKind): boolean {
     switch (kind) {
         case CompletionKind.ObjectPropertyDeclaration:
@@ -1507,6 +1675,13 @@ function isMemberCompletionKind(kind: CompletionKind): boolean {
     }
 }
 
+/**
+ * Given a location and a source file, finds the JSX closing element and returns completion information for it.
+ * If the closing element is not defined, the completion will return the tag-name of an associated opening-element.
+ * @param {Node | undefined} location - The location to search for the closing element.
+ * @param {SourceFile} sourceFile - The source file to search in.
+ * @returns {CompletionInfo | undefined} - The completion information for the closing element, or undefined if not found.
+ */
 function getJsxClosingTagCompletion(location: Node | undefined, sourceFile: SourceFile): CompletionInfo | undefined {
     // We wanna walk up the tree till we find a JSX closing element
     const jsxClosingElement = findAncestor(location, node => {
@@ -1553,6 +1728,14 @@ function getJsxClosingTagCompletion(location: Node | undefined, sourceFile: Sour
     return;
 }
 
+/**
+ * Retrieves JavaScript completion entries.
+ * @param {SourceFile} sourceFile - The source file.
+ * @param {number} position - The position.
+ * @param {UniqueNameSet} uniqueNames - The unique name set.
+ * @param {ScriptTarget} target - The script target.
+ * @param {SortedArray<CompletionEntry>} entries - The sorted array of completion entries.
+ */
 function getJSCompletionEntries(
     sourceFile: SourceFile,
     position: number,
@@ -1587,6 +1770,34 @@ function createCompletionEntryForLiteral(sourceFile: SourceFile, preferences: Us
     return { name: completionNameForLiteral(sourceFile, preferences, literal), kind: ScriptElementKind.string, kindModifiers: ScriptElementKindModifier.none, sortText: SortText.LocationPriority };
 }
 
+/**
+ * Creates a completion entry for a given symbol.
+ * @param symbol - The symbol for which to create a completion entry.
+ * @param sortText - The sort text for the completion entry.
+ * @param replacementToken - The replacement token for the completion entry.
+ * @param contextToken - The context token for the completion entry.
+ * @param location - The location for the completion entry.
+ * @param position - The position for the completion entry.
+ * @param sourceFile - The source file for the completion entry.
+ * @param host - The language service host for the completion entry.
+ * @param program - The program for the completion entry.
+ * @param name - The name for the completion entry.
+ * @param needsConvertPropertyAccess - Whether the property access needs to be converted.
+ * @param origin - The origin for the completion entry.
+ * @param recommendedCompletion - The recommended completion for the completion entry.
+ * @param propertyAccessToConvert - The property access expression to convert.
+ * @param isJsxInitializer - Whether the completion entry is a JSX initializer.
+ * @param importStatementCompletion - The import statement completion info for the completion entry.
+ * @param useSemicolons - Whether to use semicolons for the completion entry.
+ * @param options - The compiler options for the completion entry.
+ * @param preferences - The user preferences for the completion entry.
+ * @param completionKind - The completion kind for the completion entry.
+ * @param formatContext - The format context for the completion entry.
+ * @param isJsxIdentifierExpected - Whether the JSX identifier is expected for the completion entry.
+ * @param isRightOfOpenTag - Whether the completion entry is to the right of an open tag.
+ * @param includeSymbol - Whether to include the symbol in the completion entry.
+ * @returns The completion entry for the given symbol.
+ */
 function createCompletionEntry(
     symbol: Symbol,
     sortText: SortText,
@@ -1777,6 +1988,13 @@ function createCompletionEntry(
     };
 }
 
+/**
+ * Determines if a symbol is a class-like member completion based on its flags and location in the source file.
+ * @param {Symbol} symbol - The symbol to check.
+ * @param {Node} location - The location in the source file where the completion is being requested.
+ * @param {SourceFile} sourceFile - The source file where the completion is being requested.
+ * @returns {boolean} - True if the symbol is a class-like member completion, false otherwise.
+ */
 function isClassLikeMemberCompletion(symbol: Symbol, location: Node, sourceFile: SourceFile): boolean {
     // TODO: support JS files.
     if (isInJSFile(location)) {
@@ -1826,6 +2044,20 @@ function isClassLikeMemberCompletion(symbol: Symbol, location: Node, sourceFile:
         );
 }
 
+/**
+ * Retrieves the completion entry for a member, given its name, symbol, location, and context.
+ * @param host - The LanguageServiceHost object.
+ * @param program - The Program object.
+ * @param options - The CompilerOptions object.
+ * @param preferences - The UserPreferences object.
+ * @param name - The name of the member.
+ * @param symbol - The Symbol object of the member.
+ * @param location - The Node object representing the location of the member.
+ * @param position - The position of the member.
+ * @param contextToken - The Node object representing the context token.
+ * @param formatContext - The FormatContext object.
+ * @returns An object containing the insertText, filterText, isSnippet, importAdder, and eraseRange properties, or undefined if the classLikeDeclaration is not found.
+ */
 function getEntryForMemberCompletion(
     host: LanguageServiceHost,
     program: Program,
@@ -1968,6 +2200,13 @@ function getEntryForMemberCompletion(
     return { insertText, filterText, isSnippet, importAdder, eraseRange };
 }
 
+/**
+ * Returns an object containing the modifiers, decorators, and range of a given contextToken in a sourceFile at a specified position.
+ * @param {Node | undefined} contextToken - The contextToken to analyze.
+ * @param {SourceFile} sourceFile - The sourceFile to analyze.
+ * @param {number} position - The position to analyze.
+ * @returns {{modifiers: ModifierFlags, decorators?: Decorator[], range?: TextRange}} - An object containing the modifiers, decorators, and range of the contextToken.
+ */
 function getPresentModifiers(
     contextToken: Node | undefined,
     sourceFile: SourceFile,
@@ -2015,6 +2254,11 @@ function getPresentModifiers(
     return { modifiers, decorators, range: range.pos !== position ? range : undefined };
 }
 
+/**
+ * Determines if a given node is a modifier-like node.
+ * @param {Node} node - The node to check.
+ * @returns {ModifierSyntaxKind | undefined} - The kind of modifier or undefined if not a modifier-like node.
+ */
 function isModifierLike(node: Node): ModifierSyntaxKind | undefined {
     if (isModifier(node)) {
         return node.kind;
@@ -2028,6 +2272,18 @@ function isModifierLike(node: Node): ModifierSyntaxKind | undefined {
     return undefined;
 }
 
+/**
+ * Retrieves the completion entry for an object literal method.
+ * @param symbol - The symbol for the method.
+ * @param name - The name of the method.
+ * @param enclosingDeclaration - The enclosing object literal expression.
+ * @param program - The program to use for type checking.
+ * @param host - The language service host.
+ * @param options - The compiler options.
+ * @param preferences - The user preferences.
+ * @param formatContext - The format context for the completion entry.
+ * @returns An object containing the insert text, label details, and whether it is a snippet.
+ */
 function getEntryForObjectLiteralMethodCompletion(
     symbol: Symbol,
     name: string,
@@ -2083,6 +2339,16 @@ function getEntryForObjectLiteralMethodCompletion(
 
 }
 
+/**
+ * Creates a MethodDeclaration or returns undefined based on the provided Symbol, ObjectLiteralExpression, SourceFile, Program, LanguageServiceHost, and UserPreferences.
+ * @param symbol - The Symbol to create the MethodDeclaration from.
+ * @param enclosingDeclaration - The ObjectLiteralExpression enclosing the Symbol.
+ * @param sourceFile - The SourceFile to get the QuotePreference from.
+ * @param program - The Program to get the TypeChecker from.
+ * @param host - The LanguageServiceHost to use for NodeBuilderFlags.
+ * @param preferences - The UserPreferences to use for includeCompletionsWithSnippetText.
+ * @returns A MethodDeclaration or undefined.
+ */
 function createObjectLiteralMethod(
     symbol: Symbol,
     enclosingDeclaration: ObjectLiteralExpression,
@@ -2164,6 +2430,16 @@ function createObjectLiteralMethod(
     }
 }
 
+/**
+ * Creates a snippet printer with the given printer options.
+ * @param {PrinterOptions} printerOptions - The printer options to use.
+ * @returns An object with the following functions:
+ * - printSnippetList(format: ListFormat, list: NodeArray<Node>, sourceFile: SourceFile | undefined): string
+ * - printAndFormatSnippetList(format: ListFormat, list: NodeArray<Node>, sourceFile: SourceFile, formatContext: formatting.FormatContext): string
+ * - printNode(hint: EmitHint, node: Node, sourceFile: SourceFile): string
+ * - printAndFormatNode(hint: EmitHint, node: Node, sourceFile: SourceFile, formatContext: formatting.FormatContext): string
+ * @remarks The formatter/scanner may have issues with snippet-escaped text, so instead of writing the escaped text directly to the writer, generate a set of changes that can be applied to the unescaped text to escape it post-formatting.
+ */
 function createSnippetPrinter(
     printerOptions: PrinterOptions,
 ) {
@@ -2193,6 +2469,11 @@ function createSnippetPrinter(
     // so instead of writing the escaped text directly to the writer,
     // generate a set of changes that can be applied to the unescaped text
     // to escape it post-formatting.
+    /**
+     * Escapes a string and writes it using the provided write function. If the string is escaped, the escaped version is added to the escapes array.
+     * @param {string} s - The string to escape and write.
+     * @param {Function} write - The function used to write the escaped string.
+     */
     function escapingWrite(s: string, write: () => void) {
         const escaped = escapeSnippetText(s);
         if (escaped !== s) {
@@ -2216,6 +2497,13 @@ function createSnippetPrinter(
         return escapes ? textChanges.applyChanges(unescaped, escapes) : unescaped;
     }
 
+    /**
+     * Returns a string of unescaped snippet list based on the provided parameters.
+     * @param {ListFormat} format - The format of the list.
+     * @param {NodeArray<Node>} list - The list of nodes to be printed.
+     * @param {SourceFile | undefined} sourceFile - The source file to be used.
+     * @returns {string} - The unescaped snippet list as a string.
+     */
     function printUnescapedSnippetList(
         format: ListFormat,
         list: NodeArray<Node>,
@@ -2227,6 +2515,14 @@ function createSnippetPrinter(
         return writer.getText();
     }
 
+    /**
+     * Formats and prints a list of nodes using the specified list format.
+     * @param {ListFormat} format - The format to use for the list.
+     * @param {NodeArray<Node>} list - The list of nodes to format and print.
+     * @param {SourceFile} sourceFile - The source file containing the nodes.
+     * @param {formatting.FormatContext} formatContext - The format context to use for formatting.
+     * @returns {string} The formatted and printed list as a string.
+     */
     function printAndFormatSnippetList(
         format: ListFormat,
         list: NodeArray<Node>,
@@ -2274,6 +2570,14 @@ function createSnippetPrinter(
         return writer.getText();
     }
 
+    /**
+     * Formats and prints a given node with the provided hint, source file, and format context.
+     * @param hint - The hint for emitting the node.
+     * @param node - The node to be printed and formatted.
+     * @param sourceFile - The source file containing the node.
+     * @param formatContext - The format context for formatting the node.
+     * @returns The formatted and printed node as a string.
+     */
     function printAndFormatNode(
         hint: EmitHint,
         node: Node,
@@ -2306,6 +2610,11 @@ function createSnippetPrinter(
     }
 }
 
+/**
+ * Converts SymbolOriginInfoExport or SymbolOriginInfoResolvedExport to CompletionEntryData or undefined.
+ * @param {SymbolOriginInfoExport | SymbolOriginInfoResolvedExport} origin - The origin to convert.
+ * @returns {CompletionEntryData | undefined} The converted CompletionEntryData or undefined.
+ */
 function originToCompletionEntryData(origin: SymbolOriginInfoExport | SymbolOriginInfoResolvedExport): CompletionEntryData | undefined {
     const ambientModuleName = origin.fileName ? undefined : stripQuotes(origin.moduleSymbol.name);
     const isPackageJsonImport = origin.isFromPackageJson ? true : undefined;
@@ -2330,6 +2639,13 @@ function originToCompletionEntryData(origin: SymbolOriginInfoExport | SymbolOrig
     return unresolvedData;
 }
 
+/**
+ * Converts completion entry data to symbol origin information.
+ * @param data - The completion entry data.
+ * @param completionName - The name of the completion.
+ * @param moduleSymbol - The module symbol.
+ * @returns Either a resolved or unresolved symbol origin information.
+ */
 function completionEntryDataToSymbolOriginInfo(data: CompletionEntryData, completionName: string, moduleSymbol: Symbol): SymbolOriginInfoExport | SymbolOriginInfoResolvedExport {
     const isDefaultExport = data.exportName === InternalSymbolName.Default;
     const isFromPackageJson = !!data.isPackageJsonImport;
@@ -2360,6 +2676,17 @@ function completionEntryDataToSymbolOriginInfo(data: CompletionEntryData, comple
     return unresolvedOrigin;
 }
 
+/**
+ * Returns an object containing the insert text and replacement span for import completion.
+ * @param {string} name - The name of the import.
+ * @param {ImportStatementCompletionInfo} importStatementCompletion - Information about the import statement completion.
+ * @param {SymbolOriginInfoResolvedExport} origin - Information about the symbol origin.
+ * @param {boolean} useSemicolons - Whether or not to use semicolons.
+ * @param {SourceFile} sourceFile - The source file.
+ * @param {CompilerOptions} options - The compiler options.
+ * @param {UserPreferences} preferences - The user preferences.
+ * @returns {{insertText: string, replacementSpan: TextSpan}} - An object containing the insert text and replacement span.
+ */
 function getInsertTextAndReplacementSpanForImportCompletion(name: string, importStatementCompletion: ImportStatementCompletionInfo, origin: SymbolOriginInfoResolvedExport, useSemicolons: boolean, sourceFile: SourceFile, options: CompilerOptions, preferences: UserPreferences) {
     const replacementSpan = importStatementCompletion.replacementSpan;
     const quotedModuleSpecifier = escapeSnippetText(quote(sourceFile, preferences, origin.moduleSpecifier));
@@ -2394,6 +2721,11 @@ function isRecommendedCompletionMatch(localSymbol: Symbol, recommendedCompletion
         !!(localSymbol.flags & SymbolFlags.ExportValue) && checker.getExportSymbolOfSymbol(localSymbol) === recommendedCompletion;
 }
 
+/**
+ * Returns the source of a symbol origin info.
+ * @param {SymbolOriginInfo | undefined} origin - The symbol origin info.
+ * @returns {string | undefined} - The source of the symbol origin info.
+ */
 function getSourceFromOrigin(origin: SymbolOriginInfo | undefined): string | undefined {
     if (originIsExport(origin)) {
         return stripQuotes(origin.moduleSymbol.name);
@@ -2409,7 +2741,36 @@ function getSourceFromOrigin(origin: SymbolOriginInfo | undefined): string | und
     }
 }
 
-/** @internal */
+/**
+ * Retrieves completion entries from an array of symbols.
+ * @param symbols An array of symbols to retrieve completion entries from.
+ * @param entries A sorted array of completion entries.
+ * @param replacementToken The node to replace with the completion entry.
+ * @param contextToken The node providing context for the completion request.
+ * @param location The node where the completion is requested.
+ * @param position The position of the completion request.
+ * @param sourceFile The source file where the completion is requested.
+ * @param host The language service host.
+ * @param program The program.
+ * @param target The script target.
+ * @param log A logging function.
+ * @param kind The kind of completion being requested.
+ * @param preferences The user preferences.
+ * @param compilerOptions The compiler options.
+ * @param formatContext The format context.
+ * @param isTypeOnlyLocation Indicates if the location is a type-only location.
+ * @param propertyAccessToConvert The property access expression to convert.
+ * @param jsxIdentifierExpected Indicates if a JSX identifier is expected.
+ * @param isJsxInitializer Indicates if the completion is for a JSX initializer.
+ * @param importStatementCompletion The import statement completion info.
+ * @param recommendedCompletion The recommended completion.
+ * @param symbolToOriginInfoMap The symbol to origin info map.
+ * @param symbolToSortTextMap The symbol to sort text map.
+ * @param isRightOfOpenTag Indicates if the completion is to the right of an open tag.
+ * @param includeSymbol Indicates if the symbol should be included in the completion.
+ * @returns A set of unique names.
+ * @internal
+ */
 export function getCompletionEntriesFromSymbols(
     symbols: readonly Symbol[],
     entries: SortedArray<CompletionEntry>,
@@ -2504,6 +2865,12 @@ export function getCompletionEntriesFromSymbols(
         add: name => uniques.set(name, true),
     };
 
+    /**
+     * Determines whether a symbol should be included in auto import suggestions.
+     * @param symbol - The symbol to check.
+     * @param symbolToSortTextMap - A map of symbol IDs to their sort text.
+     * @returns A boolean indicating whether the symbol should be included.
+     */
     function shouldIncludeSymbol(symbol: Symbol, symbolToSortTextMap: SymbolSortTextMap): boolean {
         let allFlags = symbol.flags;
         if (!isSourceFile(location)) {
@@ -2575,6 +2942,11 @@ function getLabelCompletionAtPosition(node: BreakOrContinueStatement): Completio
     }
 }
 
+/**
+ * Returns an array of CompletionEntry objects representing unique labeled statements within the given Node.
+ * @param {Node} node - The Node to search for labeled statements.
+ * @returns {CompletionEntry[]} - An array of CompletionEntry objects representing unique labeled statements.
+ */
 function getLabelStatementCompletions(node: Node): CompletionEntry[] {
     const entries: CompletionEntry[] = [];
     const uniques = new Map<string, true>();
@@ -2601,6 +2973,18 @@ function getLabelStatementCompletions(node: Node): CompletionEntry[] {
     return entries;
 }
 
+/**
+ * Represents a symbol completion object.
+ * @interface
+ * @property {string} type - The type of the symbol completion object. Always "symbol".
+ * @property {Symbol} symbol - The symbol associated with the completion object.
+ * @property {Node} location - The location of the completion object.
+ * @property {SymbolOriginInfo | SymbolOriginInfoExport | SymbolOriginInfoResolvedExport | undefined} origin - The origin of the completion object.
+ * @property {Node | undefined} previousToken - The previous token of the completion object.
+ * @property {Node | undefined} contextToken - The context token of the completion object.
+ * @property {IsJsxInitializer} isJsxInitializer - Whether the completion object is a JSX initializer.
+ * @property {boolean} isTypeOnlyLocation - Whether the completion object is in a type-only location.
+ */
 interface SymbolCompletion {
     type: "symbol";
     symbol: Symbol;
@@ -2611,6 +2995,17 @@ interface SymbolCompletion {
     readonly isJsxInitializer: IsJsxInitializer;
     readonly isTypeOnlyLocation: boolean;
 }
+/**
+ * Retrieves symbol completion from entry ID.
+ * @param program - The program object.
+ * @param log - The log object.
+ * @param sourceFile - The source file object.
+ * @param position - The position number.
+ * @param entryId - The completion entry identifier.
+ * @param host - The language service host.
+ * @param preferences - The user preferences.
+ * @returns SymbolCompletion or { type: "request", request: Request } or { type: "literal", literal: string | number | PseudoBigInt } or { type: "cases" } or { type: "none" }
+ */
 function getSymbolCompletionFromEntryId(
     program: Program,
     log: Log,
@@ -2677,7 +3072,19 @@ export interface CompletionEntryIdentifier {
     data?: CompletionEntryData;
 }
 
-/** @internal */
+/**
+ * Retrieves details about a completion entry at a given position in a source file.
+ * @param program - The TypeScript program.
+ * @param log - The logger.
+ * @param sourceFile - The source file.
+ * @param position - The position in the source file.
+ * @param entryId - The completion entry identifier.
+ * @param host - The language service host.
+ * @param formatContext - The format context.
+ * @param preferences - The user preferences.
+ * @param cancellationToken - The cancellation token.
+ * @returns The completion entry details, or undefined if not found.
+ */
 export function getCompletionEntryDetails(
     program: Program,
     log: Log,
@@ -2789,6 +3196,26 @@ interface CodeActionsAndSourceDisplay {
     readonly codeActions: CodeAction[] | undefined;
     readonly sourceDisplay: SymbolDisplayPart[] | undefined;
 }
+/**
+ * Returns an object containing code actions and source display for a completion entry.
+ * @param name - The name of the completion entry.
+ * @param location - The location of the completion entry.
+ * @param contextToken - The context token of the completion entry.
+ * @param origin - The origin of the completion entry.
+ * @param symbol - The symbol of the completion entry.
+ * @param program - The program of the completion entry.
+ * @param host - The language service host of the completion entry.
+ * @param compilerOptions - The compiler options of the completion entry.
+ * @param sourceFile - The source file of the completion entry.
+ * @param position - The position of the completion entry.
+ * @param previousToken - The previous token of the completion entry.
+ * @param formatContext - The format context of the completion entry.
+ * @param preferences - The user preferences of the completion entry.
+ * @param data - The completion entry data.
+ * @param source - The source of the completion entry.
+ * @param cancellationToken - The cancellation token of the completion entry.
+ * @returns An object containing code actions and source display for a completion entry.
+ */
 function getCompletionEntryCodeActionsAndSourceDisplay(
     name: string,
     location: Node,
@@ -2885,7 +3312,18 @@ function getCompletionEntryCodeActionsAndSourceDisplay(
     return { sourceDisplay: [textPart(moduleSpecifier)], codeActions: [codeAction] };
 }
 
-/** @internal */
+/**
+ * Retrieves the symbol for a completion entry.
+ * @param {Program} program - The program being used.
+ * @param {Log} log - The log being used.
+ * @param {SourceFile} sourceFile - The source file being completed.
+ * @param {number} position - The position of the completion entry.
+ * @param {CompletionEntryIdentifier} entryId - The identifier of the completion entry.
+ * @param {LanguageServiceHost} host - The language service host being used.
+ * @param {UserPreferences} preferences - The user preferences being used.
+ * @returns {Symbol | undefined} - The symbol for the completion entry, or undefined if not found.
+ * @internal
+ */
 export function getCompletionEntrySymbol(
     program: Program,
     log: Log,
@@ -2906,6 +3344,33 @@ const enum CompletionDataKind { Data, JsDocTagName, JsDocTag, JsDocParameterName
  * @internal
  */
 export type IsJsxInitializer = boolean | Identifier;
+/**
+ * Represents data returned from a completion request.
+ * @readonly
+ * @property {CompletionDataKind.Data} kind - The kind of completion data.
+ * @property {readonly Symbol[]} symbols - The symbols that match the completion request.
+ * @property {CompletionKind} completionKind - The kind of completion.
+ * @property {boolean} isInSnippetScope - Indicates if the completion is in a snippet scope.
+ * @property {PropertyAccessExpression | undefined} propertyAccessToConvert - The property access expression to convert.
+ * @property {boolean} isNewIdentifierLocation - Indicates if the completion is in a new identifier location.
+ * @property {Node} location - The location of the completion.
+ * @property {KeywordCompletionFilters} keywordFilters - The keyword completion filters.
+ * @property {readonly (string | number | PseudoBigInt)[]} literals - The literals that match the completion request.
+ * @property {SymbolOriginInfoMap} symbolToOriginInfoMap - The map of symbols to origin info.
+ * @property {Symbol | undefined} recommendedCompletion - The recommended completion.
+ * @property {Node | undefined} previousToken - The previous token.
+ * @property {Node | undefined} contextToken - The context token.
+ * @property {IsJsxInitializer} isJsxInitializer - Indicates if the completion is in a JSX initializer.
+ * @property {boolean} insideJsDocTagTypeExpression - Indicates if the completion is inside a JSDoc tag type expression.
+ * @property {SymbolSortTextMap} symbolToSortTextMap - The map of symbols to sort text.
+ * @property {boolean} isTypeOnlyLocation - Indicates if the completion is in a type-only location.
+ * @property {boolean} isJsxIdentifierExpected - Indicates if a JSX identifier is expected.
+ * @property {boolean} isRightOfOpenTag - Indicates if the completion is to the right of an open tag.
+ * @property {boolean} isRightOfDotOrQuestionDot - Indicates if the completion is to the right of a dot or question dot.
+ * @property {ImportStatementCompletionInfo | undefined} importStatementCompletion - The import statement completion info.
+ * @property {boolean | undefined} hasUnresolvedAutoImports - Indicates if there are unresolved auto imports.
+ * @property {CompletionInfoFlags} flags - The completion info flags.
+ */
 interface CompletionData {
     readonly kind: CompletionDataKind.Data;
     readonly symbols: readonly Symbol[];
@@ -2948,6 +3413,13 @@ export const enum CompletionKind {
     None,
 }
 
+/**
+ * Returns the first symbol in a chain with a recommended completion.
+ * @param {Node} previousToken - The previous token in the chain.
+ * @param {Type} contextualType - The contextual type of the symbol.
+ * @param {TypeChecker} checker - The type checker.
+ * @returns {Symbol | undefined} - The recommended completion symbol or undefined.
+ */
 function getRecommendedCompletion(previousToken: Node, contextualType: Type, checker: TypeChecker): Symbol | undefined {
     // For a union, return the first one with a recommended completion.
     return firstDefined(contextualType && (contextualType.isUnion() ? contextualType.types : [contextualType]), type => {
@@ -2959,6 +3431,14 @@ function getRecommendedCompletion(previousToken: Node, contextualType: Type, che
     });
 }
 
+/**
+ * Returns the contextual type of a given previous token in a TypeScript source file.
+ * @param previousToken - The previous token in the source file.
+ * @param position - The position of the token in the source file.
+ * @param sourceFile - The source file being analyzed.
+ * @param checker - The type checker for the source file.
+ * @returns The contextual type of the previous token, or undefined if none is found.
+ */
 function getContextualType(previousToken: Node, position: number, sourceFile: SourceFile, checker: TypeChecker): Type | undefined {
     const { parent } = previousToken;
     switch (previousToken.kind) {
@@ -3367,6 +3847,11 @@ function getCompletionData(
         | JSDocThrowsTag
         | JSDocSatisfiesTag;
 
+    /**
+     * Checks if a given JSDoc tag is a JSDocTagWithTypeExpression.
+     * @param {JSDocTag} tag - The JSDoc tag to check.
+     * @returns {boolean} - True if the tag is a JSDocTagWithTypeExpression, false otherwise.
+     */
     function isTagWithTypeExpression(tag: JSDocTag): tag is JSDocTagWithTypeExpression {
         switch (tag.kind) {
             case SyntaxKind.JSDocParameterTag:
@@ -3384,6 +3869,11 @@ function getCompletionData(
         }
     }
 
+    /**
+     * Tries to get a JSDocTypeExpression or ExpressionWithTypeArguments from a JSDocTag.
+     * @param {JSDocTag} tag - The JSDocTag to extract the type expression from.
+     * @returns {JSDocTypeExpression | ExpressionWithTypeArguments | undefined} The extracted type expression or undefined if not found.
+     */
     function tryGetTypeExpressionFromTag(tag: JSDocTag): JSDocTypeExpression | ExpressionWithTypeArguments | undefined {
         if (isTagWithTypeExpression(tag)) {
             const typeExpression = isJSDocTemplateTag(tag) ? tag.constraint : tag.typeExpression;
@@ -3395,6 +3885,14 @@ function getCompletionData(
         return undefined;
     }
 
+    /**
+     * Retrieves TypeScript member symbols for a given node and adds them to an array of symbols.
+     * @remarks This function is used for right of dot member completion list and qualified name check for type node location.
+     * @remarks This function also extracts module or enum members and adds them to the array of symbols.
+     * @remarks If the module is merged with a value, it gets the type of the class and adds its properties (for inherited static methods).
+     * @remarks If the node is part of the expression of a `yield` or `return`, this function tries to get the type of `this` before checking the type of the node to avoid circularity.
+     * @returns void
+     */
     function getTypeScriptMemberSymbols(): void {
         // Right of dot member completion list
         completionKind = CompletionKind.PropertyAccess;
@@ -3484,6 +3982,13 @@ function getCompletionData(
         }
     }
 
+    /**
+     * Adds type properties to the completion suggestion list based on the given parameters.
+     * @param {Type} type - The type to retrieve properties from.
+     * @param {boolean} insertAwait - Whether to insert "await" before the property.
+     * @param {boolean} insertQuestionDot - Whether to insert "?" before the property.
+     * @returns {void}
+     */
     function addTypeProperties(type: Type, insertAwait: boolean, insertQuestionDot: boolean): void {
         isNewIdentifierLocation = !!type.getStringIndexType();
         if (isRightOfQuestionDot && some(type.getCallSignatures())) {
@@ -3519,6 +4024,13 @@ function getCompletionData(
         }
     }
 
+    /**
+     * Adds a completion symbol to the list of symbols to be displayed in the editor's completion list.
+     * For a computed property with an accessible name like `Symbol.iterator`, adds a completion for the *name* `Symbol` instead of for the property.
+     * @param {Symbol} symbol - The symbol to add to the completion list.
+     * @param {boolean} insertAwait - Whether to insert an await keyword before the completion.
+     * @param {boolean} insertQuestionDot - Whether to insert a question mark and dot before the completion.
+     */
     function addPropertySymbol(symbol: Symbol, insertAwait: boolean, insertQuestionDot: boolean) {
         // For a computed property with an accessible name like `Symbol.iterator`,
         // we'll add a completion for the *name* `Symbol` instead of for the property.
@@ -3582,6 +4094,11 @@ function getCompletionData(
             }
         }
 
+        /**
+         * Adds origin information to a symbol.
+         * @param symbol - The symbol to add origin information to.
+         * @remarks This function checks preferences to determine whether to include completions with insert text. If insertAwait is true and the symbol has not been seen before, the origin information kind will be set to Promise. If insertQuestionDot is true, the origin information kind will be set to Nullable.
+         */
         function addSymbolOriginInfo(symbol: Symbol) {
             if (preferences.includeCompletionsWithInsertText) {
                 if (insertAwait && addToSeen(seenPropertySymbols, getSymbolId(symbol))) {
@@ -3603,6 +4120,10 @@ function getCompletionData(
         return isIdentifier(e) ? e : isPropertyAccessExpression(e) ? getLeftMostName(e.expression) : undefined;
     }
 
+    /**
+     * Tries to retrieve global symbols for autocompletion.
+     * @returns {boolean} Returns true if global symbols were successfully retrieved, false otherwise.
+     */
     function tryGetGlobalSymbols(): boolean {
         const result: GlobalsSearch = tryGetObjectTypeLiteralInTypeArgumentCompletionSymbols()
             || tryGetObjectLikeCompletionSymbols()
@@ -3616,6 +4137,10 @@ function getCompletionData(
         return result === GlobalsSearch.Success;
     }
 
+    /**
+     * Tries to get constructor completion.
+     * @returns {GlobalsSearch} Returns GlobalsSearch enum value.
+     */
     function tryGetConstructorCompletion(): GlobalsSearch {
         if (!tryGetConstructorLikeCompletionContainer(contextToken)) return GlobalsSearch.Continue;
         // no members, only keywords
@@ -3627,6 +4152,10 @@ function getCompletionData(
         return GlobalsSearch.Success;
     }
 
+    /**
+     * Tries to get JSX completion symbols.
+     * @returns {GlobalsSearch} The result of the search.
+     */
     function tryGetJsxCompletionSymbols(): GlobalsSearch {
         const jsxContainer = tryGetContainingJsxElement(contextToken);
         // Cursor is inside a JSX self-closing element or opening element
@@ -3647,6 +4176,10 @@ function getCompletionData(
         return GlobalsSearch.Success;
     }
 
+    /**
+     * Retrieves global completion candidates based on the current context token and position.
+     * @returns {void}
+     */
     function getGlobalCompletions(): void {
         keywordFilters = tryGetFunctionLikeBodyCompletionContainer(contextToken) ? KeywordCompletionFilters.FunctionLikeBodyKeywords : KeywordCompletionFilters.All;
 
@@ -3728,6 +4261,11 @@ function getCompletionData(
         }
     }
 
+    /**
+     * Determines whether import completions should be offered.
+     * @returns {boolean} True if import completions should be offered, false otherwise.
+     * @remarks This function checks various conditions such as whether an import statement is already being typed, whether the current completion is for non-contextual object literal shorthand, whether modules are enabled, and whether module transpilation is enabled or the target is ES6 or above.
+     */
     function shouldOfferImportCompletions(): boolean {
         // If already typing an import statement, provide completions for it.
         if (importStatementCompletion) return true;
@@ -3743,6 +4281,11 @@ function getCompletionData(
         return programContainsModules(program);
     }
 
+    /**
+     * Determines if a given node is a snippet scope.
+     * @param {Node} scopeNode - The node to check.
+     * @returns {boolean} - True if the node is a snippet scope, false otherwise.
+     */
     function isSnippetScope(scopeNode: Node): boolean {
         switch (scopeNode.kind) {
             case SyntaxKind.SourceFile:
@@ -3771,6 +4314,11 @@ function getCompletionData(
             (contextToken.kind === SyntaxKind.AssertsKeyword && contextToken.parent.kind === SyntaxKind.TypePredicate));
     }
 
+    /**
+     * Determines if the given contextToken is of a specific type based on its parent kind and the contextToken's own kind.
+     * @param {Node} contextToken - The contextToken to check.
+     * @returns {boolean} - Returns true if the contextToken is of a specific type, otherwise false.
+     */
     function isContextTokenTypeLocation(contextToken: Node): boolean {
         if (contextToken) {
             const parentKind = contextToken.parent.kind;
@@ -3802,7 +4350,21 @@ function getCompletionData(
         return false;
     }
 
-    /** Mutates `symbols`, `symbolToOriginInfoMap`, and `symbolToSortTextMap` */
+    /**
+     * Collects auto-import suggestions for the current position in the source file.
+     * Mutates `symbols`, `symbolToOriginInfoMap`, and `symbolToSortTextMap`.
+     * @returns void
+     * @remarks This function should not be run when a faster path is available via `data`.
+     * @remarks Do not try to auto-import something with a lowercase first letter for a JSX tag.
+     * @remarks In node16+, module specifier resolution can fail due to modules being blocked by package.json `exports`.
+     * If that happens, don't show a completion item.
+     * @remarks During the subsequent `CompletionEntryDetails` request, we'll get all the ExportInfos again and pick
+     * the best one based on the module specifier it produces.
+     * @remarks If useful, include object type of variables with the usual {} notation e.g. "@returns {number} amount",
+     * appropriate tags such as @params, @class etc and any @remarks if they are very useful.
+     * @params None
+     * @class
+     */
     function collectAutoImports() {
         if (!shouldOfferImportCompletions()) return;
         Debug.assert(!detailsEntryId?.data, "Should not run 'collectAutoImports' when faster path is available via `data`");
@@ -3906,6 +4468,11 @@ function getCompletionData(
             }
         );
 
+        /**
+         * Determines if the provided SymbolExportInfo is importable.
+         * @param {SymbolExportInfo} info - The SymbolExportInfo to check.
+         * @returns {boolean} - True if the SymbolExportInfo is importable, false otherwise.
+         */
         function isImportableExportInfo(info: SymbolExportInfo) {
             const moduleFile = tryCast(info.moduleSymbol.valueDeclaration, isSourceFile);
             if (!moduleFile) {
@@ -3928,6 +4495,11 @@ function getCompletionData(
         }
     }
 
+    /**
+     * Adds a symbol to the list of auto-import suggestions.
+     * @param {Symbol} symbol - The symbol to add.
+     * @param {SymbolOriginInfoResolvedExport | SymbolOriginInfoExport} origin - The origin of the symbol.
+     */
     function pushAutoImportSymbol(symbol: Symbol, origin: SymbolOriginInfoResolvedExport | SymbolOriginInfoExport) {
         const symbolId = getSymbolId(symbol);
         if (symbolToSortTextMap[symbolId] === SortText.GlobalsOrKeywords) {
@@ -3940,6 +4512,17 @@ function getCompletionData(
     }
 
     /* Mutates `symbols` and `symbolToOriginInfoMap`. */
+    /**
+     * Collects object literal method symbols from a given array of symbols and enclosing declaration.
+     *
+     * @param {Symbol[]} members - The array of symbols to collect from.
+     * @param {ObjectLiteralExpression} enclosingDeclaration - The enclosing declaration of the symbols.
+     * @returns {void}
+     *
+     * @remarks
+     * This function currently does not support JS files and will return early if the location is in a JS file.
+     *
+     */
     function collectObjectLiteralMethodSymbols(members: Symbol[], enclosingDeclaration: ObjectLiteralExpression): void {
         // TODO: support JS files.
         if (isInJSFile(location)) {
@@ -3978,6 +4561,19 @@ function getCompletionData(
         });
     }
 
+    /**
+     * Determines if a given symbol is an object literal method symbol.
+     * @param {Symbol} symbol - The symbol to check.
+     * @returns {boolean} - True if the symbol is an object literal method symbol, false otherwise.
+     * @remarks
+     * For an object type
+     * `type Foo = {
+     * bar(x: number): void;
+     * foo: (x: string) => string;
+     * }`,
+     * `bar` will have symbol flag `Method`,
+     * `foo` will have symbol flag `Property`.
+     */
     function isObjectLiteralMethodSymbol(symbol: Symbol): boolean {
         /*
             For an object type
@@ -4006,6 +4602,11 @@ function getCompletionData(
         return scope;
     }
 
+    /**
+     * Determines if the given contextToken is a blocker for completion lists.
+     * @param {Node} contextToken - The context token to check.
+     * @returns {boolean} - True if the context token is a blocker for completion lists, false otherwise.
+     */
     function isCompletionListBlocker(contextToken: Node): boolean {
         const start = timestamp();
         const result = isInStringOrRegularExpressionOrTemplateLiteral(contextToken) ||
@@ -4017,6 +4618,11 @@ function getCompletionData(
         return result;
     }
 
+    /**
+     * Determines if the given contextToken is within a JSX text element.
+     * @param {Node} contextToken - The context token to check.
+     * @returns {boolean} - True if the contextToken is within a JSX text element, false otherwise.
+     */
     function isInJsxText(contextToken: Node): boolean {
         if (contextToken.kind === SyntaxKind.JsxText) {
             return true;
@@ -4047,6 +4653,13 @@ function getCompletionData(
         return false;
     }
 
+    /**
+     * Determines if the current location is a valid identifier definition location.
+     * @returns {boolean} True if the current location is a valid identifier definition location, false otherwise.
+     * @remarks This function is used by the TypeScript language service to determine if a given location is a valid location to define a new identifier.
+     * @remarks This function takes into account the current context token and its parent node kind to determine if the location is valid.
+     * @remarks This function also handles cases where the previous token may have been a keyword that was converted to an identifier.
+     */
     function isNewIdentifierDefinitionLocation(): boolean {
         if (contextToken) {
             const containingNodeKind = contextToken.parent.kind;
@@ -4122,6 +4735,10 @@ function getCompletionData(
             position === contextToken.end && (!!contextToken.isUnterminated || isRegularExpressionLiteral(contextToken)));
     }
 
+    /**
+     * Tries to get the object type literal in type argument completion symbols.
+     * @returns {GlobalsSearch | undefined} Returns GlobalsSearch.Continue or GlobalsSearch.Success.
+     */
     function tryGetObjectTypeLiteralInTypeArgumentCompletionSymbols(): GlobalsSearch | undefined {
         const typeLiteralNode = tryGetTypeLiteralNode(contextToken);
         if (!typeLiteralNode) return GlobalsSearch.Continue;
@@ -4149,10 +4766,9 @@ function getCompletionData(
     }
 
     /**
-     * Aggregates relevant symbols for completion in object literals and object binding patterns.
-     * Relevant symbols are stored in the captured 'symbols' variable.
-     *
-     * @returns true if 'symbols' was successfully populated; false otherwise.
+     * Attempts to retrieve relevant symbols for completion in object literals and object binding patterns.
+     * Populates the 'symbols' variable with the relevant symbols.
+     * @returns True if 'symbols' was successfully populated; false otherwise.
      */
     function tryGetObjectLikeCompletionSymbols(): GlobalsSearch | undefined {
         const symbolsStartIndex = symbols.length;
@@ -4240,17 +4856,13 @@ function getCompletionData(
     }
 
     /**
-     * Aggregates relevant symbols for completion in import clauses and export clauses
-     * whose declarations have a module specifier; for instance, symbols will be aggregated for
-     *
-     *      import { | } from "moduleName";
-     *      export { a as foo, | } from "moduleName";
-     *
-     * but not for
-     *
-     *      export { | };
-     *
-     * Relevant symbols are stored in the captured 'symbols' variable.
+     * Tries to retrieve relevant symbols for completion in import clauses and export clauses
+     * whose declarations have a module specifier. Relevant symbols are stored in the captured 'symbols' variable.
+     * @returns {GlobalsSearch} The result of the search.
+     * @remarks
+     * This function checks if the context token is a named import or export and attempts to show exported members for imported/re-exported modules.
+     * If there are no relevant symbols to import, the function will not offer the 'type' keyword either.
+     * @see {@link GlobalsSearch}
      */
     function tryGetImportOrExportClauseCompletionSymbols(): GlobalsSearch {
         if (!contextToken) return GlobalsSearch.Continue;
@@ -4293,13 +4905,9 @@ function getCompletionData(
     }
 
     /**
-     * Adds local declarations for completions in named exports:
-     *
-     *   export { | };
-     *
-     * Does not check for the absence of a module specifier (`export {} from "./other"`)
-     * because `tryGetImportOrExportClauseCompletionSymbols` runs first and handles that,
-     * preventing this function from running.
+     * Retrieves local named export completion symbols for use in an export statement.
+     * @returns {GlobalsSearch} The result of the search for completion symbols.
+     * @remarks This function does not check for the absence of a module specifier (`export {} from "./other"`) because `tryGetImportOrExportClauseCompletionSymbols` runs first and handles that, preventing this function from running.
      */
     function tryGetLocalNamedExportCompletionSymbols(): GlobalsSearch {
         const namedExports = contextToken && (contextToken.kind === SyntaxKind.OpenBraceToken || contextToken.kind === SyntaxKind.CommaToken)
@@ -4323,8 +4931,26 @@ function getCompletionData(
     }
 
     /**
-     * Aggregates relevant symbols for completion in class declaration
-     * Relevant symbols are stored in the captured 'symbols' variable.
+     * Retrieves relevant symbols for completion in a class declaration.
+     * @returns {GlobalsSearch} The result of the search for relevant symbols.
+     * @remarks Relevant symbols are stored in the captured 'symbols' variable. The function determines the kind of completion to be performed, whether it is for a member, a property, a method, or an accessor. It also determines if the identifier location is new, and filters keywords based on the context token. If the context token is an interface, the function stops the search for symbols. If the context token is not being edited, the function considers if it would lead to a modifier. The function also determines the class element modifier flags, and if the class element is a static block declaration. Finally, the function retrieves the list of property symbols of the base type that are not private and already implemented, and filters the class members list based on the class element modifier flags.
+     * @see {@link GlobalsSearch}
+     * @see {@link tryGetObjectTypeDeclarationCompletionContainer}
+     * @see {@link isClassLike}
+     * @see {@link getEffectiveModifierFlags}
+     * @see {@link isCurrentlyEditingNode}
+     * @see {@link getEffectiveBaseTypeNode}
+     * @see {@link getAllSuperTypeNodes}
+     * @see {@link typeChecker}
+     * @see {@link filterClassMembersList}
+     * @see {@link concatenate}
+     * @see {@link forEach}
+     * @see {@link isClassElement}
+     * @see {@link isComputedPropertyName}
+     * @see {@link SymbolOriginInfoComputedPropertyName}
+     * @see {@link SymbolOriginInfoKind}
+     * @see {@link symbolToOriginInfoMap}
+     * @see {@link typeChecker.symbolToString}
      */
     function tryGetClassLikeCompletionSymbols(): GlobalsSearch {
         const decl = tryGetObjectTypeDeclarationCompletionContainer(sourceFile, contextToken, location, position);
@@ -4391,8 +5017,9 @@ function getCompletionData(
     }
 
     /**
-     * Returns the immediate owning class declaration of a context token,
-     * on the condition that one exists and that the context implies completion should be given.
+     * Tries to retrieve the immediate owning class declaration of a context token, if one exists and the context implies completion should be given.
+     * @param {Node} contextToken - The context token to retrieve the owning class declaration for.
+     * @returns {ConstructorDeclaration | undefined} - The immediate owning class declaration of the context token, if one exists.
      */
     function tryGetConstructorLikeCompletionContainer(contextToken: Node): ConstructorDeclaration | undefined {
         if (contextToken) {
@@ -4411,6 +5038,11 @@ function getCompletionData(
         return undefined;
     }
 
+    /**
+     * Tries to get the completion container for a function-like declaration.
+     * @param {Node} contextToken - The context token for the completion request.
+     * @returns {FunctionLikeDeclaration | undefined} The function-like declaration or undefined if not found.
+     */
     function tryGetFunctionLikeBodyCompletionContainer(contextToken: Node): FunctionLikeDeclaration | undefined {
         if (contextToken) {
             let prev: Node;
@@ -4690,9 +5322,9 @@ function getCompletionData(
 
     /**
      * Filters out completion suggestions for named imports or exports.
-     *
-     * @returns Symbols to be suggested in an object binding pattern or object literal expression, barring those whose declarations
-     *          do not occur at the current position and have not otherwise been typed.
+     * @param contextualMemberSymbols - An array of Symbol objects representing the contextual member symbols.
+     * @param existingMembers - An array of Declaration objects representing the existing members.
+     * @returns An array of Symbol objects to be suggested in an object binding pattern or object literal expression, barring those whose declarations do not occur at the current position and have not otherwise been typed.
      */
     function filterObjectMembersList(contextualMemberSymbols: Symbol[], existingMembers: readonly Declaration[]): Symbol[] {
         if (existingMembers.length === 0) {
@@ -4748,6 +5380,11 @@ function getCompletionData(
         return filteredSymbols;
     }
 
+    /**
+     * Sets the members declared by a SpreadAssignment or JsxSpreadAttribute into a Set.
+     * @param declaration - The SpreadAssignment or JsxSpreadAttribute to extract members from.
+     * @param membersDeclaredBySpreadAssignment - The Set to add the extracted members to.
+     */
     function setMembersDeclaredBySpreadAssignment(declaration: SpreadAssignment | JsxSpreadAttribute, membersDeclaredBySpreadAssignment: Set<string>) {
         const expression = declaration.expression;
         const symbol = typeChecker.getSymbolAtLocation(expression);
@@ -4771,6 +5408,12 @@ function getCompletionData(
     }
 
     // Set SortText to MemberDeclaredBySpreadAssignment if it is fulfilled by spread assignment
+    /**
+     * Sets sort text to members declared by spread assignment.
+     * @param {Set<string>} membersDeclaredBySpreadAssignment - The set of members declared by spread assignment.
+     * @param {Symbol[]} contextualMemberSymbols - The contextual member symbols.
+     * @remarks This function updates the symbolToSortTextMap object with the sort text for members declared by spread assignment.
+     */
     function setSortTextToMemberDeclaredBySpreadAssignment(membersDeclaredBySpreadAssignment: Set<string>, contextualMemberSymbols: Symbol[]): void {
         if (membersDeclaredBySpreadAssignment.size === 0) {
             return;
@@ -4782,6 +5425,10 @@ function getCompletionData(
         }
     }
 
+    /**
+     * Sorts the members of an object literal starting from a given index.
+     * @param start - The index to start sorting from.
+     */
     function transformObjectLiteralMembersSortText(start: number): void {
         for (let i = start; i < symbols.length; i++) {
             const symbol = symbols[i];
@@ -4804,8 +5451,10 @@ function getCompletionData(
 
     /**
      * Filters out completion suggestions for class elements.
-     *
-     * @returns Symbols to be suggested in an class element depending on existing memebers and symbol flags
+     * @param {readonly Symbol[]} baseSymbols - The base symbols to filter from.
+     * @param {readonly ClassElement[]} existingMembers - The existing members to compare against.
+     * @param {ModifierFlags} currentClassElementModifierFlags - The current class element modifier flags.
+     * @returns {Symbol[]} - Symbols to be suggested in a class element depending on existing members and symbol flags.
      */
     function filterClassMembersList(baseSymbols: readonly Symbol[], existingMembers: readonly ClassElement[], currentClassElementModifierFlags: ModifierFlags): Symbol[] {
         const existingMemberNames = new Set<__String>();
@@ -4849,8 +5498,10 @@ function getCompletionData(
     /**
      * Filters out completion suggestions from 'symbols' according to existing JSX attributes.
      *
-     * @returns Symbols to be suggested in a JSX element, barring those whose attributes
-     *          do not occur at the current position and have not otherwise been typed.
+     * @param symbols - An array of symbols to be filtered.
+     * @param attributes - An array of JSX attributes to be used for filtering.
+     * @returns An array of symbols to be suggested in a JSX element, barring those whose attributes
+     * do not occur at the current position and have not otherwise been typed.
      */
     function filterJsxAttributes(symbols: Symbol[], attributes: NodeArray<JsxAttribute | JsxSpreadAttribute>): Symbol[] {
         const seenNames = new Set<__String>();
@@ -4883,6 +5534,8 @@ function getCompletionData(
 /**
  * Returns the immediate owning object literal or binding pattern of a context token,
  * on the condition that one exists and that the context implies completion should be given.
+ * @param {Node | undefined} contextToken - The context token to check.
+ * @returns {ObjectLiteralExpression | ObjectBindingPattern | undefined} The immediate owning object literal or binding pattern, or undefined if none exists.
  */
 function tryGetObjectLikeCompletionContainer(contextToken: Node | undefined): ObjectLiteralExpression | ObjectBindingPattern | undefined {
     if (contextToken) {
@@ -4916,6 +5569,14 @@ function getRelevantTokens(position: number, sourceFile: SourceFile): { contextT
     return { contextToken: previousToken as Node, previousToken: previousToken as Node };
 }
 
+/**
+ * Retrieves the symbol and origin information for an auto-import completion entry.
+ * @param {string} name - The name of the completion entry.
+ * @param {CompletionEntryData} data - The completion entry data.
+ * @param {Program} program - The program to use for type checking.
+ * @param {LanguageServiceHost} host - The language service host.
+ * @returns {{ symbol: Symbol, origin: SymbolOriginInfoExport | SymbolOriginInfoResolvedExport } | undefined} - The symbol and origin information, or undefined if not found.
+ */
 function getAutoImportSymbolFromCompletionEntryData(name: string, data: CompletionEntryData, program: Program, host: LanguageServiceHost): { symbol: Symbol, origin: SymbolOriginInfoExport | SymbolOriginInfoResolvedExport } | undefined {
     const containingProgram = data.isPackageJsonImport ? host.getPackageJsonAutoImportProvider!()! : program;
     const checker = containingProgram.getTypeChecker();
@@ -4938,6 +5599,15 @@ interface CompletionEntryDisplayNameForSymbol {
     readonly name: string;
     readonly needsConvertPropertyAccess: boolean;
 }
+/**
+ * Retrieves the display name for a completion entry based on the provided symbol, target, origin, kind, and jsxIdentifierExpected parameters.
+ * @param symbol The symbol to retrieve the display name for.
+ * @param target The script target.
+ * @param origin The symbol origin information.
+ * @param kind The completion kind.
+ * @param jsxIdentifierExpected Whether a JSX identifier is expected.
+ * @returns The completion entry display name for the symbol, or undefined if the symbol is not a valid entry.
+ */
 function getCompletionEntryDisplayNameForSymbol(
     symbol: Symbol,
     target: ScriptTarget,
@@ -5005,6 +5675,11 @@ function getKeywordCompletions(keywordFilter: KeywordCompletionFilters, filterOu
         );
 }
 
+/**
+ * Returns an array of completion entries for TypeScript keywords based on the provided keyword filter.
+ * @param {KeywordCompletionFilters} keywordFilter - The filter to apply to the keyword list.
+ * @returns {readonly CompletionEntry[]} An array of completion entries for TypeScript keywords.
+ */
 function getTypescriptKeywordCompletions(keywordFilter: KeywordCompletionFilters): readonly CompletionEntry[] {
     return _keywordCompletions[keywordFilter] || (_keywordCompletions[keywordFilter] = allKeywordsCompletions().filter(entry => {
         const kind = stringToToken(entry.name)!;
@@ -5039,6 +5714,11 @@ function getTypescriptKeywordCompletions(keywordFilter: KeywordCompletionFilters
     }));
 }
 
+/**
+ * Determines if a given SyntaxKind is a TypeScript-only keyword.
+ * @param {SyntaxKind} kind - The SyntaxKind to check.
+ * @returns {boolean} - Returns true if the SyntaxKind is a TypeScript-only keyword, otherwise false.
+ */
 function isTypeScriptOnlyKeyword(kind: SyntaxKind) {
     switch (kind) {
         case SyntaxKind.AbstractKeyword:
@@ -5078,6 +5758,11 @@ function isInterfaceOrTypeLiteralCompletionKeyword(kind: SyntaxKind): boolean {
     return kind === SyntaxKind.ReadonlyKeyword;
 }
 
+/**
+ * Determines if a given syntax kind is a class member completion keyword.
+ * @param {SyntaxKind} kind - The syntax kind to check.
+ * @returns {boolean} - True if the syntax kind is a class member completion keyword, false otherwise.
+ */
 function isClassMemberCompletionKeyword(kind: SyntaxKind) {
     switch (kind) {
         case SyntaxKind.AbstractKeyword:
@@ -5107,6 +5792,18 @@ function keywordForNode(node: Node): SyntaxKind {
     return isIdentifier(node) ? identifierToKeywordKind(node) ?? SyntaxKind.Unknown : node.kind;
 }
 
+/**
+ * Returns an array of completion entries based on the context token and position.
+ * @param {Node | undefined} contextToken - The context token.
+ * @param {number} position - The position.
+ * @returns {readonly CompletionEntry[]} An array of completion entries.
+ * @remarks An `AssertClause` can come after an import declaration:
+ * import * from "foo" |
+ * import "foo" |
+ * or after a re-export declaration that has a module specifier:
+ * export { foo } from "foo" |
+ * Source: https://tc39.es/proposal-import-assertions/
+ */
 function getContextualKeywords(
     contextToken: Node | undefined,
     position: number,
@@ -5146,7 +5843,15 @@ function getJsDocTagAtPosition(node: Node, position: number): JSDocTag | undefin
             isJSDoc(n) ? "quit" : false) as JSDocTag | undefined;
 }
 
-/** @internal */
+/**
+ * Returns an array of Symbol objects representing the properties of an ObjectLiteralExpression or JsxAttributes object.
+ * @param contextualType The contextual type of the object.
+ * @param completionsType An optional type for completions.
+ * @param obj The ObjectLiteralExpression or JsxAttributes object to get properties from.
+ * @param checker The TypeChecker object to use for type checking.
+ * @returns An array of Symbol objects representing the properties of the object.
+ * @remarks This function filters out members whose only declaration is the object literal itself to avoid self-fulfilling completions.
+ */
 export function getPropertiesForObjectExpression(contextualType: Type, completionsType: Type | undefined, obj: ObjectLiteralExpression | JsxAttributes, checker: TypeChecker): Symbol[] {
     const hasCompletionsType = completionsType && completionsType !== contextualType;
     const type = hasCompletionsType && !(completionsType.flags & TypeFlags.AnyOrUnknown)
@@ -5193,8 +5898,14 @@ function getPropertiesForCompletion(type: Type, checker: TypeChecker): Symbol[] 
 }
 
 /**
- * Returns the immediate owning class declaration of a context token,
- * on the condition that one exists and that the context implies completion should be given.
+ * Tries to retrieve the immediate owning class declaration of a context token, given a source file, a context token, a location, and a position.
+ *
+ * @param {SourceFile} sourceFile - The source file where the context token is located.
+ * @param {Node | undefined} contextToken - The context token for which to retrieve the owning class declaration.
+ * @param {Node} location - The location of the context token.
+ * @param {number} position - The position of the context token.
+ *
+ * @returns {ObjectTypeDeclaration | undefined} The immediate owning class declaration of the context token, or undefined if it cannot be retrieved.
  */
 function tryGetObjectTypeDeclarationCompletionContainer(sourceFile: SourceFile, contextToken: Node | undefined, location: Node, position: number): ObjectTypeDeclaration | undefined {
     // class c { method() { } | method2() { } }
@@ -5260,6 +5971,11 @@ function tryGetObjectTypeDeclarationCompletionContainer(sourceFile: SourceFile, 
     }
 }
 
+/**
+ * Returns the TypeLiteralNode of a given node if it exists.
+ * @param {Node} node - The node to check for a TypeLiteralNode.
+ * @returns {TypeLiteralNode | undefined} - The TypeLiteralNode of the given node or undefined if it does not exist.
+ */
 function tryGetTypeLiteralNode(node: Node): TypeLiteralNode | undefined {
     if (!node) return undefined;
 
@@ -5283,6 +5999,12 @@ function tryGetTypeLiteralNode(node: Node): TypeLiteralNode | undefined {
     return undefined;
 }
 
+/**
+ * Returns the constraint of a type argument property.
+ * @param {Node} node - The node to check.
+ * @param {TypeChecker} checker - The type checker to use.
+ * @returns {Type | undefined} The constraint of the type argument property, or undefined if none found.
+ */
 function getConstraintOfTypeArgumentProperty(node: Node, checker: TypeChecker): Type | undefined {
     if (!node) return undefined;
 
@@ -5308,6 +6030,14 @@ function isFromObjectTypeDeclaration(node: Node): boolean {
     return node.parent && isClassOrTypeElement(node.parent) && isObjectTypeDeclaration(node.parent.parent);
 }
 
+/**
+ * Determines if a given trigger character is valid for triggering code completions.
+ * @param {SourceFile} sourceFile - The source file being edited.
+ * @param {CompletionsTriggerCharacter} triggerCharacter - The trigger character being checked.
+ * @param {Node | undefined} contextToken - The current context token.
+ * @param {number} position - The current position in the source file.
+ * @returns {boolean} - True if the trigger character is valid for triggering code completions, false otherwise.
+ */
 function isValidTrigger(sourceFile: SourceFile, triggerCharacter: CompletionsTriggerCharacter, contextToken: Node | undefined, position: number): boolean {
     switch (triggerCharacter) {
         case ".":
@@ -5338,7 +6068,15 @@ function binaryExpressionMayBeOpenTag({ left }: BinaryExpression): boolean {
     return nodeIsMissing(left);
 }
 
-/** Determines if a type is exactly the same type resolved by the global 'self', 'global', or 'globalThis'. */
+/**
+ * Determines if a given type is the same type resolved by the global 'self', 'global', or 'globalThis'.
+ *
+ * @param {Type} type - The type to check.
+ * @param {SourceFile} sourceFile - The source file where the type is defined.
+ * @param {TypeChecker} checker - The type checker to use.
+ *
+ * @returns {boolean} - Returns true if the given type is the same type resolved by the global 'self', 'global', or 'globalThis', otherwise false.
+ */
 function isProbablyGlobalType(type: Type, sourceFile: SourceFile, checker: TypeChecker) {
     // The type of `self` and `window` is the same in lib.dom.d.ts, but `window` does not exist in
     // lib.webworker.d.ts, so checking against `self` is also a check against `window` when it exists.
@@ -5361,6 +6099,12 @@ function isStaticProperty(symbol: Symbol) {
     return !!(symbol.valueDeclaration && getEffectiveModifierFlags(symbol.valueDeclaration) & ModifierFlags.Static && isClassLike(symbol.valueDeclaration.parent));
 }
 
+/**
+ * Tries to get the contextual type of an object literal expression.
+ * @param {ObjectLiteralExpression} node - The object literal expression node.
+ * @param {TypeChecker} typeChecker - The type checker instance.
+ * @returns {Type | undefined} - The contextual type of the object literal expression, if found. Otherwise, undefined.
+ */
 function tryGetObjectLiteralContextualType(node: ObjectLiteralExpression, typeChecker: TypeChecker) {
     const type = typeChecker.getContextualType(node);
     if (type) {
@@ -5388,6 +6132,11 @@ export interface ImportStatementCompletionInfo {
     replacementSpan: TextSpan | undefined;
 }
 
+/**
+ * Returns an object containing information for completing an import statement.
+ * @param {Node} contextToken - The context token for the completion request.
+ * @returns {ImportStatementCompletionInfo} - An object containing information for completing an import statement.
+ */
 function getImportStatementCompletionInfo(contextToken: Node): ImportStatementCompletionInfo {
     let keywordCompletion: TokenSyntaxKind | undefined;
     let isKeywordOnlyCompletion = false;
@@ -5401,6 +6150,14 @@ function getImportStatementCompletionInfo(contextToken: Node): ImportStatementCo
         replacementSpan: getSingleLineReplacementSpanForImportCompletionNode(candidate),
     };
 
+    /**
+     * Returns the candidate node for completion based on the context token and its parent node.
+     * @returns {Node | undefined} The candidate node for completion or undefined if there is none.
+     * @remarks This function is used by the TypeScript language service to provide completion suggestions for imports.
+     * @remarks The context token is the token that the user has just typed or is about to type.
+     * @remarks The parent node is the immediate parent of the context token in the AST.
+     * @remarks The function checks the parent node and the context token to determine the appropriate candidate node for completion.
+     */
     function getCandidate() {
         const parent = contextToken.parent;
         if (isImportEqualsDeclaration(parent)) {
@@ -5445,6 +6202,12 @@ function getImportStatementCompletionInfo(contextToken: Node): ImportStatementCo
     }
 }
 
+/**
+ * Returns a single-line TextSpan for an ImportDeclaration, ImportEqualsDeclaration, ImportSpecifier, or Token<SyntaxKind.ImportKeyword>.
+ * @param {ImportDeclaration | ImportEqualsDeclaration | ImportSpecifier | Token<SyntaxKind.ImportKeyword> | undefined} node - The node to get the TextSpan for.
+ * @returns {TextSpan | undefined} - The single-line TextSpan for the node, or undefined if the node is falsy.
+ * @remarks - If the node is a multiline import, this function will attempt to guess which part of the import might actually be a later statement parsed as part of the import during parser recovery, and return the single-line range of the import excluding that probable statement.
+ */
 function getSingleLineReplacementSpanForImportCompletionNode(node: ImportDeclaration | ImportEqualsDeclaration | ImportSpecifier | Token<SyntaxKind.ImportKeyword> | undefined) {
     if (!node) return undefined;
     const top = findAncestor(node, or(isImportDeclaration, isImportEqualsDeclaration)) ?? node;
@@ -5496,6 +6259,12 @@ function couldBeTypeOnlyImportSpecifier(importSpecifier: Node, contextToken: Nod
         && (importSpecifier.isTypeOnly || contextToken === importSpecifier.name && isTypeKeywordTokenOrIdentifier(contextToken));
 }
 
+/**
+ * Determines if a given NamedImportBindings object can be completed.
+ * @param {NamedImportBindings} namedBindings - The NamedImportBindings object to check.
+ * @returns {boolean} - Returns true if the namedBindings object can be completed, false otherwise.
+ * @remarks - This function checks if the moduleSpecifier of the parent object is missing or empty, and if there are no other named imports already. It also considers the probably-valid named imports.
+ */
 function canCompleteFromNamedBindings(namedBindings: NamedImportBindings) {
     if (!isModuleSpecifierMissingOrEmpty(namedBindings.parent.parent.moduleSpecifier) || namedBindings.parent.name) {
         return false;
@@ -5534,7 +6303,13 @@ function isArrowFunctionBody(node: Node) {
     );
 }
 
-/** True if symbol is a type or a module containing at least one type. */
+/**
+ * Determines if a symbol can be referenced at a type location.
+ * @param symbol - The symbol to check.
+ * @param checker - The TypeChecker instance to use.
+ * @param seenModules - A map of already seen modules to avoid circular references.
+ * @returns True if the symbol is a type or a module containing at least one type, false otherwise.
+ */
 function symbolCanBeReferencedAtTypeLocation(symbol: Symbol, checker: TypeChecker, seenModules = new Map<SymbolId, true>()): boolean {
     // Since an alias can be merged with a local declaration, we need to test both the alias and its target.
     // This code used to just test the result of `skipAlias`, but that would ignore any locally introduced meanings.
@@ -5552,22 +6327,13 @@ function isDeprecated(symbol: Symbol, checker: TypeChecker) {
     return !!length(declarations) && every(declarations, isDeprecatedDeclaration);
 }
 
-/**
- * True if the first character of `lowercaseCharacters` is the first character
- * of some "word" in `identiferString` (where the string is split into "words"
- * by camelCase and snake_case segments), then if the remaining characters of
- * `lowercaseCharacters` appear, in order, in the rest of `identifierString`.
- *
- * True:
- * 'state' in 'useState'
- * 'sae' in 'useState'
- * 'viable' in 'ENVIRONMENT_VARIABLE'
- *
- * False:
- * 'staet' in 'useState'
- * 'tate' in 'useState'
- * 'ment' in 'ENVIRONMENT_VARIABLE'
- */
+ /**
+  * Determines if the first character of `lowercaseCharacters` is the first character of some "word" in `identifierString` (where the string is split into "words"
+  * by camelCase and snake_case segments), then if the remaining characters of `lowercaseCharacters` appear, in order, in the rest of `identifierString`.
+  * @param {string} identifierString - The string to search for a fuzzy match.
+  * @param {string} lowercaseCharacters - The characters to search for in `identifierString`.
+  * @returns {boolean} - True if `lowercaseCharacters` appears in `identifierString` in the specified order, false otherwise.
+  */
  function charactersFuzzyMatchInString(identifierString: string, lowercaseCharacters: string): boolean {
     if (lowercaseCharacters.length === 0) {
         return true;

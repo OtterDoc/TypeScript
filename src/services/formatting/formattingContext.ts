@@ -18,7 +18,10 @@ export const enum FormattingRequestKind {
     FormatOnClosingCurlyBrace
 }
 
-/** @internal */
+/**
+ * Represents the formatting context for a source file.
+ * @internal
+ */
 export class FormattingContext {
     public currentTokenSpan!: TextRangeWithKind;
     public nextTokenSpan!: TextRangeWithKind;
@@ -35,6 +38,14 @@ export class FormattingContext {
     constructor(public readonly sourceFile: SourceFileLike, public formattingRequestKind: FormattingRequestKind, public options: FormatCodeSettings) {
     }
 
+    /**
+     * Updates the context of the current token and next token based on the provided parameters.
+     * @param {TextRangeWithKind} currentRange - The current token range.
+     * @param {Node} currentTokenParent - The parent node of the current token.
+     * @param {TextRangeWithKind} nextRange - The next token range.
+     * @param {Node} nextTokenParent - The parent node of the next token.
+     * @param {Node} commonParent - The common parent node of the current and next tokens.
+     */
     public updateContext(currentRange: TextRangeWithKind, currentTokenParent: Node, nextRange: TextRangeWithKind, nextTokenParent: Node, commonParent: Node) {
         this.currentTokenSpan = Debug.checkDefined(currentRange);
         this.currentTokenParent = Debug.checkDefined(currentTokenParent);
@@ -98,6 +109,11 @@ export class FormattingContext {
         return startLine === endLine;
     }
 
+    /**
+     * Determines if a given node's block is on a single line.
+     * @param {Node} node - The node to check.
+     * @returns {boolean} - True if the block is on a single line, false otherwise.
+     */
     private BlockIsOnOneLine(node: Node): boolean {
         const openBrace = findChildOfKind(node, SyntaxKind.OpenBraceToken, this.sourceFile);
         const closeBrace = findChildOfKind(node, SyntaxKind.CloseBraceToken, this.sourceFile);

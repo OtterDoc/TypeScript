@@ -55,6 +55,13 @@ interface Info {
     arg: Expression;
 }
 
+/**
+ * Returns information about a program, source file, and text span.
+ * @param program - The program to search for semantic diagnostics.
+ * @param sourceFile - The source file to search for semantic diagnostics.
+ * @param span - The text span to search for semantic diagnostics.
+ * @returns An object containing a suggestion, expression, and argument if found, otherwise undefined.
+ */
 function getInfo(program: Program, sourceFile: SourceFile, span: TextSpan): Info | undefined {
     const diag = find(program.getSemanticDiagnostics(sourceFile), diag => diag.start === span.start && diag.length === span.length);
     if (diag === undefined || diag.relatedInformation === undefined) return;

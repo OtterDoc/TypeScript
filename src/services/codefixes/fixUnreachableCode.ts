@@ -34,6 +34,14 @@ registerCodeFix({
     getAllCodeActions: context => codeFixAll(context, errorCodes, (changes, diag) => doChange(changes, diag.file, diag.start, diag.length, diag.code)),
 });
 
+/**
+ * Removes a statement or a range of statements from a given source file based on the start and length parameters.
+ * @param changes - The text changes object used to track changes made to the source file.
+ * @param sourceFile - The source file from which the statement(s) will be removed.
+ * @param start - The starting position of the statement(s) to be removed.
+ * @param length - The length of the statement(s) to be removed.
+ * @param errorCode - The error code associated with the statement(s) to be removed.
+ */
 function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, start: number, length: number, errorCode: number): void {
     const token = getTokenAtPosition(sourceFile, start);
     const statement = findAncestor(token, isStatement)!;

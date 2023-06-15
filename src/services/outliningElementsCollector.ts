@@ -65,6 +65,13 @@ export function collectElements(sourceFile: SourceFile, cancellationToken: Cance
     return res.sort((span1, span2) => span1.textSpan.start - span2.textSpan.start);
 }
 
+/**
+ * Adds outlining spans to an array for all nodes in a given source file.
+ * @param sourceFile - The source file to add outlining spans for.
+ * @param cancellationToken - A token that can be used to cancel the operation.
+ * @param out - The array to add outlining spans to.
+ * @remarks This function is used to add outlining spans for various types of nodes in a source file, including import statements, function declarations, and class declarations. It also handles nested nodes and comments attached to those nodes.
+ */
 function addNodeOutliningSpans(sourceFile: SourceFile, cancellationToken: CancellationToken, out: OutliningSpan[]): void {
     let depthRemaining = 40;
     let current = 0;
@@ -88,6 +95,10 @@ function addNodeOutliningSpans(sourceFile: SourceFile, cancellationToken: Cancel
         }
     }
 
+    /**
+     * Visits a given node and adds outlining for leading comments and certain types of nodes.
+     * @param n The node to visit.
+     */
     function visitNode(n: Node) {
         if (depthRemaining === 0) return;
         cancellationToken.throwIfCancellationRequested();
@@ -134,6 +145,15 @@ function addNodeOutliningSpans(sourceFile: SourceFile, cancellationToken: Cancel
     }
 }
 
+/**
+ * Adds outlining spans for regions in the provided source file.
+ * @param {SourceFile} sourceFile - The source file to add outlining spans to.
+ * @param {OutliningSpan[]} out - The array of outlining spans to add to.
+ * @remarks
+ * This function searches for region delimiters in the source file and creates outlining spans for them.
+ * If a region delimiter is found and it is not within a comment, a new outlining span is created.
+ * If a closing region delimiter is found, the last created outlining span is closed and added to the output array.
+ */
 function addRegionOutliningSpans(sourceFile: SourceFile, out: OutliningSpan[]): void {
     const regions: OutliningSpan[] = [];
     const lineStarts = sourceFile.getLineStarts();
@@ -161,6 +181,11 @@ function addRegionOutliningSpans(sourceFile: SourceFile, out: OutliningSpan[]): 
 }
 
 const regionDelimiterRegExp = /^#(end)?region(?:\s+(.*))?(?:\r)?$/;
+/**
+ * Determines if a given line of text is a region delimiter.
+ * @param lineText The text to check.
+ * @returns An array of matches if the line is a region delimiter, otherwise null.
+ */
 function isRegionDelimiter(lineText: string) {
     // We trim the leading whitespace and // without the regex since the
     // multiple potential whitespace matches can make for some gnarly backtracking behavior

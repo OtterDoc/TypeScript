@@ -47,6 +47,11 @@ const errorCodes = [
 
 registerCodeFix({
     errorCodes,
+    /**
+     * Returns an array of CodeFixActions based on the context provided. The context should include a sourceFile and a span.start value. The function uses the TypeChecker to get information about the typeNode and type. If the info is not available, undefined is returned. The function then creates an array of fix actions based on the typeNode and type. If the typeNode is a JSDocNullableType, an additional fix action is added to suggest a flow-compatible T | null | undefined type. The function returns the array of fix actions.
+     * @param {Object} context - An object containing a sourceFile and a span.start value.
+     * @returns {Array<CodeFixAction>} - An array of CodeFixActions.
+     */
     getCodeActions(context) {
         const { sourceFile } = context;
         const checker = context.program.getTypeChecker();
@@ -68,6 +73,11 @@ registerCodeFix({
         }
     },
     fixIds: [fixIdPlain, fixIdNullable],
+    /**
+     * Retrieves all code actions for a given context.
+     * @param {Object} context - The context object containing fixId, program, and sourceFile properties.
+     * @returns {Array} An array of code actions.
+     */
     getAllCodeActions(context) {
         const { fixId, program, sourceFile } = context;
         const checker = program.getTypeChecker();
@@ -97,6 +107,12 @@ type TypeContainer =
     | GetAccessorDeclaration | IndexSignatureDeclaration | MappedTypeNode | MethodDeclaration
     | MethodSignature | ParameterDeclaration | PropertyDeclaration | PropertySignature | SetAccessorDeclaration
     | TypeAliasDeclaration | TypeAssertion | VariableDeclaration;
+/**
+ * Checks if the provided node is a TypeContainer.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - Returns true if the node is a TypeContainer, false otherwise.
+ * @remarks Some locations are not handled yet: MappedTypeNode.typeParameters and SignatureDeclaration.typeParameters, as well as CallExpression.typeArguments.
+ */
 function isTypeContainer(node: Node): node is TypeContainer {
     // NOTE: Some locations are not handled yet:
     // MappedTypeNode.typeParameters and SignatureDeclaration.typeParameters, as well as CallExpression.typeArguments
@@ -123,6 +139,12 @@ function isTypeContainer(node: Node): node is TypeContainer {
     }
 }
 
+/**
+ * Returns the type of a given TypeNode, accounting for JSDoc nullable types.
+ * @param checker - The TypeChecker instance to use.
+ * @param node - The TypeNode to get the type of.
+ * @returns The type of the TypeNode, accounting for JSDoc nullable types.
+ */
 function getType(checker: TypeChecker, node: TypeNode) {
     if (isJSDocNullableType(node)) {
         const type = checker.getTypeFromTypeNode(node.type);

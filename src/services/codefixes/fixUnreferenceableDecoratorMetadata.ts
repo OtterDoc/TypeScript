@@ -65,6 +65,13 @@ function getImportDeclaration(sourceFile: SourceFile, program: Program, start: n
 // cannot be done cleanly, we could offer to *extract* the offending import to a
 // new type-only import declaration, but honestly I doubt anyone will ever use this
 // codefix at all, so it's probably not worth the lines of code.
+/**
+ * Converts an import statement to a type-only import statement by inserting the 'type' keyword before the import clause or import equals declaration.
+ * @param changes - The text changes object to apply the modification to.
+ * @param sourceFile - The source file containing the import statement.
+ * @param importDeclaration - The import clause, import specifier, or import equals declaration to modify.
+ * @param program - The program instance to use for type checking.
+ */
 function doTypeOnlyImportChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, importDeclaration: ImportClause | ImportSpecifier | ImportEqualsDeclaration, program: Program) {
     if (importDeclaration.kind === SyntaxKind.ImportEqualsDeclaration) {
         changes.insertModifierBefore(sourceFile, SyntaxKind.TypeKeyword, importDeclaration.name);

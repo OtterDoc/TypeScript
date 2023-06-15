@@ -39,6 +39,12 @@ registerCodeFix({
     },
 });
 
+/**
+ * Replaces an `await` expression with its inner expression.
+ * @param changeTracker - The `textChanges.ChangeTracker` object to track changes made to the source file.
+ * @param sourceFile - The `SourceFile` object representing the source file being modified.
+ * @param span - The `TextSpan` object representing the span of the `await` expression to replace.
+ */
 function makeChange(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, span: TextSpan) {
     const awaitKeyword = tryCast(getTokenAtPosition(sourceFile, span.start), (node): node is AwaitKeyword => node.kind === SyntaxKind.AwaitKeyword);
     const awaitExpression = awaitKeyword && tryCast(awaitKeyword.parent, isAwaitExpression);

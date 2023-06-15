@@ -50,6 +50,12 @@ function getExportSpecifierForDiagnosticSpan(span: TextSpan, sourceFile: SourceF
     return tryCast(getTokenAtPosition(sourceFile, span.start).parent, isExportSpecifier);
 }
 
+/**
+ * Fixes a single export declaration by adding a type-only export if necessary.
+ * @param changes - The text changes to be made.
+ * @param exportSpecifier - The export specifier to be fixed.
+ * @param context - The code fix context.
+ */
 function fixSingleExportDeclaration(changes: textChanges.ChangeTracker, exportSpecifier: ExportSpecifier | undefined, context: CodeFixContextBase) {
     if (!exportSpecifier) {
         return;
@@ -86,6 +92,12 @@ function fixSingleExportDeclaration(changes: textChanges.ChangeTracker, exportSp
     }
 }
 
+/**
+ * Returns an array of ExportSpecifier objects that match the specified originExportSpecifier and pass the provided context's semantic diagnostics.
+ * @param originExportSpecifier - The ExportSpecifier object to match against.
+ * @param context - The CodeFixContextBase object containing the program and source file to check for semantic diagnostics.
+ * @returns An array of ExportSpecifier objects that match the specified originExportSpecifier and pass the provided context's semantic diagnostics.
+ */
 function getTypeExportSpecifiers(originExportSpecifier: ExportSpecifier, context: CodeFixContextBase): readonly ExportSpecifier[] {
     const exportClause = originExportSpecifier.parent;
     if (exportClause.elements.length === 1) {

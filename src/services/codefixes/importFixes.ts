@@ -163,6 +163,11 @@ const errorCodes: readonly number[] = [
 
 registerCodeFix({
     errorCodes,
+    /**
+     * Returns an array of code actions based on the provided context.
+     * @param {Object} context - The context object containing the errorCode, preferences, sourceFile, span, and program.
+     * @returns {Array} An array of code actions.
+     */
     getCodeActions(context) {
         const { errorCode, preferences, sourceFile, span, program } = context;
         const info = getFixInfos(context, errorCode, span.start, /*useAutoImportProvider*/ true);
@@ -227,6 +232,12 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
         addImport(first(info));
     }
 
+    /**
+     * Adds an import statement for a given exported symbol.
+     * @param {Symbol} exportedSymbol - The symbol to import.
+     * @param {boolean} [isValidTypeOnlyUseSite] - Optional flag indicating if the import is only used for type information.
+     * @remarks This function uses various helper functions to determine the necessary import statement and adds it to the source file if it does not already exist.
+     */
     function addImportFromExportedSymbol(exportedSymbol: Symbol, isValidTypeOnlyUseSite?: boolean) {
         const moduleSymbol = Debug.checkDefined(exportedSymbol.parent);
         const symbolName = getNameForExportedSymbol(exportedSymbol, getEmitScriptTarget(compilerOptions));
@@ -240,6 +251,11 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
         }
     }
 
+    /**
+     * Adds an import to the appropriate collection based on the provided FixInfo object.
+     * @param {FixInfo} info - The FixInfo object containing the import fix information.
+     * @returns {void}
+     */
     function addImport(info: FixInfo) {
         const { fix, symbolName } = info;
         switch (fix.kind) {
@@ -308,6 +324,20 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
             return Math.max(prevValue ?? 0, newValue);
         }
 
+        /**
+         * Returns a new entry for an import statement.
+         * @param {string} moduleSpecifier - The module specifier for the import statement.
+         * @param {ImportKind} importKind - The kind of import statement.
+         * @param {boolean} useRequire - Whether to use require for the import statement.
+         * @param {AddAsTypeOnly} addAsTypeOnly - Whether to add the import statement as type-only.
+         * @returns {Mutable<ImportsCollection & { useRequire: boolean }>} - The new entry for the import statement.
+         * @remarks
+         * A default import that requires type-only makes the whole import type-only.
+         * Under `--preserveValueImports` and `--importsNotUsedAsValues=error`, if a
+         * module default-exports a type but named-exports some values (weird), you would
+         * have to use a type-only default import and non-type-only named imports. These
+         * require two separate import declarations, so we build this into the map key.
+         */
         function getNewImportEntry(moduleSpecifier: string, importKind: ImportKind, useRequire: boolean, addAsTypeOnly: AddAsTypeOnly): Mutable<ImportsCollection & { useRequire: boolean }> {
             // A default import that requires type-only makes the whole import type-only.
             // (We could add `default` as a named import, but that style seems undesirable.)
@@ -345,6 +375,11 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
         }
     }
 
+    /**
+     * Adds fixes to a source file using a change tracker.
+     * @param changeTracker - The change tracker to use.
+     * @returns void
+     */
     function writeFixes(changeTracker: textChanges.ChangeTracker) {
         const quotePreference = getQuotePreference(sourceFile, preferences);
         for (const fix of addToNamespace) {
@@ -400,12 +435,28 @@ function createImportAdderWorker(sourceFile: SourceFile, program: Program, useAu
     ): { exportInfo?: SymbolExportInfo, moduleSpecifier: string, computedWithoutCacheCount: number } | undefined;
 }
 
-/** @internal */
+/**
+ * Creates an ImportSpecifierResolver object.
+ * @param {SourceFile} importingFile - The source file that is importing the module.
+ * @param {Program} program - The program that contains the source file.
+ * @param {LanguageServiceHost} host - The language service host.
+ * @param {UserPreferences} preferences - The user preferences.
+ * @returns {ImportSpecifierResolver} - The ImportSpecifierResolver object.
+ * @remarks This function is marked as internal and should not be used outside of the module.
+ */
 export function createImportSpecifierResolver(importingFile: SourceFile, program: Program, host: LanguageServiceHost, preferences: UserPreferences): ImportSpecifierResolver {
     const packageJsonImportFilter = createPackageJsonImportFilter(importingFile, preferences, host);
     const importMap = createExistingImportMap(program.getTypeChecker(), importingFile, program.getCompilerOptions());
     return { getModuleSpecifierForBestExportInfo };
 
+    /**
+     * Returns the module specifier for the best export info.
+     * @param exportInfo - An array of SymbolExportInfo objects.
+     * @param position - The position of the export info.
+     * @param isValidTypeOnlyUseSite - A boolean indicating if the use site is valid.
+     * @param fromCacheOnly - An optional boolean indicating if the info should be retrieved from cache only.
+     * @returns An object containing the export info, module specifier, and computedWithoutCacheCount, or undefined.
+     */
     function getModuleSpecifierForBestExportInfo(
         exportInfo: readonly SymbolExportInfo[],
         position: number,
@@ -488,7 +539,22 @@ interface FixAddToExistingImportInfo {
     readonly symbol: Symbol;
 }
 
-/** @internal */
+/**
+ * Retrieves the import completion action for a given symbol in a source file.
+ * @param targetSymbol The symbol to import.
+ * @param moduleSymbol The module symbol to import from.
+ * @param exportMapKey The export map key, if available.
+ * @param sourceFile The source file to import into.
+ * @param symbolName The name of the symbol to import.
+ * @param isJsxTagName Whether the symbol is a JSX tag name.
+ * @param host The language service host.
+ * @param program The program.
+ * @param formatContext The format context.
+ * @param position The position in the source file.
+ * @param preferences The user preferences.
+ * @param cancellationToken The cancellation token.
+ * @returns An object containing the module specifier and code action.
+ */
 export function getImportCompletionAction(
     targetSymbol: Symbol,
     moduleSymbol: Symbol,
@@ -564,6 +630,15 @@ function getAllExportInfoForSymbol(importingFile: SourceFile, symbol: Symbol, sy
         });
 }
 
+/**
+ * Retrieves information about a single export symbol.
+ * @param symbol - The symbol to retrieve information for.
+ * @param symbolName - The name of the symbol.
+ * @param moduleSymbol - The symbol of the module.
+ * @param program - The program to retrieve information from.
+ * @param host - The language service host.
+ * @returns The export information for the symbol.
+ */
 function getSingleExportInfoForSymbol(symbol: Symbol, symbolName: string, moduleSymbol: Symbol, program: Program, host: LanguageServiceHost): SymbolExportInfo {
     const compilerOptions = program.getCompilerOptions();
     const mainProgramInfo = getInfoWithChecker(program.getTypeChecker(), /*isFromPackageJson*/ false);
@@ -573,6 +648,12 @@ function getSingleExportInfoForSymbol(symbol: Symbol, symbolName: string, module
     const autoImportProvider = host.getPackageJsonAutoImportProvider?.()?.getTypeChecker();
     return Debug.checkDefined(autoImportProvider && getInfoWithChecker(autoImportProvider, /*isFromPackageJson*/ true), `Could not find symbol in specified module for code actions`);
 
+    /**
+     * Retrieves SymbolExportInfo based on a TypeChecker and a boolean value indicating if it is from package.json.
+     * @param {TypeChecker} checker - The TypeChecker to use.
+     * @param {boolean} isFromPackageJson - A boolean value indicating if the export is from package.json.
+     * @returns {SymbolExportInfo | undefined} - The SymbolExportInfo if found, otherwise undefined.
+     */
     function getInfoWithChecker(checker: TypeChecker, isFromPackageJson: boolean): SymbolExportInfo | undefined {
         const defaultInfo = getDefaultLikeExportInfo(moduleSymbol, checker, compilerOptions);
         if (defaultInfo && skipAlias(defaultInfo.symbol, checker) === symbol) {
@@ -585,6 +666,20 @@ function getSingleExportInfoForSymbol(symbol: Symbol, symbolName: string, module
     }
 }
 
+/**
+ * Computes import fixes for a given set of export infos and usage position.
+ * @param exportInfos - An array of SymbolExportInfo objects representing the exports to be imported.
+ * @param usagePosition - The position of the usage site of the export, if applicable.
+ * @param isValidTypeOnlyUseSite - A boolean indicating whether the usage site is a valid type-only use site.
+ * @param useRequire - A boolean indicating whether to use require() syntax for the import.
+ * @param program - The Program object representing the TypeScript program.
+ * @param sourceFile - The SourceFile object representing the source file containing the import statement.
+ * @param host - The LanguageServiceHost object representing the language service host.
+ * @param preferences - The UserPreferences object representing the user preferences for the language service.
+ * @param importMap - An optional object representing the existing import map.
+ * @param fromCacheOnly - An optional boolean indicating whether to only use the cache for import map lookups.
+ * @returns An object containing the computedWithoutCacheCount and an array of ImportFixWithModuleSpecifier objects representing the import fixes.
+ */
 function getImportFixes(
     exportInfos: readonly SymbolExportInfo[],
     usagePosition: number | undefined,
@@ -626,6 +721,12 @@ function getImportFixes(
     };
 }
 
+/**
+ * Tries to use an existing namespace import for a given position in the code. If multiple import statements with the same specifier exist in the file, it provides two actions: changing the member to "ns.member" or adding the member to the second import statement's import list. It is up to the user to decide which one fits best.
+ * @param existingImports An array of existing imports to check.
+ * @param position The position in the code to check for an existing import.
+ * @returns A FixUseNamespaceImport object if an existing import is found, otherwise undefined.
+ */
 function tryUseExistingNamespaceImport(existingImports: readonly FixAddToExistingImportInfo[], position: number): FixUseNamespaceImport | undefined {
     // It is possible that multiple import statements with the same specifier exist in the file.
     // e.g.
@@ -649,6 +750,11 @@ function tryUseExistingNamespaceImport(existingImports: readonly FixAddToExistin
     });
 }
 
+/**
+ * Returns the text of a namespace-like import from a given import or require statement.
+ * @param declaration - The import or require statement to extract the namespace-like import text from.
+ * @returns The text of the namespace-like import.
+ */
 function getNamespaceLikeImportText(declaration: AnyImportOrRequire) {
     switch (declaration.kind) {
         case SyntaxKind.VariableDeclaration:
@@ -662,6 +768,16 @@ function getNamespaceLikeImportText(declaration: AnyImportOrRequire) {
     }
 }
 
+/**
+ * Determines whether to add an import as type-only based on various conditions.
+ * @param {boolean} isValidTypeOnlyUseSite - Indicates whether the usage is a valid type-only use site.
+ * @param {boolean} isForNewImportDeclaration - Indicates whether the import is for a new import declaration.
+ * @param {Symbol} symbol - The symbol to be imported.
+ * @param {SymbolFlags} targetFlags - The target flags for the symbol.
+ * @param {TypeChecker} checker - The type checker to use.
+ * @param {CompilerOptions} compilerOptions - The compiler options to use.
+ * @returns {AddAsTypeOnly} - The result of whether to add the import as type-only or not.
+ */
 function getAddAsTypeOnly(
     isValidTypeOnlyUseSite: boolean,
     isForNewImportDeclaration: boolean,
@@ -707,6 +823,11 @@ function tryAddToExistingImport(existingImports: readonly FixAddToExistingImport
     }
     return best;
 
+    /**
+     * Returns a FixAddToExistingImport object or undefined based on the provided FixAddToExistingImportInfo object.
+     * @param {FixAddToExistingImportInfo} param0 - An object containing declaration, importKind, symbol, and targetFlags properties.
+     * @returns {FixAddToExistingImport | undefined} - A FixAddToExistingImport object or undefined.
+     */
     function getAddToExistingImportFix({ declaration, importKind, symbol, targetFlags }: FixAddToExistingImportInfo): FixAddToExistingImport | undefined {
         if (importKind === ImportKind.CommonJS || importKind === ImportKind.Namespace || declaration.kind === SyntaxKind.ImportEqualsDeclaration) {
             // These kinds of imports are not combinable with anything
@@ -757,6 +878,13 @@ function tryAddToExistingImport(existingImports: readonly FixAddToExistingImport
     }
 }
 
+/**
+ * Creates an import map for an existing module.
+ * @param {TypeChecker} checker - The TypeChecker object.
+ * @param {SourceFile} importingFile - The SourceFile object for the importing file.
+ * @param {CompilerOptions} compilerOptions - The CompilerOptions object.
+ * @returns {Object} An object with a single method, getImportsForExportInfo, which returns an array of FixAddToExistingImportInfo objects.
+ */
 function createExistingImportMap(checker: TypeChecker, importingFile: SourceFile, compilerOptions: CompilerOptions) {
     let importMap: MultiMap<SymbolId, AnyImportOrRequire> | undefined;
     for (const moduleSpecifier of importingFile.imports) {
@@ -787,6 +915,12 @@ function createExistingImportMap(checker: TypeChecker, importingFile: SourceFile
     };
 }
 
+/**
+ * Determines whether to use the "require" syntax in a TypeScript file.
+ * @param {SourceFile} sourceFile - The TypeScript source file to check.
+ * @param {Program} program - The TypeScript program containing the source file.
+ * @returns {boolean} - Whether to use "require" syntax.
+ */
 function shouldUseRequire(sourceFile: SourceFile, program: Program): boolean {
     // 1. TypeScript files don't use require variable declarations
     if (!isSourceFileJS(sourceFile)) {
@@ -818,6 +952,19 @@ function createGetChecker(program: Program, host: LanguageServiceHost) {
     return memoizeOne((isFromPackageJson: boolean) => isFromPackageJson ? host.getPackageJsonAutoImportProvider!()!.getTypeChecker() : program.getTypeChecker());
 }
 
+/**
+ * Computes and returns fixes for adding new imports or JSDoc type imports for a given program, source file, usage position, and export information.
+ * @param program - The TypeScript program.
+ * @param sourceFile - The source file to add imports to.
+ * @param usagePosition - The position of the usage of the exported symbol.
+ * @param isValidTypeOnlyUseSite - Indicates if the usage is a valid type-only use site.
+ * @param useRequire - Indicates if the import should use require instead of import syntax.
+ * @param exportInfo - An array of SymbolExportInfo objects containing information about the exported symbols.
+ * @param host - The LanguageServiceHost.
+ * @param preferences - The UserPreferences.
+ * @param fromCacheOnly - Indicates if the module specifiers should be retrieved from cache only.
+ * @returns An object containing the computedWithoutCacheCount and an array of FixAddNewImport or FixAddJsdocTypeImport objects.
+ */
 function getNewImportFixes(
     program: Program,
     sourceFile: SourceFile,
@@ -890,6 +1037,20 @@ function getNewImportFixes(
     return { computedWithoutCacheCount, fixes };
 }
 
+/**
+ * Returns an object containing fixes for adding imports.
+ * @param {readonly SymbolExportInfo[]} exportInfos - An array of SymbolExportInfo objects.
+ * @param {readonly FixAddToExistingImportInfo[]} existingImports - An array of FixAddToExistingImportInfo objects.
+ * @param {Program} program - A Program object.
+ * @param {SourceFile} sourceFile - A SourceFile object.
+ * @param {number | undefined} usagePosition - A number representing the usage position.
+ * @param {boolean} isValidTypeOnlyUseSite - A boolean indicating if the use site is valid for type only imports.
+ * @param {boolean} useRequire - A boolean indicating if require should be used.
+ * @param {LanguageServiceHost} host - A LanguageServiceHost object.
+ * @param {UserPreferences} preferences - A UserPreferences object.
+ * @param {boolean} [fromCacheOnly] - An optional boolean indicating if the fix should be computed from cache only.
+ * @returns {{ computedWithoutCacheCount?: number, fixes: readonly (FixAddNewImport | FixAddJsdocTypeImport)[] }} An object containing the computedWithoutCacheCount and an array of FixAddNewImport or FixAddJsdocTypeImport objects.
+ */
 function getFixesForAddImport(
     exportInfos: readonly SymbolExportInfo[],
     existingImports: readonly FixAddToExistingImportInfo[],
@@ -906,6 +1067,15 @@ function getFixesForAddImport(
     return existingDeclaration ? { fixes: [existingDeclaration] } : getNewImportFixes(program, sourceFile, usagePosition, isValidTypeOnlyUseSite, useRequire, exportInfos, host, preferences, fromCacheOnly);
 }
 
+/**
+ * Creates a new import information object from an existing specifier.
+ * @param {FixAddToExistingImportInfo} param - An object containing the declaration, import kind, symbol, target flags, and other information.
+ * @param {boolean} isValidTypeOnlyUseSite - A boolean indicating whether the use site is valid for a type-only import.
+ * @param {boolean} useRequire - A boolean indicating whether to use require instead of import.
+ * @param {TypeChecker} checker - The TypeChecker object.
+ * @param {CompilerOptions} compilerOptions - The CompilerOptions object.
+ * @returns {FixAddNewImport | undefined} - A new import information object or undefined if no module specifier is found.
+ */
 function newImportInfoFromExistingSpecifier(
     { declaration, importKind, symbol, targetFlags }: FixAddToExistingImportInfo,
     isValidTypeOnlyUseSite: boolean,
@@ -928,6 +1098,14 @@ interface FixInfo {
     readonly errorIdentifierText: string | undefined;
     readonly isJsxNamespaceFix?: boolean;
 }
+/**
+ * Retrieves an array of FixInfo objects based on the provided CodeFixContextBase, errorCode, pos, and useAutoImportProvider parameters.
+ * @param {CodeFixContextBase} context - The CodeFixContextBase object.
+ * @param {number} errorCode - The error code.
+ * @param {number} pos - The position.
+ * @param {boolean} useAutoImportProvider - A boolean indicating whether to use the auto import provider.
+ * @returns {readonly FixInfo[] | undefined} An array of FixInfo objects or undefined.
+ */
 function getFixInfos(context: CodeFixContextBase, errorCode: number, pos: number, useAutoImportProvider: boolean): readonly FixInfo[] | undefined {
     const symbolToken = getTokenAtPosition(context.sourceFile, pos);
     let info;
@@ -1003,6 +1181,14 @@ function compareModuleSpecifiers(
 // This can produce false positives or negatives if re-exports cross into sibling directories
 // (e.g. `export * from "../whatever"`) or are not named "index" (we don't even try to consider
 // this if we're in a resolution mode where you can't drop trailing "/index" from paths).
+/**
+ * Determines if a fix is possibly re-exporting an importing file.
+ * @param fix - The import fix with module specifier.
+ * @param importingFile - The source file importing the module.
+ * @param compilerOptions - The compiler options.
+ * @param toPath - A function that converts a file name to a path.
+ * @returns A boolean indicating if the fix is possibly re-exporting the importing file.
+ */
 function isFixPossiblyReExportingImportingFile(fix: ImportFixWithModuleSpecifier, importingFile: SourceFile, compilerOptions: CompilerOptions, toPath: (fileName: string) => Path): boolean {
     if (fix.isReExport &&
         fix.exportInfo?.moduleFileName &&
@@ -1042,6 +1228,12 @@ function getFixesInfoForUMDImport({ sourceFile, program, host, preferences }: Co
     const fixes = getImportFixes(exportInfo, /*usagePosition*/ undefined, /*isValidTypeOnlyUseSite*/ false, useRequire, program, sourceFile, host, preferences).fixes;
     return fixes.map(fix => ({ fix, symbolName, errorIdentifierText: tryCast(token, isIdentifier)?.text }));
 }
+/**
+ * Returns the UMD symbol for a given Node and TypeChecker.
+ * @param {Node} token - The Node to check for the UMD symbol.
+ * @param {TypeChecker} checker - The TypeChecker to use for resolving the symbol.
+ * @returns {Symbol | undefined} The UMD symbol, if found.
+ */
 function getUmdSymbol(token: Node, checker: TypeChecker): Symbol | undefined {
     // try the identifier to see if it is the umd symbol
     const umdSymbol = isIdentifier(token) ? checker.getSymbolAtLocation(token) : undefined;
@@ -1059,10 +1251,12 @@ function getUmdSymbol(token: Node, checker: TypeChecker): Symbol | undefined {
 }
 
 /**
+ * Determines the appropriate import kind based on the exporting file's module kind and the export kind.
+ * @param importingFile The source file that is importing the module.
+ * @param exportKind The kind of export being imported.
+ * @param compilerOptions The compiler options for the project.
  * @param forceImportKeyword Indicates that the user has already typed `import`, so the result must start with `import`.
- * (In other words, do not allow `const x = require("...")` for JS files.)
- *
- * @internal
+ * @returns The appropriate import kind.
  */
 export function getImportKind(importingFile: SourceFile, exportKind: ExportKind, compilerOptions: CompilerOptions, forceImportKeyword?: boolean): ImportKind {
     if (compilerOptions.verbatimModuleSyntax && (getEmitModuleKind(compilerOptions) === ModuleKind.CommonJS || importingFile.impliedNodeFormat === ModuleKind.CommonJS)) {
@@ -1078,6 +1272,13 @@ export function getImportKind(importingFile: SourceFile, exportKind: ExportKind,
     }
 }
 
+/**
+ * Determines the appropriate import kind for a given importing file and compiler options.
+ * @param importingFile - The source file that is importing the module.
+ * @param compilerOptions - The compiler options for the project.
+ * @param forceImportKeyword - Whether to force the use of the "import" keyword.
+ * @returns The appropriate import kind as an ImportKind enum value.
+ */
 function getUmdImportKind(importingFile: SourceFile, compilerOptions: CompilerOptions, forceImportKeyword: boolean): ImportKind {
     // Import a synthetic `default` if enabled.
     if (getAllowSyntheticDefaultImports(compilerOptions)) {
@@ -1110,6 +1311,13 @@ function getUmdImportKind(importingFile: SourceFile, compilerOptions: CompilerOp
     }
 }
 
+/**
+ * Returns an array of FixInfo objects with module specifiers for non-UMD imports.
+ * @param {CodeFixContextBase} context - The context object containing sourceFile, program, cancellationToken, host, and preferences.
+ * @param {Identifier} symbolToken - The symbol token to import.
+ * @param {boolean} useAutoImportProvider - Whether to use the auto import provider.
+ * @returns {readonly (FixInfo & { fix: ImportFixWithModuleSpecifier })[] | undefined} - An array of FixInfo objects with module specifiers for non-UMD imports.
+ */
 function getFixesInfoForNonUMDImport({ sourceFile, program, cancellationToken, host, preferences }: CodeFixContextBase, symbolToken: Identifier, useAutoImportProvider: boolean): readonly (FixInfo & { fix: ImportFixWithModuleSpecifier })[] | undefined {
     const checker = program.getTypeChecker();
     const compilerOptions = program.getCompilerOptions();
@@ -1129,6 +1337,14 @@ function getFixesInfoForNonUMDImport({ sourceFile, program, cancellationToken, h
     });
 }
 
+/**
+ * Retrieves a FixPromoteTypeOnlyImport object if a type-only import alias declaration exists for a given symbol in a source file.
+ * @param {SourceFile} sourceFile - The source file to search for the type-only import alias declaration.
+ * @param {Identifier} symbolToken - The symbol token to resolve the name of the symbol.
+ * @param {string} symbolName - The name of the symbol to search for.
+ * @param {Program} program - The program instance to retrieve the type checker from.
+ * @returns {FixPromoteTypeOnlyImport|undefined} - Returns a FixPromoteTypeOnlyImport object if a type-only import alias declaration exists, otherwise undefined.
+ */
 function getTypeOnlyPromotionFix(sourceFile: SourceFile, symbolToken: Identifier, symbolName: string, program: Program): FixPromoteTypeOnlyImport | undefined {
     const checker = program.getTypeChecker();
     const symbol = checker.resolveName(symbolName, symbolToken, SymbolFlags.Value, /*excludeGlobals*/ true);
@@ -1140,6 +1356,14 @@ function getTypeOnlyPromotionFix(sourceFile: SourceFile, symbolToken: Identifier
     return { kind: ImportFixKind.PromoteTypeOnly, typeOnlyAliasDeclaration };
 }
 
+/**
+ * Returns an array of symbol names to import.
+ * @param {SourceFile} sourceFile - The source file.
+ * @param {TypeChecker} checker - The type checker.
+ * @param {Identifier} symbolToken - The symbol token.
+ * @param {CompilerOptions} compilerOptions - The compiler options.
+ * @returns {string[]} An array of symbol names to import.
+ */
 function getSymbolNamesToImport(sourceFile: SourceFile, checker: TypeChecker, symbolToken: Identifier, compilerOptions: CompilerOptions): string[] {
     const parent = symbolToken.parent;
     if ((isJsxOpeningLikeElement(parent) || isJsxClosingElement(parent)) && parent.tagName === symbolToken && jsxModeNeedsExplicitImport(compilerOptions.jsx)) {
@@ -1342,6 +1566,10 @@ function promoteFromTypeOnly(changes: textChanges.ChangeTracker, aliasDeclaratio
             Debug.failBadSyntaxKind(aliasDeclaration);
     }
 
+    /**
+     * Promotes an import clause to a type-only import.
+     * @param importClause The import clause to promote.
+     */
     function promoteImportClause(importClause: ImportClause) {
         changes.delete(sourceFile, getTypeKeywordOfTypeOnlyImport(importClause, sourceFile));
         if (convertExistingToTypeOnly) {
@@ -1366,6 +1594,15 @@ function promoteFromTypeOnly(changes: textChanges.ChangeTracker, aliasDeclaratio
     }
 }
 
+/**
+ * Adds existing import specifiers to an import clause or object binding pattern.
+ * @param changes - The change tracker to use for making edits.
+ * @param sourceFile - The source file containing the import clause or object binding pattern.
+ * @param clause - The import clause or object binding pattern to add the specifiers to.
+ * @param defaultImport - The default import specifier to add, if any.
+ * @param namedImports - The named import specifiers to add, if any.
+ * @param preferences - The user preferences to use for sorting and organizing the import specifiers.
+ */
 function doAddExistingFix(
     changes: textChanges.ChangeTracker,
     sourceFile: SourceFile,
@@ -1510,6 +1747,16 @@ function needsTypeOnly({ addAsTypeOnly }: { addAsTypeOnly: AddAsTypeOnly }): boo
     return addAsTypeOnly === AddAsTypeOnly.Required;
 }
 
+/**
+ * Returns an import statement or an array of import statements based on the provided parameters.
+ * @param moduleSpecifier - The module specifier string.
+ * @param quotePreference - The preferred quote type for the module specifier.
+ * @param defaultImport - An optional object of type Import representing the default import.
+ * @param namedImports - An optional array of objects of type Import representing the named imports.
+ * @param namespaceLikeImport - An optional object of type Import & { importKind: ImportKind.CommonJS | ImportKind.Namespace } representing the namespace-like import.
+ * @param compilerOptions - The compiler options object.
+ * @returns An import statement or an array of import statements of type AnyImportSyntax | readonly AnyImportSyntax[].
+ */
 function getNewImports(
     moduleSpecifier: string,
     quotePreference: QuotePreference,
@@ -1558,6 +1805,15 @@ function getNewImports(
     return Debug.checkDefined(statements);
 }
 
+/**
+ * Returns a RequireVariableStatement or an array of RequireVariableStatements based on the provided parameters.
+ * @param {string} moduleSpecifier - The module specifier string.
+ * @param {QuotePreference} quotePreference - The quote preference for the module specifier.
+ * @param {Import} defaultImport - The default import object.
+ * @param {readonly Import[]} namedImports - An array of named imports.
+ * @param {Import} namespaceLikeImport - The namespace-like import object.
+ * @returns {RequireVariableStatement | readonly RequireVariableStatement[]} The resulting RequireVariableStatement(s).
+ */
 function getNewRequires(moduleSpecifier: string, quotePreference: QuotePreference, defaultImport: Import | undefined, namedImports: readonly Import[] | undefined, namespaceLikeImport: Import | undefined): RequireVariableStatement | readonly RequireVariableStatement[] {
     const quotedModuleSpecifier = makeStringLiteral(moduleSpecifier, quotePreference);
     let statements: RequireVariableStatement | readonly RequireVariableStatement[] | undefined;
@@ -1578,6 +1834,12 @@ function getNewRequires(moduleSpecifier: string, quotePreference: QuotePreferenc
     return Debug.checkDefined(statements);
 }
 
+/**
+ * Creates a variable declaration using the 'const' keyword and the 'require' function to import a module.
+ * @param {string | ObjectBindingPattern} name - The name of the variable or object binding pattern.
+ * @param {StringLiteral} quotedModuleSpecifier - The module specifier enclosed in quotes.
+ * @returns {RequireVariableStatement} - The created variable statement.
+ */
 function createConstEqualsRequireDeclaration(name: string | ObjectBindingPattern, quotedModuleSpecifier: StringLiteral): RequireVariableStatement {
     return factory.createVariableStatement(
         /*modifiers*/ undefined,
@@ -1599,7 +1861,13 @@ export function moduleSymbolToValidIdentifier(moduleSymbol: Symbol, target: Scri
     return moduleSpecifierToValidIdentifier(removeFileExtension(stripQuotes(moduleSymbol.name)), target, forceCapitalize);
 }
 
-/** @internal */
+/**
+ * Converts a module specifier string to a valid identifier string.
+ * @param {string} moduleSpecifier - The module specifier string to convert.
+ * @param {ScriptTarget | undefined} target - The script target to use for validation.
+ * @param {boolean} [forceCapitalize] - Whether to force capitalize the first character of the resulting identifier.
+ * @returns {string} - The resulting valid identifier string.
+ */
 export function moduleSpecifierToValidIdentifier(moduleSpecifier: string, target: ScriptTarget | undefined, forceCapitalize?: boolean): string {
     const baseName = getBaseFileName(removeSuffix(moduleSpecifier, "/index"));
     let res = "";

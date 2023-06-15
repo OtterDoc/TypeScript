@@ -402,16 +402,15 @@ export function getAllRules(): RuleSpec[] {
 }
 
 /**
- * A rule takes a two tokens (left/right) and a particular context
- * for which you're meant to look at them. You then declare what should the
- * whitespace annotation be between these tokens via the action param.
+ * Creates a rule for formatting whitespace between two tokens based on a given context.
  *
- * @param debugName Name to print
- * @param left The left side of the comparison
- * @param right The right side of the comparison
- * @param context A set of filters to narrow down the space in which this formatter rule applies
- * @param action a declaration of the expected whitespace
- * @param flags whether the rule deletes a line or not, defaults to no-op
+ * @param debugName Name to print for debugging purposes.
+ * @param left The left side of the comparison, can be a single SyntaxKind or an array of SyntaxKinds.
+ * @param right The right side of the comparison, can be a single SyntaxKind or an array of SyntaxKinds.
+ * @param context An array of filters to narrow down the space in which this formatter rule applies.
+ * @param action A declaration of the expected whitespace.
+ * @param flags Whether the rule deletes a line or not, defaults to no-op.
+ * @returns A RuleSpec object containing the left and right token ranges and the rule object with the debugName, context, action, and flags.
  */
 function rule(
     debugName: string,
@@ -478,6 +477,11 @@ function isNotForContext(context: FormattingContext): boolean {
     return !isForContext(context);
 }
 
+/**
+ * Determines if the given FormattingContext is in a binary operation context.
+ * @param {FormattingContext} context - The FormattingContext to check.
+ * @returns {boolean} - True if the context is in a binary operation context, false otherwise.
+ */
 function isBinaryOpContext(context: FormattingContext): boolean {
     switch (context.contextNode.kind) {
         case SyntaxKind.BinaryExpression:
@@ -581,6 +585,11 @@ function isBeforeBlockContext(context: FormattingContext): boolean {
 }
 
 // IMPORTANT!!! This method must return true ONLY for nodes with open and close braces as immediate children
+/**
+ * Determines if a given node is a block context.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is a block context, false otherwise.
+ */
 function nodeIsBlockContext(node: Node): boolean {
     if (nodeIsTypeScriptDeclWithBlockContext(node)) {
         // This means we are in a context that looks like a block to the user, but in the grammar is actually not a node (it's a class, module, enum, object type literal, etc).
@@ -598,6 +607,11 @@ function nodeIsBlockContext(node: Node): boolean {
     return false;
 }
 
+/**
+ * Determines if the given FormattingContext is within a function declaration context.
+ * @param {FormattingContext} context - The FormattingContext to check.
+ * @returns {boolean} - True if the context is within a function declaration context, false otherwise.
+ */
 function isFunctionDeclContext(context: FormattingContext): boolean {
     switch (context.contextNode.kind) {
         case SyntaxKind.FunctionDeclaration:
@@ -636,6 +650,11 @@ function isTypeScriptDeclWithBlockContext(context: FormattingContext): boolean {
     return nodeIsTypeScriptDeclWithBlockContext(context.contextNode);
 }
 
+/**
+ * Determines if a given node is a TypeScript declaration with a block context.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is a TypeScript declaration with a block context, false otherwise.
+ */
 function nodeIsTypeScriptDeclWithBlockContext(node: Node): boolean {
     switch (node.kind) {
         case SyntaxKind.ClassDeclaration:
@@ -654,6 +673,11 @@ function nodeIsTypeScriptDeclWithBlockContext(node: Node): boolean {
     return false;
 }
 
+/**
+ * Determines if the given FormattingContext is after a code block context.
+ * @param {FormattingContext} context - The FormattingContext to check.
+ * @returns {boolean} - True if the context is after a code block context, false otherwise.
+ */
 function isAfterCodeBlockContext(context: FormattingContext): boolean {
     switch (context.currentTokenParent.kind) {
         case SyntaxKind.ClassDeclaration:
@@ -674,6 +698,11 @@ function isAfterCodeBlockContext(context: FormattingContext): boolean {
     return false;
 }
 
+/**
+ * Determines if the given FormattingContext is a control declaration context.
+ * @param {FormattingContext} context - The FormattingContext to check.
+ * @returns {boolean} - True if the context is a control declaration context, false otherwise.
+ */
 function isControlDeclContext(context: FormattingContext): boolean {
     switch (context.contextNode.kind) {
         case SyntaxKind.IfStatement:
@@ -799,6 +828,12 @@ function isConstructorSignatureContext(context: FormattingContext): boolean {
     return context.contextNode.kind === SyntaxKind.ConstructSignature;
 }
 
+/**
+ * Determines if a given token is a type argument, parameter, or assertion.
+ * @param {TextRangeWithKind} token - The token to check.
+ * @param {Node} parent - The parent node of the token.
+ * @returns {boolean} - True if the token is a type argument, parameter, or assertion; otherwise, false.
+ */
 function isTypeArgumentOrParameterOrAssertion(token: TextRangeWithKind, parent: Node): boolean {
     if (token.kind !== SyntaxKind.LessThanToken && token.kind !== SyntaxKind.GreaterThanToken) {
         return false;
@@ -856,6 +891,11 @@ function isNotStatementConditionContext(context: FormattingContext): boolean {
     return !isStatementConditionContext(context);
 }
 
+/**
+ * Determines if the provided FormattingContext is a statement condition context.
+ * @param {FormattingContext} context - The FormattingContext to check.
+ * @returns {boolean} - True if the context is a statement condition context, false otherwise.
+ */
 function isStatementConditionContext(context: FormattingContext): boolean {
     switch (context.contextNode.kind) {
         case SyntaxKind.IfStatement:
@@ -871,6 +911,11 @@ function isStatementConditionContext(context: FormattingContext): boolean {
     }
 }
 
+/**
+ * Determines if the current context is a semicolon deletion context.
+ * @param {FormattingContext} context - The formatting context.
+ * @returns {boolean} - True if the current context is a semicolon deletion context, false otherwise.
+ */
 function isSemicolonDeletionContext(context: FormattingContext): boolean {
     let nextTokenKind = context.nextTokenSpan.kind;
     let nextTokenStart = context.nextTokenSpan.pos;

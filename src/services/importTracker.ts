@@ -151,6 +151,11 @@ function getImportersForExport(
 
     return { directImports, indirectUsers: getIndirectUsers() };
 
+    /**
+     * Retrieves an array of SourceFile objects representing all indirect users of the current module.
+     *
+     * @returns {readonly SourceFile[]} An array of SourceFile objects representing all indirect users of the current module.
+     */
     function getIndirectUsers(): readonly SourceFile[] {
         if (isAvailableThroughGlobal) {
             // It has `export as namespace`, so anything could potentially use it.
@@ -258,6 +263,15 @@ function getImportersForExport(
         });
     }
 
+    /**
+     * Handles namespace imports.
+     * @param importDeclaration - The import declaration.
+     * @param name - The identifier name.
+     * @param isReExport - Whether it is a re-export.
+     * @param alreadyAddedDirect - Whether it is already added as a direct import.
+     * @returns void
+     * @remarks This function checks if the import is a direct import or import-as-namespace. If it is a direct import and not already added, it is added to the direct imports array. If it is not available through global and is a re-export or has namespace re-exports, it adds indirect user with transitive dependencies. Otherwise, it adds indirect user without transitive dependencies.
+     */
     function handleNamespaceImport(importDeclaration: ImportEqualsDeclaration | ImportDeclaration, name: Identifier, isReExport: boolean, alreadyAddedDirect: boolean): void {
         if (exportKind === ExportKind.ExportEquals) {
             // This is a direct import, not import-as-namespace.
@@ -398,6 +412,11 @@ function getSearchesFromDirectImports(directImports: Importer[], exportSymbol: S
         }
     }
 
+    /**
+     * Searches for named imports or exports and adds them to a list of single references and local symbols to search for.
+     * @param namedBindings The named imports or exports to search for.
+     * @remarks This function is used in a larger codebase for analyzing imports and exports in TypeScript files.
+     */
     function searchForNamedImport(namedBindings: NamedImportsOrExports | undefined): void {
         if (!namedBindings) {
             return;
@@ -434,7 +453,13 @@ function getSearchesFromDirectImports(directImports: Importer[], exportSymbol: S
     }
 }
 
-/** Returns 'true' is the namespace 'name' is re-exported from this module, and 'false' if it is only used locally. */
+/**
+ * Finds if the namespace 'name' is re-exported from the given source file.
+ * @param sourceFileLike - The source file to search in.
+ * @param name - The identifier of the namespace to search for.
+ * @param checker - The type checker to use.
+ * @returns {boolean} - 'true' if the namespace is re-exported, 'false' if it is only used locally.
+ */
 function findNamespaceReExports(sourceFileLike: SourceFileLike, name: Identifier, checker: TypeChecker): boolean {
     const namespaceImportSymbol = checker.getSymbolAtLocation(name);
 
@@ -557,17 +582,30 @@ export interface ExportedSymbol {
 }
 
 /**
- * Given a local reference, we might notice that it's an import/export and recursively search for references of that.
- * If at an import, look locally for the symbol it imports.
- * If at an export, look for all imports of it.
+ * Given a local reference, recursively searches for references of that.
+ * If at an import, looks locally for the symbol it imports.
+ * If at an export, looks for all imports of it.
  * This doesn't handle export specifiers; that is done in `getReferencesAtExportSpecifier`.
+ * @param node The node to search for references.
+ * @param symbol The symbol to search for references of.
+ * @param checker The TypeChecker instance.
  * @param comingFromExport If we are doing a search for all exports, don't bother looking backwards for the imported symbol, since that's the reason we're here.
+ * @returns An ImportedSymbol or ExportedSymbol if found, undefined otherwise.
  *
  * @internal
  */
 export function getImportOrExportSymbol(node: Node, symbol: Symbol, checker: TypeChecker, comingFromExport: boolean): ImportedSymbol | ExportedSymbol | undefined {
     return comingFromExport ? getExport() : getExport() || getImport();
 
+    /**
+     * Returns an ExportedSymbol, ImportedSymbol, or undefined based on the provided node's parent and grandparent.
+     * @returns {ExportedSymbol | ImportedSymbol | undefined}
+     * @remarks This function determines the export/import status of a given symbol based on its parent and grandparent nodes.
+     * @remarks If the symbol is an export, it returns the appropriate exportInfo based on the parent node's kind.
+     * @remarks If the symbol is an import, it returns the symbol of the left-hand-side of an import equals declaration.
+     * @remarks If the symbol is a special property export, it returns the appropriate exportInfo based on the kind of assignment declaration.
+     * @remarks If the symbol is not an export or import, it returns undefined.
+     */
     function getExport(): ExportedSymbol | ImportedSymbol | undefined {
         const { parent } = node;
         const grandparent = parent.parent;
@@ -629,6 +667,12 @@ export function getImportOrExportSymbol(node: Node, symbol: Symbol, checker: Typ
             return { kind: ImportExport.Export, symbol, exportInfo: { exportingModuleSymbol: ex.symbol.parent, exportKind } };
         }
 
+        /**
+         * Returns an ExportedSymbol or undefined based on the provided BinaryExpression node and boolean useLhsSymbol flag.
+         * @param {BinaryExpression} node - The BinaryExpression node to analyze.
+         * @param {boolean} useLhsSymbol - A flag indicating whether to use the left-hand side symbol.
+         * @returns {ExportedSymbol | undefined} - An ExportedSymbol or undefined.
+         */
         function getSpecialPropertyExport(node: BinaryExpression, useLhsSymbol: boolean): ExportedSymbol | undefined {
             let kind: ExportKind;
             switch (getAssignmentDeclarationKind(node)) {
@@ -647,6 +691,10 @@ export function getImportOrExportSymbol(node: Node, symbol: Symbol, checker: Typ
         }
     }
 
+    /**
+     * Returns the imported symbol or undefined. A symbol being imported is always an alias. So get what that aliases to find the local symbol. Search on the local symbol in the exporting module, not the exported symbol. If the import has a different name than the export, do not continue searching. If `importedName` is undefined, do continue searching as the export is anonymous. (All imports returned from this function will be ignored anyway if we are in rename and this is a not a named export.)
+     * @returns {ImportedSymbol | undefined} The imported symbol or undefined.
+     */
     function getImport(): ImportedSymbol | undefined {
         const isImport = isNodeImport(node);
         if (!isImport) return undefined;
@@ -684,6 +732,12 @@ export function getImportOrExportSymbol(node: Node, symbol: Symbol, checker: Typ
     }
 }
 
+/**
+ * Returns the local symbol for an imported symbol. If the imported symbol is an alias, returns the immediate aliased symbol. If the imported symbol is an export assignment or a module export, returns the symbol of the exported class. If the imported symbol is from a JSON module, returns the symbol of the source file.
+ * @param {Symbol} importedSymbol - The imported symbol to get the local symbol for.
+ * @param {TypeChecker} checker - The type checker to use.
+ * @returns {Symbol|undefined} - The local symbol for the imported symbol, or undefined if it cannot be found.
+ */
 function getExportEqualsLocalSymbol(importedSymbol: Symbol, checker: TypeChecker): Symbol | undefined {
     if (importedSymbol.flags & SymbolFlags.Alias) {
         return checker.getImmediateAliasedSymbol(importedSymbol);
@@ -704,6 +758,12 @@ function getExportEqualsLocalSymbol(importedSymbol: Symbol, checker: TypeChecker
 
 // If a reference is a class expression, the exported node would be its parent.
 // If a reference is a variable declaration, the exported node would be the variable statement.
+/**
+ * Returns the export node of a given parent and node.
+ * @param {Node} parent - The parent node.
+ * @param {Node} node - The node to search for.
+ * @returns {Node|undefined} - The export node or undefined if not found.
+ */
 function getExportNode(parent: Node, node: Node): Node | undefined {
     const declaration = isVariableDeclaration(parent) ? parent : isBindingElement(parent) ? walkUpBindingElementsAndPatterns(parent) : undefined;
     if (declaration) {
@@ -715,6 +775,11 @@ function getExportNode(parent: Node, node: Node): Node | undefined {
     }
 }
 
+/**
+ * Determines if a given node is an import statement in a TypeScript file.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is an import statement, false otherwise.
+ */
 function isNodeImport(node: Node): boolean {
     const { parent } = node;
     switch (parent.kind) {
@@ -743,7 +808,12 @@ export function getExportInfo(exportSymbol: Symbol, exportKind: ExportKind, chec
     return isExternalModuleSymbol(exportingModuleSymbol) ? { exportingModuleSymbol, exportKind } : undefined;
 }
 
-/** If at an export specifier, go to the symbol it refers to. */
+/**
+ * If the provided symbol is at an export specifier, this function will return the symbol it refers to. If not, it will return the provided symbol.
+ * @param {Symbol} symbol - The symbol to check.
+ * @param {TypeChecker} checker - The TypeChecker instance to use.
+ * @returns {Symbol} - The symbol that the export specifier refers to, or the provided symbol if it is not an export specifier.
+ */
 function skipExportSpecifierSymbol(symbol: Symbol, checker: TypeChecker): Symbol {
     // For `export { foo } from './bar", there's nothing to skip, because it does not create a new alias. But `export { foo } does.
     if (symbol.declarations) {
@@ -769,6 +839,11 @@ function getContainingModuleSymbol(importer: Importer, checker: TypeChecker): Sy
     return checker.getMergedSymbol(getSourceFileLikeForImportDeclaration(importer).symbol);
 }
 
+/**
+ * Returns a SourceFileLike object for an ImporterOrCallExpression node.
+ * @param {ImporterOrCallExpression} node - The node to get the SourceFileLike object for.
+ * @returns {SourceFileLike} - The SourceFileLike object for the given node.
+ */
 function getSourceFileLikeForImportDeclaration(node: ImporterOrCallExpression): SourceFileLike {
     if (node.kind === SyntaxKind.CallExpression) {
         return node.getSourceFile();

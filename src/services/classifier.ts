@@ -273,6 +273,13 @@ const noRegexTable: true[] = arrayToNumericMap<SyntaxKind, true>([
     SyntaxKind.FalseKeyword,
 ], token => token, () => true);
 
+/**
+ * Determines the end of line state based on the provided scanner, token, and lastOnTemplateStack.
+ * @param {Scanner} scanner - The scanner object.
+ * @param {SyntaxKind} token - The syntax kind of the token.
+ * @param {SyntaxKind | undefined} lastOnTemplateStack - The syntax kind of the last template on the stack.
+ * @returns {EndOfLineState | undefined} - The end of line state or undefined.
+ */
 function getNewEndOfLineState(scanner: Scanner, token: SyntaxKind, lastOnTemplateStack: SyntaxKind | undefined): EndOfLineState | undefined {
     switch (token) {
         case SyntaxKind.StringLiteral: {
@@ -311,6 +318,15 @@ function getNewEndOfLineState(scanner: Scanner, token: SyntaxKind, lastOnTemplat
     }
 }
 
+/**
+ * Pushes an encoded classification to the result array.
+ * @param {number} start - The starting index of the classification.
+ * @param {number} end - The ending index of the classification.
+ * @param {number} offset - The offset of the classification.
+ * @param {ClassificationType} classification - The type of classification.
+ * @param {number[]} result - The array to push the encoded classification to.
+ * @remarks If the classification is white space, it will not be added to the result array.
+ */
 function pushEncodedClassification(start: number, end: number, offset: number, classification: ClassificationType, result: number[]): void {
     if (classification === ClassificationType.whiteSpace) {
         // Don't bother with whitespace classifications.  They're not needed.
@@ -361,6 +377,11 @@ function convertClassificationsToResult(classifications: Classifications, text: 
     return { entries, finalLexState: classifications.endOfLineState };
 }
 
+/**
+ * Converts a classification type to a token class.
+ * @param {ClassificationType} type - The classification type to convert.
+ * @returns {TokenClass} The corresponding token class.
+ */
 function convertClassification(type: ClassificationType): TokenClass {
     switch (type) {
         case ClassificationType.comment: return TokenClass.Comment;
@@ -386,7 +407,12 @@ function convertClassification(type: ClassificationType): TokenClass {
     }
 }
 
-/** Returns true if 'keyword2' can legally follow 'keyword1' in any language construct. */
+/**
+ * Determines if a given keyword can legally follow another keyword in any language construct.
+ * @param keyword1 - The first keyword to check.
+ * @param keyword2 - The second keyword to check.
+ * @returns Returns true if 'keyword2' can legally follow 'keyword1'.
+ */
 function canFollow(keyword1: SyntaxKind, keyword2: SyntaxKind): boolean {
     if (!isAccessibilityModifier(keyword1)) {
         // Assume any other keyword combination is legal.
@@ -405,6 +431,18 @@ function canFollow(keyword1: SyntaxKind, keyword2: SyntaxKind): boolean {
     }
 }
 
+/**
+ * Returns an object containing a prefix string and an optional pushTemplate boolean value based on the provided EndOfLineState.
+ * If the lexState is InDoubleQuoteStringLiteral, the prefix will be "\"\\n".
+ * If the lexState is InSingleQuoteStringLiteral, the prefix will be "'\\n".
+ * If the lexState is InMultiLineCommentTrivia, the prefix will be "/*\n".
+ * If the lexState is InTemplateHeadOrNoSubstitutionTemplate, the prefix will be "`\n".
+ * If the lexState is InTemplateMiddleOrTail, the prefix will be "}\n" and pushTemplate will be true.
+ * If the lexState is InTemplateSubstitutionPosition, the prefix will be "" and pushTemplate will be true.
+ * If the lexState is None, the prefix will be "".
+ * @param {EndOfLineState} lexState - The EndOfLineState to determine the prefix for.
+ * @returns {{ readonly prefix: string, readonly pushTemplate?: true }} - An object containing a prefix string and an optional pushTemplate boolean value.
+ */
 function getPrefixFromLexState(lexState: EndOfLineState): { readonly prefix: string, readonly pushTemplate?: true } {
     // If we're in a string literal, then prepend: "\
     // (and a newline).  That way when we lex we'll think we're still in a string literal.
@@ -431,6 +469,11 @@ function getPrefixFromLexState(lexState: EndOfLineState): { readonly prefix: str
     }
 }
 
+/**
+ * Determines if a given token is a binary expression operator token.
+ * @param {SyntaxKind} token - The token to check.
+ * @returns {boolean} - True if the token is a binary expression operator token, false otherwise.
+ */
 function isBinaryExpressionOperatorToken(token: SyntaxKind): boolean {
     switch (token) {
         case SyntaxKind.AsteriskToken:
@@ -481,6 +524,11 @@ function isBinaryExpressionOperatorToken(token: SyntaxKind): boolean {
     }
 }
 
+/**
+ * Determines if a given token is a prefix unary expression operator token.
+ * @param {SyntaxKind} token - The token to check.
+ * @returns {boolean} - True if the token is a prefix unary expression operator token, false otherwise.
+ */
 function isPrefixUnaryExpressionOperatorToken(token: SyntaxKind): boolean {
     switch (token) {
         case SyntaxKind.PlusToken:
@@ -495,6 +543,11 @@ function isPrefixUnaryExpressionOperatorToken(token: SyntaxKind): boolean {
     }
 }
 
+/**
+ * Determines the classification type of a given token based on its syntax kind.
+ * @param {SyntaxKind} token - The syntax kind of the token to classify.
+ * @returns {ClassificationType} The classification type of the token.
+ */
 function classFromKind(token: SyntaxKind): ClassificationType {
     if (isKeyword(token)) {
         return ClassificationType.keyword;
@@ -536,6 +589,12 @@ export function getSemanticClassifications(typeChecker: TypeChecker, cancellatio
     return convertClassificationsToSpans(getEncodedSemanticClassifications(typeChecker, cancellationToken, sourceFile, classifiableNames, span));
 }
 
+/**
+ * Checks if the classification has been cancelled by the user.
+ * @param {CancellationToken} cancellationToken - The cancellation token to check.
+ * @param {SyntaxKind} kind - The syntax kind to check for cancellation.
+ * @remarks We only check for cancellation on a few reasonable node kinds to avoid excessive calls to the host and overhead of marshalling data.
+ */
 function checkForClassificationCancellation(cancellationToken: CancellationToken, kind: SyntaxKind) {
     // We don't want to actually call back into our host on every node to find out if we've
     // been canceled.  That would be an enormous amount of chattyness, along with the all
@@ -559,7 +618,15 @@ function checkForClassificationCancellation(cancellationToken: CancellationToken
     }
 }
 
-/** @internal */
+/**
+ * Retrieves the encoded semantic classifications for a given set of classifiable names within a specified text span of a source file.
+ * @param typeChecker - The TypeChecker instance to use for symbol classification.
+ * @param cancellationToken - The CancellationToken instance to use for cancellation of the classification process.
+ * @param sourceFile - The SourceFile instance to classify.
+ * @param classifiableNames - The set of classifiable names to retrieve classifications for.
+ * @param span - The text span to retrieve classifications within.
+ * @returns An object containing an array of classification spans and the end of line state.
+ */
 export function getEncodedSemanticClassifications(typeChecker: TypeChecker, cancellationToken: CancellationToken, sourceFile: SourceFile, classifiableNames: ReadonlySet<__String>, span: TextSpan): Classifications {
     const spans: number[] = [];
     sourceFile.forEachChild(function cb(node: Node): void {
@@ -593,6 +660,13 @@ export function getEncodedSemanticClassifications(typeChecker: TypeChecker, canc
     }
 }
 
+/**
+ * Classifies a symbol based on its flags and meaning at a given position.
+ * @param symbol - The symbol to classify.
+ * @param meaningAtPosition - The semantic meaning at the position of the symbol.
+ * @param checker - The type checker to use.
+ * @returns The classification type of the symbol, or undefined if it cannot be classified.
+ */
 function classifySymbol(symbol: Symbol, meaningAtPosition: SemanticMeaning, checker: TypeChecker): ClassificationType | undefined {
     const flags = symbol.getFlags();
     if ((flags & SymbolFlags.Classifiable) === SymbolFlags.None) {
@@ -630,6 +704,11 @@ function hasValueSideModule(symbol: Symbol): boolean {
         isModuleDeclaration(declaration) && getModuleInstanceState(declaration) === ModuleInstanceState.Instantiated);
 }
 
+/**
+ * Returns the name of the classification type as a string.
+ * @param {ClassificationType} type - The classification type to get the name of.
+ * @returns {ClassificationTypeNames | undefined} - The name of the classification type as a string, or undefined if the type is not recognized.
+ */
 function getClassificationTypeName(type: ClassificationType): ClassificationTypeNames {
     switch (type) {
         case ClassificationType.comment: return ClassificationTypeNames.comment;
@@ -660,6 +739,11 @@ function getClassificationTypeName(type: ClassificationType): ClassificationType
     }
 }
 
+/**
+ * Converts an object of classifications to an array of classified spans.
+ * @param {Classifications} classifications - The object of classifications to convert.
+ * @returns {ClassifiedSpan[]} An array of classified spans.
+ */
 function convertClassificationsToSpans(classifications: Classifications): ClassifiedSpan[] {
     Debug.assert(classifications.spans.length % 3 === 0);
     const dense = classifications.spans;
@@ -699,6 +783,11 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
         result.push(type);
     }
 
+    /**
+     * Classifies leading trivia and returns the start position of the token.
+     * @param {Node} token - The node to classify trivia for.
+     * @returns {number} - The start position of the token.
+     */
     function classifyLeadingTriviaAndGetTokenStart(token: Node): number {
         triviaScanner.resetTokenState(token.pos);
         while (true) {
@@ -761,6 +850,13 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
         }
     }
 
+    /**
+     * Classifies a comment based on its type and sets certain portions of it specially if it is a doc comment.
+     * @param token - The node representing the comment.
+     * @param kind - The syntax kind of the comment.
+     * @param start - The start position of the comment.
+     * @param width - The width of the comment.
+     */
     function classifyComment(token: Node, kind: SyntaxKind, start: number, width: number) {
         if (kind === SyntaxKind.MultiLineCommentTrivia) {
             // See if this is a doc comment.  If so, we'll classify certain portions of it
@@ -787,6 +883,10 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
         pushClassification(start, width, ClassificationType.comment);
     }
 
+    /**
+     * Classifies a JSDoc comment by parsing its tags and pushing appropriate classifications and comment ranges.
+     * @param {JSDoc} docComment - The JSDoc comment to classify.
+     */
     function classifyJSDocComment(docComment: JSDoc) {
         let pos = docComment.pos;
 
@@ -868,6 +968,13 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
 
         return;
 
+        /**
+         * Processes a JSDoc parameter tag.
+         *
+         * @param {JSDocParameterTag} tag - The JSDoc parameter tag to process.
+         * @remarks This function updates the comment range and classification of the parameter name and type expression.
+         * @returns {void}
+         */
         function processJSDocParameterTag(tag: JSDocParameterTag) {
             if (tag.isNameFirst) {
                 pushCommentRange(pos, tag.name.pos - pos);
@@ -889,6 +996,13 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
         }
     }
 
+    /**
+     * Tries to classify a triple slash comment as an XML-like tag with attributes.
+     * @param start The starting position of the comment in the source file.
+     * @param width The width of the comment in the source file.
+     * @returns A boolean indicating whether the comment was successfully classified.
+     * @remarks This function is used to classify XML-like tags with attributes in triple slash comments.
+     */
     function tryClassifyTripleSlashComment(start: number, width: number): boolean {
         const tripleSlashXMLCommentRegEx = /^(\/\/\/\s*)(<)(?:(\S+)((?:[^/]|\/[^>])*)(\/>)?)?/im;
         // Require a leading whitespace character (the parser already does) to prevent terrible backtracking performance
@@ -979,6 +1093,14 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
         }
     }
 
+    /**
+     * Classifies disabled merge code in a given text string between start and end indices.
+     * The line that the ||||||| or ======= marker is on is classified as a comment.
+     * Further tokens are lexed and added to the result.
+     * @param {string} text - The text string to classify.
+     * @param {number} start - The starting index of the disabled merge code.
+     * @param {number} end - The ending index of the disabled merge code.
+     */
     function classifyDisabledMergeCode(text: string, start: number, end: number) {
         // Classify the line that the ||||||| or ======= marker is on as a comment.
         // Then just lex all further tokens and add them to the result.
@@ -996,6 +1118,11 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
         }
     }
 
+    /**
+     * Classifies a disabled code token.
+     * @returns {void}
+     * @remarks This function uses the mergeConflictScanner and classifyTokenType functions to determine the type of the token and push the classification to the appropriate array.
+     */
     function classifyDisabledCodeToken() {
         const start = mergeConflictScanner.getTokenEnd();
         const tokenKind = mergeConflictScanner.scan();
@@ -1008,8 +1135,9 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
     }
 
     /**
-     * Returns true if node should be treated as classified and no further processing is required.
-     * False will mean that node is not classified and traverse routine should recurse into node contents.
+     * Determines if a given node should be classified or if further processing is required.
+     * @param {Node} node - The node to classify.
+     * @returns {boolean} - True if node should be treated as classified and no further processing is required, false otherwise.
      */
     function tryClassifyNode(node: Node): boolean {
         if (isJSDoc(node)) {
@@ -1039,6 +1167,11 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
         return true;
     }
 
+    /**
+     * Determines the classification type of a JSX element name token.
+     * @param {Node} token - The token to classify.
+     * @returns {ClassificationType | undefined} - The classification type of the token, or undefined if it cannot be classified.
+     */
     function tryClassifyJsxElementName(token: Node): ClassificationType | undefined {
         switch (token.parent && token.parent.kind) {
             case SyntaxKind.JsxOpeningElement:
@@ -1068,6 +1201,12 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
     // for accurate classification, the actual token should be passed in.  however, for
     // cases like 'disabled merge code' classification, we just get the token kind and
     // classify based on that instead.
+    /**
+     * Classifies the token type based on its syntax kind and parent node.
+     * @param tokenKind The syntax kind of the token.
+     * @param token Optional. The node representing the token.
+     * @returns The classification type of the token, or undefined if it cannot be classified.
+     */
     function classifyTokenType(tokenKind: SyntaxKind, token?: Node): ClassificationType | undefined {
         if (isKeyword(tokenKind)) {
             return ClassificationType.keyword;
@@ -1169,6 +1308,12 @@ export function getEncodedSyntacticClassifications(cancellationToken: Cancellati
         }
     }
 
+    /**
+     * Processes a given Node element to classify its kind based on its children.
+     * @param {Node | undefined} element - The Node element to be processed.
+     * @returns {void}
+     * @remarks This function ignores nodes that do not intersect the original span to classify. It also checks for classification cancellation and recursively processes child nodes that cannot be classified.
+     */
     function processElement(element: Node | undefined) {
         if (!element) {
             return;

@@ -82,6 +82,14 @@ registerCodeFix({
     }),
 });
 
+/**
+ * Returns an object containing the node and suggested symbol for a misspelled word in the provided source file at the given position. Only fixes spelling for No_overload_matches_this_call emitted on the React class component.
+ * @param {SourceFile} sourceFile - The source file to check for misspelled words.
+ * @param {number} pos - The position in the source file to check for misspelled words.
+ * @param {CodeFixContextBase} context - The context for the code fix.
+ * @param {number} errorCode - The error code for the misspelled word.
+ * @returns {{ node: Node, suggestedSymbol: Symbol } | undefined} An object containing the node and suggested symbol for the misspelled word, or undefined if no suggested symbol is found.
+ */
 function getInfo(sourceFile: SourceFile, pos: number, context: CodeFixContextBase, errorCode: number): { node: Node, suggestedSymbol: Symbol } | undefined {
     // This is the identifier of the misspelled word. eg:
     // this.speling = 1;
@@ -146,6 +154,14 @@ function getInfo(sourceFile: SourceFile, pos: number, context: CodeFixContextBas
     return suggestedSymbol === undefined ? undefined : { node, suggestedSymbol };
 }
 
+/**
+ * Replaces a node in a source file with a suggested symbol name.
+ * @param changes - The text changes object.
+ * @param sourceFile - The source file containing the node to replace.
+ * @param node - The node to replace.
+ * @param suggestedSymbol - The suggested symbol to replace the node with.
+ * @param target - The script target.
+ */
 function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, node: Node, suggestedSymbol: Symbol, target: ScriptTarget) {
     const suggestion = symbolName(suggestedSymbol);
     if (!isIdentifierText(suggestion, target) && isPropertyAccessExpression(node.parent)) {
@@ -162,6 +178,11 @@ function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, no
     }
 }
 
+/**
+ * Converts a SemanticMeaning value to its corresponding SymbolFlags value.
+ * @param {SemanticMeaning} meaning - The SemanticMeaning value to convert.
+ * @returns {SymbolFlags} The corresponding SymbolFlags value.
+ */
 function convertSemanticMeaningToSymbolFlags(meaning: SemanticMeaning): SymbolFlags {
     let flags = 0;
     if (meaning & SemanticMeaning.Namespace) {

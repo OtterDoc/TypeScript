@@ -41,6 +41,12 @@ function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, na
     changes.replaceNodeWithText(sourceFile, name, `${ name.text }()`);
 }
 
+/**
+ * Returns the name of the function or property being called at the specified position in the source file.
+ * @param {SourceFile} sourceFile - The source file to search in.
+ * @param {number} start - The position in the source file to search at.
+ * @returns {Identifier | PrivateIdentifier | undefined} - The name of the function or property being called, or undefined if not found.
+ */
 function getCallName(sourceFile: SourceFile, start: number): Identifier | PrivateIdentifier | undefined {
     const token = getTokenAtPosition(sourceFile, start);
     if (isPropertyAccessExpression(token.parent)) {

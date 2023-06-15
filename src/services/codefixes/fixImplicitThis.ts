@@ -42,6 +42,14 @@ registerCodeFix({
     }),
 });
 
+/**
+ * Converts a function declaration or expression containing a 'this' expression to an arrow function.
+ * @param changes - The text changes to apply to the source file.
+ * @param sourceFile - The source file containing the function declaration or expression.
+ * @param pos - The position of the 'this' expression.
+ * @param checker - The type checker for the source file.
+ * @returns A diagnostic or an array containing a diagnostic and its arguments if the conversion was successful, otherwise undefined.
+ */
 function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, pos: number, checker: TypeChecker): DiagnosticOrDiagnosticAndArguments | undefined {
     const token = getTokenAtPosition(sourceFile, pos);
     if (!isThis(token)) return undefined;

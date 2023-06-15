@@ -187,10 +187,9 @@ registerRefactor(refactorName, {
 });
 
 /**
- * Compute the associated code actions
- * Exported for tests.
- *
- * @internal
+ * Returns an array of applicable refactor actions for extracting a symbol from a given RefactorContext.
+ * @param {RefactorContext} context - The RefactorContext object containing information about the code to be refactored.
+ * @returns {readonly ApplicableRefactorInfo[]} - An array of ApplicableRefactorInfo objects representing the applicable refactor actions.
  */
 export function getRefactorActionsToExtractSymbol(context: RefactorContext): readonly ApplicableRefactorInfo[] {
     const requestedRefactor = context.kind;
@@ -335,9 +334,11 @@ export function getRefactorActionsToExtractSymbol(context: RefactorContext): rea
 }
 
 /**
- * Exported for tests
+ * Extracts a symbol from a given RefactorContext and actionName.
  *
- * @internal
+ * @param {RefactorContext} context - The RefactorContext to extract the symbol from.
+ * @param {string} actionName - The name of the action to perform.
+ * @returns {RefactorEditInfo | undefined} - The RefactorEditInfo object containing the extracted symbol's information, or undefined if extraction failed.
  */
 export function getRefactorEditsToExtractSymbol(context: RefactorContext, actionName: string): RefactorEditInfo | undefined {
     const rangeToExtract = getRangeToExtract(context.file, getRefactorContextSpan(context));
@@ -392,7 +393,17 @@ export namespace Messages {
     export const cannotExtractFunctionsContainingThisToMethod = createMessage("Cannot extract functions containing this to method");
 }
 
-/** @internal */
+/**
+ * An enumeration representing various facts about a range of code.
+ * @enum {number}
+ * @property {number} None - The range has no special facts.
+ * @property {number} HasReturn - The range contains a return statement.
+ * @property {number} IsGenerator - The range is a generator function.
+ * @property {number} IsAsyncFunction - The range is an async function.
+ * @property {number} UsesThis - The range contains a reference to 'this'.
+ * @property {number} UsesThisInFunction - The range contains a reference to 'this' in a function.
+ * @property {number} InStaticRegion - The range is in a function which needs the 'static' modifier in a class.
+ */
 export enum RangeFacts {
     None = 0,
     HasReturn = 1 << 0,
@@ -534,8 +545,9 @@ export function getRangeToExtract(sourceFile: SourceFile, span: TextSpan, invoke
     return { targetRange: { range: getStatementOrExpressionRange(node)!, facts: rangeFacts, thisNode } }; // TODO: GH#18217
 
     /**
-     * Attempt to refine the extraction node (generally, by shrinking it) to produce better results.
+     * Attempt to refine the extraction node to produce better results.
      * @param node The unrefined extraction node.
+     * @returns The refined extraction node.
      */
     function refineNode(node: Node): Node {
         if (isReturnStatement(node)) {
@@ -573,6 +585,12 @@ export function getRangeToExtract(sourceFile: SourceFile, span: TextSpan, invoke
         return undefined;
     }
 
+    /**
+     * Checks if a given node is in a static context within a containing class.
+     * @param {Node} nodeToCheck - The node to check.
+     * @param {Node} containingClass - The containing class node.
+     * @remarks This function uses a while loop to traverse up the parent chain of the given node until it reaches the containing class. It then checks if the node is a property, parameter, or method declaration and if it is static. If it is, it sets the rangeFacts variable to include the InStaticRegion flag.
+     */
     function checkForStaticContext(nodeToCheck: Node, containingClass: Node) {
         let current: Node = nodeToCheck;
         while (current !== containingClass) {
@@ -814,6 +832,11 @@ function getAdjustedSpanFromNodes(startNode: Node, endNode: Node, sourceFile: So
     return { start, length: end - start };
 }
 
+/**
+ * Returns the range of the statement or expression based on the provided node.
+ * @param {Node} node - The node to get the range from.
+ * @returns {(Statement[] | Expression | undefined)} - The range of the statement or expression.
+ */
 function getStatementOrExpressionRange(node: Node): Statement[] | Expression | undefined {
     if (isStatement(node)) {
         return [node];
@@ -906,9 +929,11 @@ interface ScopeExtractions {
 }
 
 /**
- * Given a piece of text to extract ('targetRange'), computes a list of possible extractions.
- * Each returned ExtractResultForScope corresponds to a possible target scope and is either a set of changes
- * or an error explaining why we can't extract into that scope.
+ * Given a piece of text to extract ('targetRange') and a RefactorContext, computes a list of possible extractions.
+ * Each returned ScopeExtractions corresponds to a possible target scope and contains a description of the extraction and any errors that may occur.
+ * @param {TargetRange} targetRange - The range of text to extract.
+ * @param {RefactorContext} context - The context in which the extraction is being performed.
+ * @returns {readonly ScopeExtractions[] | undefined} - An array of ScopeExtractions, each corresponding to a possible target scope, or undefined if no extractions are possible.
  */
 function getPossibleExtractions(targetRange: TargetRange, context: RefactorContext): readonly ScopeExtractions[] | undefined {
     const { scopes, readsAndWrites: { functionErrorsPerScope, constantErrorsPerScope } } = getPossibleExtractionsWorker(targetRange, context);
@@ -957,6 +982,12 @@ function getPossibleExtractions(targetRange: TargetRange, context: RefactorConte
     return extractions;
 }
 
+/**
+ * Returns an object containing an array of scopes and an object of reads and writes.
+ * @param {TargetRange} targetRange - The range to collect scopes and reads and writes from.
+ * @param {RefactorContext} context - The context object containing the source file and program type checker.
+ * @returns {{scopes: Scope[], readsAndWrites: ReadsAndWrites}} - An object containing an array of scopes and an object of reads and writes.
+ */
 function getPossibleExtractionsWorker(targetRange: TargetRange, context: RefactorContext): { readonly scopes: Scope[], readonly readsAndWrites: ReadsAndWrites } {
     const { file: sourceFile } = context;
 
@@ -984,6 +1015,11 @@ function getDescriptionForConstantInScope(scope: Scope): string {
         ? "readonly field"
         : "constant";
 }
+/**
+ * Returns a string describing the type of function declaration passed as a parameter.
+ * @param {FunctionLikeDeclaration} scope - The function declaration to describe.
+ * @returns {string} - A string describing the type of function declaration.
+ */
 function getDescriptionForFunctionLikeDeclaration(scope: FunctionLikeDeclaration): string {
     switch (scope.kind) {
         case SyntaxKind.Constructor:
@@ -1321,6 +1357,12 @@ function extractFunctionInScope(
     const renameLocation = getRenameLocation(edits, renameFilename, functionNameText, /*preferLastLocation*/ false);
     return { renameFilename, renameLocation, edits };
 
+    /**
+     * Returns a deep clone of the provided TypeNode, including any union types that contain undefined.
+     * If the provided TypeNode is undefined, returns undefined.
+     * @param typeNode The TypeNode to clone.
+     * @returns A deep clone of the provided TypeNode, including any union types that contain undefined, or undefined if the provided TypeNode is undefined.
+     */
     function getTypeDeepCloneUnionUndefined(typeNode: TypeNode | undefined): TypeNode | undefined {
         if (typeNode === undefined) {
             return undefined;
@@ -1532,6 +1574,12 @@ function extractConstantInScope(
     }
 }
 
+/**
+ * Returns the containing variable declaration if the provided node is in the list of declarations in the scope.
+ * @param {Node} node - The node to check for in the list of declarations.
+ * @param {Scope} scope - The scope to search for the list of declarations.
+ * @returns {Node | undefined} - The containing variable declaration if found, otherwise undefined.
+ */
 function getContainingVariableDeclarationIfInList(node: Node, scope: Scope) {
     let prevNode;
     while (node !== undefined && node !== scope) {
@@ -1548,6 +1596,12 @@ function getContainingVariableDeclarationIfInList(node: Node, scope: Scope) {
     }
 }
 
+/**
+ * Returns the first declaration before a given position in a type's symbol declarations.
+ * @param {Type} type - The type to search for declarations in.
+ * @param {number} position - The position to search for declarations before.
+ * @returns {Declaration | undefined} - The first declaration before the given position, or undefined if none found.
+ */
 function getFirstDeclarationBeforePosition(type: Type, position: number): Declaration | undefined {
     let firstDeclaration;
 
@@ -1563,6 +1617,17 @@ function getFirstDeclarationBeforePosition(type: Type, position: number): Declar
     return firstDeclaration;
 }
 
+/**
+ * Compares two types by their declaration order.
+ * @param {object} param0 - An object containing the first type and its declaration.
+ * @param {Type} param0.type - The first type to compare.
+ * @param {Declaration} [param0.declaration] - The declaration of the first type.
+ * @param {object} param1 - An object containing the second type and its declaration.
+ * @param {Type} param1.type - The second type to compare.
+ * @param {Declaration} [param1.declaration] - The declaration of the second type.
+ * @returns {number} - Returns a number indicating the order of the types.
+ * @remarks This function uses the compareProperties, compareStringsCaseSensitive, and compareValues functions to compare the types.
+ */
 function compareTypesByDeclarationOrder(
     { type: type1, declaration: declaration1 }: { type: Type, declaration?: Declaration },
     { type: type2, declaration: declaration2 }: { type: Type, declaration?: Declaration }) {
@@ -1574,6 +1639,13 @@ function compareTypesByDeclarationOrder(
         || compareValues(type1.id, type2.id);
 }
 
+/**
+ * Returns an Expression representing a called function with the given name.
+ * @param {Node} scope - The scope in which the function is defined.
+ * @param {TargetRange} range - The range of the function call.
+ * @param {string} functionNameText - The name of the function to call.
+ * @returns {Expression} - An Expression representing the called function.
+ */
 function getCalledExpression(scope: Node, range: TargetRange, functionNameText: string): Expression {
     const functionReference = factory.createIdentifier(functionNameText);
     if (isClassLike(scope)) {
@@ -1614,6 +1686,11 @@ function transformFunctionBody(body: Node, exposedVariableDeclarations: readonly
         return { body: factory.createBlock(statements, /*multiLine*/ true), returnValueProperty: undefined };
     }
 
+    /**
+     * Visits a given node and returns a VisitResult<Node>.
+     * @param {Node} node - The node to visit.
+     * @returns {VisitResult<Node>} - The result of visiting the node.
+     */
     function visitor(node: Node): VisitResult<Node> {
         if (!ignoreReturns && isReturnStatement(node) && hasWritesOrVariableDeclarations) {
             const assignments: ObjectLiteralElementLike[] = getPropertyAssignmentsForWritesAndVariableDeclarations(exposedVariableDeclarations, writes);
@@ -1641,6 +1718,12 @@ function transformFunctionBody(body: Node, exposedVariableDeclarations: readonly
     }
 }
 
+/**
+ * Transforms a constant initializer expression by substituting nodes with their corresponding nodes from a given map.
+ * @param initializer - The expression to be transformed.
+ * @param substitutions - A map of node substitutions.
+ * @returns The transformed expression.
+ */
 function transformConstantInitializer(initializer: Expression, substitutions: ReadonlyMap<string, Node>): Expression {
     return substitutions.size
         ? visitor(initializer) as Expression
@@ -1681,6 +1764,13 @@ function getNodeToInsertFunctionBefore(minPos: number, scope: Scope): Statement 
         child.pos >= minPos && isFunctionLikeDeclaration(child) && !isConstructorDeclaration(child));
 }
 
+/**
+ * Returns the ClassElement to insert a property before in a ClassLikeDeclaration.
+ * @param {number} maxPos - The maximum position to insert the property before.
+ * @param {ClassLikeDeclaration} scope - The scope in which to search for the ClassElement.
+ * @returns {ClassElement} The ClassElement to insert the property before.
+ * @remarks If no members are found in the scope, an error will be thrown.
+ */
 function getNodeToInsertPropertyBefore(maxPos: number, scope: ClassLikeDeclaration): ClassElement {
     const members = scope.members;
     Debug.assert(members.length > 0, "Found no members"); // There must be at least one child, since we extracted from one.
@@ -1707,6 +1797,13 @@ function getNodeToInsertPropertyBefore(maxPos: number, scope: ClassLikeDeclarati
     return prevMember;
 }
 
+/**
+ * Returns the statement to insert a constant before in a given scope.
+ * @param {Node} node - The node to start searching from.
+ * @param {Scope} scope - The scope to search in.
+ * @returns {Statement} - The statement to insert the constant before.
+ * @remarks This function assumes that the scope is not a class-like node.
+ */
 function getNodeToInsertConstantBefore(node: Node, scope: Scope): Statement {
     Debug.assert(!isClassLike(scope));
 
@@ -1741,6 +1838,13 @@ function getNodeToInsertConstantBefore(node: Node, scope: Scope): Statement {
     }
 }
 
+/**
+ * Returns an array of ShorthandPropertyAssignments for exposedVariableDeclarations and writes.
+ * @param {readonly VariableDeclaration[]} exposedVariableDeclarations - An array of exposed VariableDeclarations.
+ * @param {readonly UsageEntry[] | undefined} writes - An optional array of UsageEntries.
+ * @returns {ShorthandPropertyAssignment[]} An array of ShorthandPropertyAssignments.
+ * @remarks This function concatenates the variableAssignments and writeAssignments arrays if both are defined.
+ */
 function getPropertyAssignmentsForWritesAndVariableDeclarations(
     exposedVariableDeclarations: readonly VariableDeclaration[],
     writes: readonly UsageEntry[] | undefined
@@ -1966,6 +2070,11 @@ function collectReadsAndWrites(
         return !!findAncestor(node, n => isDeclarationWithTypeParameters(n) && getEffectiveTypeParameterDeclarations(n).length !== 0);
     }
 
+    /**
+     * Records the usage of type parameters in a given type.
+     * @param {Type} type - The type to record type parameter usages for.
+     * @remarks This function is potentially expensive as it may visit all properties of a library type. Filtering to user types is not a trivial solution due to cases like Array.
+     */
     function recordTypeParameterUsages(type: Type) {
         // PERF: This is potentially very expensive.  `type` could be a library type with
         // a lot of properties, each of which the walker will visit.  Unfortunately, the
@@ -1980,6 +2089,13 @@ function collectReadsAndWrites(
         }
     }
 
+    /**
+     * Collects usages of a given node in the TypeScript AST.
+     * @param node The node to collect usages for.
+     * @param valueUsage The usage type of the node. Defaults to Usage.Read.
+     * @remarks This function recursively traverses the AST and records usages of the given node.
+     * @returns void
+     */
     function collectUsages(node: Node, valueUsage = Usage.Read) {
         if (inGenericContext) {
             const type = checker.getTypeAtLocation(node);
@@ -2019,6 +2135,12 @@ function collectReadsAndWrites(
         }
     }
 
+    /**
+     * Records the usage of an identifier and updates the substitution maps for each scope.
+     * @param {Identifier} n - The identifier node.
+     * @param {Usage} usage - The usage type.
+     * @param {boolean} isTypeNode - Indicates if the node is a type node.
+     */
     function recordUsage(n: Identifier, usage: Usage, isTypeNode: boolean) {
         const symbolId = recordUsagebySymbol(n, usage, isTypeNode);
         if (symbolId) {
@@ -2032,6 +2154,13 @@ function collectReadsAndWrites(
         }
     }
 
+    /**
+     * Records the usage of a symbol in a given range.
+     * @param {Identifier} identifier - The identifier of the symbol being used.
+     * @param {Usage} usage - The type of usage (read or write).
+     * @param {boolean} isTypeName - Indicates if the symbol is a type name.
+     * @returns {string | undefined} - The ID of the symbol if it was successfully recorded, undefined otherwise.
+     */
     function recordUsagebySymbol(identifier: Identifier, usage: Usage, isTypeName: boolean) {
         const symbol = getSymbolReferencedByIdentifier(identifier);
         if (!symbol) {
@@ -2111,6 +2240,10 @@ function collectReadsAndWrites(
         return symbolId;
     }
 
+    /**
+     * Checks if a given node is used in the extracted range and adds it to the list of exposed variable declarations if it is a variable declaration. Recurses through the node's children to check for more declarations.
+     * @param {Node} node - The node to check for used declarations.
+     */
     function checkForUsedDeclarations(node: Node) {
         // If this node is entirely within the original extraction range, we don't need to do anything.
         if (node === targetRange.range || (isReadonlyArray(targetRange.range) && targetRange.range.indexOf(node as Statement) >= 0)) {
@@ -2153,6 +2286,13 @@ function collectReadsAndWrites(
             : checker.getSymbolAtLocation(identifier);
     }
 
+    /**
+     * Tries to replace a symbol with a qualified name or property access expression.
+     * @param symbol - The symbol to replace.
+     * @param scopeDecl - The scope declaration node.
+     * @param isTypeNode - Whether the node is a type node.
+     * @returns A PropertyAccessExpression, EntityName, or undefined.
+     */
     function tryReplaceWithQualifiedNameOrPropertyAccess(symbol: Symbol | undefined, scopeDecl: Node, isTypeNode: boolean): PropertyAccessExpression | EntityName | undefined {
         if (!symbol) {
             return undefined;
@@ -2176,11 +2316,13 @@ function getExtractableParent(node: Node | undefined): Node | undefined {
 }
 
 /**
- * Computes whether or not a node represents an expression in a position where it could
- * be extracted.
- * The isExpression() in utilities.ts returns some false positives we need to handle,
- * such as `import x from 'y'` -- the 'y' is a StringLiteral but is *not* an expression
- * in the sense of something that you could extract on
+ * Determines whether a given node represents an expression that can be extracted.
+ *
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node represents an extractable expression, false otherwise.
+ *
+ * @remarks
+ * This function handles false positives returned by the isExpression() function in utilities.ts, such as StringLiterals that are not extractable expressions.
  */
 function isExtractableExpression(node: Node): boolean {
     const { parent } = node;
@@ -2207,6 +2349,11 @@ function isExtractableExpression(node: Node): boolean {
     return true;
 }
 
+/**
+ * Determines if a given node is a block-like node.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is block-like, false otherwise.
+ */
 function isBlockLike(node: Node): node is BlockLike {
     switch (node.kind) {
         case SyntaxKind.Block:

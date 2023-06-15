@@ -167,9 +167,23 @@ function isPossibleCallHierarchyDeclaration(node: Node) {
 }
 
 /**
- * Indicates whether a node is a valid a call hierarchy declaration.
+ * Determines whether a given node is a valid call hierarchy declaration.
  *
- * See `resolveCallHierarchyDeclaration` for the specific rules.
+ * @param {Node} node - The node to check.
+ * @returns {boolean} - True if the node is a valid call hierarchy declaration, false otherwise.
+ *
+ * A node is considered a valid call hierarchy declaration if it meets one of the following criteria:
+ * - It is a source file.
+ * - It is a module declaration with an identifier name.
+ * - It is a function declaration.
+ * - It is a class declaration.
+ * - It is a static block declaration within a class.
+ * - It is a method declaration.
+ * - It is a method signature.
+ * - It is a getter accessor declaration.
+ * - It is a setter accessor declaration.
+ * - It is a named expression.
+ * - It is a const named expression.
  */
 function isValidCallHierarchyDeclaration(node: Node): node is CallHierarchyDeclaration {
     return isSourceFile(node)
@@ -203,7 +217,12 @@ function getSymbolOfCallHierarchyDeclaration(typeChecker: TypeChecker, node: Exc
     return location && typeChecker.getSymbolAtLocation(location);
 }
 
-/** Gets the text and range for the name of a call hierarchy declaration. */
+/**
+ * Gets the text and range for the name of a call hierarchy declaration.
+ * @param program - The TypeScript program.
+ * @param node - The call hierarchy declaration node.
+ * @returns An object containing the text, start position, and end position of the declaration name.
+ */
 function getCallHierarchyItemName(program: Program, node: CallHierarchyDeclaration): { text: string, pos: number, end: number } {
     if (isSourceFile(node)) {
         return { text: node.fileName, pos: 0, end: 0 };
@@ -251,6 +270,11 @@ function getCallHierarchyItemName(program: Program, node: CallHierarchyDeclarati
     return { text, pos: declName.getStart(), end: declName.getEnd() };
 }
 
+/**
+ * Returns the name of the container for a given CallHierarchyDeclaration node.
+ * @param node The CallHierarchyDeclaration node to get the container name for.
+ * @returns The name of the container as a string, or undefined if not found.
+ */
 function getCallHierarchItemContainerName(node: CallHierarchyDeclaration): string | undefined {
     if (isConstNamedExpression(node)) {
         if (isModuleBlock(node.parent.parent.parent.parent) && isIdentifier(node.parent.parent.parent.parent.parent.name)) {
@@ -279,6 +303,12 @@ function getCallHierarchItemContainerName(node: CallHierarchyDeclaration): strin
 /** Finds the implementation of a function-like declaration, if one exists. */
 function findImplementation(typeChecker: TypeChecker, node: Extract<CallHierarchyDeclaration, FunctionLikeDeclaration>): Extract<CallHierarchyDeclaration, FunctionLikeDeclaration> | undefined;
 function findImplementation(typeChecker: TypeChecker, node: FunctionLikeDeclaration): FunctionLikeDeclaration | undefined;
+/**
+ * Finds the implementation of a given FunctionLikeDeclaration node.
+ * @param {TypeChecker} typeChecker - The TypeChecker object.
+ * @param {FunctionLikeDeclaration} node - The FunctionLikeDeclaration node to find the implementation of.
+ * @returns {FunctionLikeDeclaration | undefined} - The implementation of the given node, or undefined if not found.
+ */
 function findImplementation(typeChecker: TypeChecker, node: FunctionLikeDeclaration): FunctionLikeDeclaration | undefined {
     if (node.body) {
         return node;
@@ -296,6 +326,12 @@ function findImplementation(typeChecker: TypeChecker, node: FunctionLikeDeclarat
     return node;
 }
 
+/**
+ * Finds all initial declarations of a call hierarchy declaration.
+ * @param {TypeChecker} typeChecker - The type checker to use.
+ * @param {Exclude<CallHierarchyDeclaration, ClassStaticBlockDeclaration>} node - The call hierarchy declaration to search for initial declarations.
+ * @returns {CallHierarchyDeclaration[] | undefined} - An array of initial declarations or undefined if none found.
+ */
 function findAllInitialDeclarations(typeChecker: TypeChecker, node: Exclude<CallHierarchyDeclaration, ClassStaticBlockDeclaration>) {
     const symbol = getSymbolOfCallHierarchyDeclaration(typeChecker, node);
     let declarations: CallHierarchyDeclaration[] | undefined;
@@ -317,7 +353,12 @@ function findAllInitialDeclarations(typeChecker: TypeChecker, node: Exclude<Call
     return declarations;
 }
 
-/** Find the implementation or the first declaration for a call hierarchy declaration. */
+/**
+ * Finds the implementation or the first declaration for a call hierarchy declaration.
+ * @param {TypeChecker} typeChecker - The type checker to use.
+ * @param {CallHierarchyDeclaration} node - The call hierarchy declaration to search for.
+ * @returns {CallHierarchyDeclaration | CallHierarchyDeclaration[]} - The implementation or the first declaration found.
+ */
 function findImplementationOrAllInitialDeclarations(typeChecker: TypeChecker, node: CallHierarchyDeclaration): CallHierarchyDeclaration | CallHierarchyDeclaration[] {
     if (isClassStaticBlockDeclaration(node)) {
         return node;
@@ -331,7 +372,11 @@ function findImplementationOrAllInitialDeclarations(typeChecker: TypeChecker, no
 }
 
 /**
- * Resolves the call hierarchy declaration for a node.
+ * Resolves the call hierarchy declaration for a given node in a TypeScript program.
+ *
+ * @param program - The TypeScript program to analyze.
+ * @param location - The node for which to resolve the call hierarchy declaration.
+ * @returns The call hierarchy declaration or declarations for the given node, or undefined if none can be found.
  *
  * @internal
  */
@@ -406,8 +451,10 @@ export function resolveCallHierarchyDeclaration(program: Program, location: Node
 
 /**
  * Creates a `CallHierarchyItem` for a call hierarchy declaration.
- *
  * @internal
+ * @param {Program} program - The program containing the call hierarchy declaration.
+ * @param {CallHierarchyDeclaration} node - The call hierarchy declaration node.
+ * @returns {CallHierarchyItem} The created call hierarchy item.
  */
 export function createCallHierarchyItem(program: Program, node: CallHierarchyDeclaration): CallHierarchyItem {
     const sourceFile = node.getSourceFile();
@@ -429,6 +476,11 @@ interface CallSite {
     range: TextRange;
 }
 
+/**
+ * Converts a FindAllReferences.Entry to a CallSite object if the entry's kind is Node and the node satisfies certain conditions.
+ * @param {FindAllReferences.Entry} entry - The entry to convert.
+ * @returns {CallSite | undefined} - The converted CallSite object or undefined if the entry does not meet the conditions.
+ */
 function convertEntryToCallSite(entry: FindAllReferences.Entry): CallSite | undefined {
     if (entry.kind === FindAllReferences.EntryKind.Node) {
         const { node } = entry;
@@ -472,7 +524,18 @@ export function getIncomingCalls(program: Program, declaration: CallHierarchyDec
     return calls ? group(calls, getCallSiteGroupKey, entries => convertCallSiteGroupToIncomingCall(program, entries)) : [];
 }
 
+/**
+ * Returns a function that collects call sites for a given program and array of call sites.
+ * @param {Program} program - The program to analyze.
+ * @param {CallSite[]} callSites - The array of call sites to populate.
+ * @returns {(node: Node | undefined) => void} - A function that collects call sites.
+ */
 function createCallSiteCollector(program: Program, callSites: CallSite[]): (node: Node | undefined) => void {
+    /**
+     * Records the call site of a given node.
+     * @param node - The node to record the call site for. Must be one of CallExpression, NewExpression, TaggedTemplateExpression, PropertyAccessExpression, ElementAccessExpression, Decorator, JsxOpeningLikeElement, or ClassStaticBlockDeclaration.
+     * @remarks This function resolves the declaration of the given node and adds it to the callSites array along with the range of the node.
+     */
     function recordCallSite(node: CallExpression | NewExpression | TaggedTemplateExpression | PropertyAccessExpression | ElementAccessExpression | Decorator | JsxOpeningLikeElement | ClassStaticBlockDeclaration) {
         const target =
             isTaggedTemplateExpression(node) ? node.tag :
@@ -494,6 +557,10 @@ function createCallSiteCollector(program: Program, callSites: CallSite[]): (node
         }
     }
 
+    /**
+     * Recursively collects call sites in a given AST node, excluding certain types of nodes.
+     * @param node - The AST node to collect call sites from.
+     */
     function collect(node: Node | undefined) {
         if (!node) return;
         if (node.flags & NodeFlags.Ambient) {
@@ -608,6 +675,11 @@ function collectCallSitesOfClassStaticBlockDeclaration(node: ClassStaticBlockDec
     collect(node.body);
 }
 
+/**
+ * Collects call sites of a class-like declaration node.
+ * @param {ClassLikeDeclaration} node - The class-like declaration node to collect call sites from.
+ * @param {(node: Node | undefined) => void} collect - The function to collect call sites.
+ */
 function collectCallSitesOfClassLikeDeclaration(node: ClassLikeDeclaration, collect: (node: Node | undefined) => void) {
     forEach(node.modifiers, collect);
     const heritage = getClassExtendsHeritageElement(node);
@@ -631,6 +703,12 @@ function collectCallSitesOfClassLikeDeclaration(node: ClassLikeDeclaration, coll
     }
 }
 
+/**
+ * Collects all call sites of a given CallHierarchyDeclaration node in a program.
+ * @param program - The program containing the node.
+ * @param node - The CallHierarchyDeclaration node to collect call sites from.
+ * @returns An array of CallSite objects representing the call sites found.
+ */
 function collectCallSites(program: Program, node: CallHierarchyDeclaration) {
     const callSites: CallSite[] = [];
     const collect = createCallSiteCollector(program, callSites);

@@ -48,6 +48,12 @@ interface Info {
     name: string;
 }
 
+/**
+ * Retrieves information about a token at a given position in a source file.
+ * @param {SourceFile} sourceFile - The source file to retrieve information from.
+ * @param {number} pos - The position of the token to retrieve information about.
+ * @returns {Info | undefined} - The information about the token, or undefined if the token is not an identifier.
+ */
 function getInfo(sourceFile: SourceFile, pos: number): Info | undefined {
     const token = getTokenAtPosition(sourceFile, pos);
     if (isIdentifier(token)) {

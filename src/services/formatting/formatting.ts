@@ -125,6 +125,9 @@ const enum Constants {
  * However if some format rule adds new line between '}' and 'let' 'let' will become
  * the first token in line so it should be indented
  */
+/**
+ * Interface for a class that provides dynamic indentation for TypeScript code.
+ */
 interface DynamicIndentation {
     getIndentationForToken(tokenLine: number, tokenKind: SyntaxKind, container: Node, suppressDelta: boolean): number;
     getIndentationForComment(owningToken: SyntaxKind, tokenIndentation: number, container: Node): number;
@@ -157,7 +160,13 @@ interface DynamicIndentation {
     recomputeIndentation(lineAddedByFormatting: boolean, parent: Node): void;
 }
 
-/** @internal */
+/**
+ * Formats the text after the user presses the enter key.
+ * @param position - The position of the cursor after the enter key is pressed.
+ * @param sourceFile - The source file being edited.
+ * @param formatContext - The context for formatting.
+ * @returns An array of text changes to be applied to the source file.
+ */
 export function formatOnEnter(position: number, sourceFile: SourceFile, formatContext: FormatContext): TextChange[] {
     const line = sourceFile.getLineAndCharacterOfPosition(position).line;
     if (line === 0) {
@@ -193,7 +202,14 @@ export function formatOnSemicolon(position: number, sourceFile: SourceFile, form
     return formatNodeLines(findOutermostNodeWithinListLevel(semicolon), sourceFile, formatContext, FormattingRequestKind.FormatOnSemicolon);
 }
 
-/** @internal */
+/**
+ * Formats the code when an opening curly brace is typed.
+ * @param position The position of the opening curly brace.
+ * @param sourceFile The source file to format.
+ * @param formatContext The format context.
+ * @returns An array of text changes to apply to the source file.
+ * @internal
+ */
 export function formatOnOpeningCurly(position: number, sourceFile: SourceFile, formatContext: FormatContext): TextChange[] {
     const openingCurly = findImmediatelyPrecedingTokenOfKind(position, SyntaxKind.OpenBraceToken, sourceFile);
     if (!openingCurly) {
@@ -262,15 +278,9 @@ function findImmediatelyPrecedingTokenOfKind(end: number, expectedTokenKind: Syn
 /**
  * Finds the highest node enclosing `node` at the same list level as `node`
  * and whose end does not exceed `node.end`.
- *
- * Consider typing the following
- * ```
- * let x = 1;
- * while (true) {
- * }
- * ```
- * Upon typing the closing curly, we want to format the entire `while`-statement, but not the preceding
- * variable declaration.
+ * @function
+ * @param {Node | undefined} node - The node to find the outermost enclosing node for.
+ * @returns {Node | undefined} - The outermost enclosing node or undefined if none found.
  */
 function findOutermostNodeWithinListLevel(node: Node | undefined) {
     let current = node;
@@ -286,6 +296,12 @@ function findOutermostNodeWithinListLevel(node: Node | undefined) {
 
 // Returns true if node is a element in some list in parent
 // i.e. parent is class declaration with the list of members and node is one of members.
+/**
+ * Determines if a given node is an element of a list within a parent node.
+ * @param {Node} parent - The parent node to check.
+ * @param {Node} node - The node to check if it is an element of the list.
+ * @returns {boolean} - Returns true if the node is an element of the list, otherwise false.
+ */
 function isListElement(parent: Node, node: Node): boolean {
     switch (parent.kind) {
         case SyntaxKind.ClassDeclaration:
@@ -305,10 +321,21 @@ function isListElement(parent: Node, node: Node): boolean {
     return false;
 }
 
-/** find node that fully contains given text range */
+/**
+ * Finds the node that fully contains the given text range.
+ *
+ * @param {TextRange} range - The text range to search for.
+ * @param {SourceFile} sourceFile - The source file to search in.
+ * @returns {Node} The node that fully contains the given text range.
+ */
 function findEnclosingNode(range: TextRange, sourceFile: SourceFile): Node {
     return find(sourceFile);
 
+    /**
+     * Recursively searches for a Node within a given range.
+     * @param {Node} n - The starting Node to search from.
+     * @returns {Node} - The Node found within the given range, or the original Node if none found.
+     */
     function find(n: Node): Node {
         const candidate = forEachChild(n, c => startEndContainsRange(c.getStart(sourceFile), c.end, range) && c);
         if (candidate) {
@@ -322,9 +349,11 @@ function findEnclosingNode(range: TextRange, sourceFile: SourceFile): Node {
     }
 }
 
-/** formatting is not applied to ranges that contain parse errors.
- * This function will return a predicate that for a given text range will tell
- * if there are any parse errors that overlap with the range.
+/**
+ * Returns a predicate function that takes a text range and determines if there are any parse errors that overlap with the range.
+ * @param errors - An array of Diagnostic objects representing parse errors.
+ * @param originalRange - The original text range to check for errors.
+ * @returns A function that takes a TextRange object and returns a boolean indicating if there are any parse errors that overlap with the range.
  */
 function prepareRangeContainsErrorFunction(errors: readonly Diagnostic[], originalRange: TextRange): (r: TextRange) => boolean {
     if (!errors.length) {
@@ -372,9 +401,11 @@ function prepareRangeContainsErrorFunction(errors: readonly Diagnostic[], origin
 }
 
 /**
- * Start of the original range might fall inside the comment - scanner will not yield appropriate results
- * This function will look for token that is located before the start of target range
- * and return its end as start position for the scanner.
+ * Returns the start position for a scanner given an enclosing node, original range, and source file.
+ * @param enclosingNode - The node that encloses the original range.
+ * @param originalRange - The original range to scan.
+ * @param sourceFile - The source file to scan.
+ * @returns The start position for the scanner.
  */
 function getScanStartPosition(enclosingNode: Node, originalRange: TextRange, sourceFile: SourceFile): number {
     const start = enclosingNode.getStart(sourceFile);
@@ -412,6 +443,13 @@ function getScanStartPosition(enclosingNode: Node, originalRange: TextRange, sou
  * if parent is on the different line - its delta was already contributed
  * to the initial indentation.
  */
+/**
+ * Calculates the delta between the current node and its parent node in terms of indentation.
+ * @param {Node} n - The current node.
+ * @param {FormatCodeSettings} options - The formatting options.
+ * @param {SourceFile} sourceFile - The source file.
+ * @returns {number} The delta between the current node and its parent node in terms of indentation.
+ */
 function getOwnOrInheritedDelta(n: Node, options: FormatCodeSettings, sourceFile: SourceFile): number {
     let previousLine = Constants.Unknown;
     let child: Node | undefined;
@@ -432,7 +470,17 @@ function getOwnOrInheritedDelta(n: Node, options: FormatCodeSettings, sourceFile
     return 0;
 }
 
-/** @internal */
+/**
+ * Formats a given node based on indentation and formatting options.
+ * @param {Node} node - The node to format.
+ * @param {SourceFileLike} sourceFileLike - The source file containing the node.
+ * @param {LanguageVariant} languageVariant - The language variant of the source file.
+ * @param {number} initialIndentation - The initial indentation level.
+ * @param {number} delta - The change in indentation level.
+ * @param {FormatContext} formatContext - The formatting context.
+ * @returns {TextChange[]} An array of text changes to apply to the source file.
+ * @internal
+ */
 export function formatNodeGivenIndentation(node: Node, sourceFileLike: SourceFileLike, languageVariant: LanguageVariant, initialIndentation: number, delta: number, formatContext: FormatContext): TextChange[] {
     const range = { pos: node.pos, end: node.end };
     return getFormattingScanner(sourceFileLike.text, languageVariant, range.pos, range.end, scanner => formatSpanWorker(
@@ -447,6 +495,14 @@ export function formatNodeGivenIndentation(node: Node, sourceFileLike: SourceFil
         sourceFileLike));
 }
 
+/**
+ * Formats the lines of a given node in a source file using a specified format context and request kind.
+ * @param {Node | undefined} node - The node to format.
+ * @param {SourceFile} sourceFile - The source file containing the node.
+ * @param {FormatContext} formatContext - The format context to use for formatting.
+ * @param {FormattingRequestKind} requestKind - The kind of formatting request.
+ * @returns {TextChange[]} An array of text changes representing the formatted lines of the node.
+ */
 function formatNodeLines(node: Node | undefined, sourceFile: SourceFile, formatContext: FormatContext, requestKind: FormattingRequestKind): TextChange[] {
     if (!node) {
         return [];
@@ -460,6 +516,14 @@ function formatNodeLines(node: Node | undefined, sourceFile: SourceFile, formatC
     return formatSpan(span, sourceFile, formatContext, requestKind);
 }
 
+/**
+ * Formats a span of text in a source file according to specified formatting options.
+ * @param originalRange The range of text to format.
+ * @param sourceFile The source file containing the text to format.
+ * @param formatContext The context for formatting.
+ * @param requestKind The kind of formatting request.
+ * @returns An array of text changes to apply to the source file.
+ */
 function formatSpan(originalRange: TextRange, sourceFile: SourceFile, formatContext: FormatContext, requestKind: FormattingRequestKind): TextChange[] {
     // find the smallest node that fully wraps the range and compute the initial indentation for the node
     const enclosingNode = findEnclosingNode(originalRange, sourceFile);
@@ -578,12 +642,14 @@ function formatSpanWorker(
 
     // local functions
 
-    /** Tries to compute the indentation for a list element.
-     * If list element is not in range then
-     * function will pick its actual indentation
-     * so it can be pushed downstream as inherited indentation.
-     * If list element is in the range - its indentation will be equal
-     * to inherited indentation from its predecessors.
+    /**
+     * Tries to compute the indentation for a list element.
+     * @param {number} startPos - The starting position of the list element.
+     * @param {number} endPos - The ending position of the list element.
+     * @param {number} parentStartLine - The starting line of the parent element.
+     * @param {TextRange} range - The range of the list element.
+     * @param {number} inheritedIndentation - The inherited indentation from the predecessors.
+     * @returns {number} - The computed indentation for the list element.
      */
     function tryComputeIndentationForListItem(startPos: number,
         endPos: number,
@@ -654,6 +720,11 @@ function formatSpanWorker(
         }
     }
 
+    /**
+     * Returns the first non-decorator token of a given node.
+     * @param {Node} node - The node to get the first non-decorator token of.
+     * @returns {SyntaxKind} - The first non-decorator token of the given node.
+     */
     function getFirstNonDecoratorTokenOfNode(node: Node) {
         if (canHaveModifiers(node)) {
             const modifier = find(node.modifiers, isModifier, findIndex(node.modifiers, isDecorator));
@@ -1072,6 +1143,15 @@ function formatSpanWorker(
         }
     }
 
+    /**
+     * Processes a given range of text and returns a LineAction enum value.
+     * @param range - The range of text to process.
+     * @param rangeStart - The starting line and character position of the range.
+     * @param parent - The parent node of the range.
+     * @param contextNode - The context node of the range.
+     * @param dynamicIndentation - The dynamic indentation of the range.
+     * @returns A LineAction enum value.
+     */
     function processRange(range: TextRangeWithKind,
         rangeStart: LineAndCharacter,
         parent: Node,
@@ -1100,6 +1180,18 @@ function formatSpanWorker(
         return lineAction;
     }
 
+    /**
+     * Applies formatting rules to a pair of text ranges and returns the corresponding line action.
+     * @param currentItem The current text range with kind.
+     * @param currentStartLine The start line of the current text range.
+     * @param currentParent The parent node of the current text range.
+     * @param previousItem The previous text range with kind.
+     * @param previousStartLine The start line of the previous text range.
+     * @param previousParent The parent node of the previous text range.
+     * @param contextNode The context node for the formatting operation.
+     * @param dynamicIndentation The dynamic indentation object or undefined.
+     * @returns The line action for the formatting operation.
+     */
     function processPair(currentItem: TextRangeWithKind,
         currentStartLine: number,
         currentParent: Node,
@@ -1158,6 +1250,15 @@ function formatSpanWorker(
         return lineAction;
     }
 
+    /**
+     * Inserts indentation at a specified position in a source file.
+     * @param pos - The position in the source file where the indentation should be inserted.
+     * @param indentation - The number of spaces to use for the indentation.
+     * @param lineAdded - A boolean indicating whether a new line was added before the token by the formatting rules.
+     * If true, the indentation string is inserted at the very beginning of the token.
+     * If false, the indentation string is inserted at the start of the line containing the token.
+     * @remarks This function is used by the TypeScript compiler to format code.
+     */
     function insertIndentation(pos: number, indentation: number, lineAdded: boolean | undefined): void {
         const indentationString = getIndentationString(indentation, options);
         if (lineAdded) {
@@ -1174,6 +1275,12 @@ function formatSpanWorker(
         }
     }
 
+    /**
+     * Calculates the column number of a given character in a line, based on the start position and the character's position in the line.
+     * @param {number} startLinePosition - The starting position of the line.
+     * @param {number} characterInLine - The position of the character in the line.
+     * @returns {number} - The column number of the character.
+     */
     function characterToColumn(startLinePosition: number, characterInLine: number): number {
         let column = 0;
         for (let i = 0; i < characterInLine; i++) {
@@ -1191,6 +1298,13 @@ function formatSpanWorker(
         return indentationString !== sourceFile.text.substr(startLinePosition, indentationString.length);
     }
 
+    /**
+     * Indents a multiline comment by a specified amount of spaces.
+     * @param commentRange The range of the comment to be indented.
+     * @param indentation The number of spaces to indent the comment by.
+     * @param firstLineIsIndented Indicates whether the first line of the comment is already indented.
+     * @param indentFinalLine Indicates whether the final line of the comment should be indented.
+     */
     function indentMultilineComment(commentRange: TextRange, indentation: number, firstLineIsIndented: boolean, indentFinalLine = true) {
         // split comment in lines
         let startLine = sourceFile.getLineAndCharacterOfPosition(commentRange.pos).line;
@@ -1247,6 +1361,12 @@ function formatSpanWorker(
         }
     }
 
+    /**
+     * Trims trailing whitespaces for lines within a given range, excluding comments and template expressions.
+     * @param line1 The starting line number.
+     * @param line2 The ending line number.
+     * @param range Optional TextRangeWithKind object to exclude comments and template expressions.
+     */
     function trimTrailingWhitespacesForLines(line1: number, line2: number, range?: TextRangeWithKind) {
         for (let line = line1; line < line2; line++) {
             const lineStartPosition = getStartPositionOfLine(line, sourceFile);
@@ -1266,8 +1386,10 @@ function formatSpanWorker(
     }
 
     /**
+     * Returns the position of the first non-whitespace character after a range of whitespace characters.
      * @param start The position of the first character in range
      * @param end The position of the last character in range
+     * @returns The position of the first non-whitespace character after the range, or -1 if there is no trailing whitespace
      */
     function getTrailingWhitespaceStartPosition(start: number, end: number) {
         let pos = end;
@@ -1281,8 +1403,13 @@ function formatSpanWorker(
     }
 
     /**
-     * Trimming will be done for lines after the previous range.
-     * Exclude comments as they had been previously processed.
+     * Trims trailing whitespaces for the remaining range of text after the previous range.
+     *
+     * @param trivias - An array of TextRangeWithKind<SyntaxKind> objects representing the range of text to trim.
+     *
+     * @remarks This function excludes comments as they had been previously processed.
+     *
+     * @returns void
      */
     function trimTrailingWhitespacesForRemainingRange(trivias: TextRangeWithKind<SyntaxKind>[]) {
         let startPos = previousRange ? previousRange.end : originalRange.pos;
@@ -1326,6 +1453,15 @@ function formatSpanWorker(
         }
     }
 
+    /**
+     * Applies edits to a given rule based on the previous and current text ranges and start lines.
+     * @param rule - The rule to apply edits to.
+     * @param previousRange - The previous text range with kind.
+     * @param previousStartLine - The start line of the previous text range.
+     * @param currentRange - The current text range with kind.
+     * @param currentStartLine - The start line of the current text range.
+     * @returns The line action to take.
+     */
     function applyRuleEdits(rule: Rule,
         previousRange: TextRangeWithKind,
         previousStartLine: number,
@@ -1384,8 +1520,21 @@ function formatSpanWorker(
 const enum LineAction { None, LineAdded, LineRemoved }
 
 /**
- *
- * @internal
+ * Returns the range of the enclosing comment for a given position in a source file.
+ * @param sourceFile - The source file to search in.
+ * @param position - The position to search for.
+ * @param precedingToken - The preceding token to search for.
+ * @param tokenAtPosition - The token at the given position.
+ * @returns The range of the enclosing comment or undefined if not found.
+ * @remarks
+ * Between two consecutive tokens, all comments are either trailing on the former or leading on the latter (and none are in both lists).
+ * The end marker of a single-line comment does not include the newline character.
+ * With caret at `^`, in the following case, we are inside a comment (^ denotes the cursor position):
+ * // asdf   ^\n
+ * But for closed multi-line comments, we don't want to be inside the comment in the following case:
+ * /* asdf * /^
+ * However, unterminated multi-line comments *do* contain their end.
+ * Internally, we represent the end of the comment at the newline and closing '/', respectively.
  */
 export function getRangeOfEnclosingComment(
     sourceFile: SourceFile,
@@ -1425,6 +1574,12 @@ export function getRangeOfEnclosingComment(
         position === range.end && (range.kind === SyntaxKind.SingleLineCommentTrivia || position === sourceFile.getFullWidth()));
 }
 
+/**
+ * Returns the appropriate open token for a given node and list of nodes.
+ * @param {Node} node - The node to check for matching list.
+ * @param {readonly Node[]} list - The list of nodes to match against.
+ * @returns {SyntaxKind} The appropriate open token for the given node and list.
+ */
 function getOpenTokenForList(node: Node, list: readonly Node[]) {
     switch (node.kind) {
         case SyntaxKind.Constructor:
@@ -1479,6 +1634,11 @@ function getOpenTokenForList(node: Node, list: readonly Node[]) {
     return SyntaxKind.Unknown;
 }
 
+/**
+ * Returns the corresponding closing token for a given opening token.
+ * @param {SyntaxKind} kind - The opening token to find the corresponding closing token for.
+ * @returns {SyntaxKind} - The corresponding closing token.
+ */
 function getCloseTokenForOpenToken(kind: SyntaxKind) {
     switch (kind) {
         case SyntaxKind.OpenParenToken:
@@ -1496,7 +1656,13 @@ let internedSizes: { tabSize: number; indentSize: number; };
 let internedTabsIndentation: string[] | undefined;
 let internedSpacesIndentation: string[] | undefined;
 
-/** @internal */
+/**
+ * Returns a string of spaces or tabs for indentation based on the given options.
+ * @param {number} indentation - The number of spaces or tabs to indent by.
+ * @param {EditorSettings} options - The options for the editor.
+ * @returns {string} - The string of spaces or tabs for indentation.
+ * @remarks - This function is intended for internal use only.
+ */
 export function getIndentationString(indentation: number, options: EditorSettings): string {
     // reset interned strings if FormatCodeOptions were changed
     const resetInternedStrings =

@@ -123,6 +123,16 @@ export function organizeImports(
 
     return changeTracker.getChanges();
 
+    /**
+     * Organizes import declarations in a TypeScript source file.
+     *
+     * @template T - A type that extends either ImportDeclaration or ExportDeclaration.
+     * @param {readonly T[]} oldImportDecls - An array of old import declarations to be organized.
+     * @param {(group: readonly T[]) => readonly T[]} coalesce - A function that takes a group of import declarations and returns a new group of import declarations.
+     * @returns {void} - This function does not return anything.
+     *
+     * @remarks - This function sorts and groups import declarations based on their module specifiers. It also handles header comments and trailing comments in the source file.
+     */
     function organizeImportsWorker<T extends ImportDeclaration | ExportDeclaration>(
         oldImportDecls: readonly T[],
         coalesce: (group: readonly T[]) => readonly T[],
@@ -174,6 +184,12 @@ export function organizeImports(
     }
 }
 
+/**
+ * Groups an array of ImportDeclaration or ExportDeclaration objects into subarrays based on contiguous newlines in the source file.
+ * @param sourceFile - The SourceFile object representing the source code file.
+ * @param decls - An array of ImportDeclaration or ExportDeclaration objects to group.
+ * @returns An array of arrays of ImportDeclaration or ExportDeclaration objects, where each subarray contains declarations separated by contiguous newlines.
+ */
 function groupByNewlineContiguous<T extends ImportDeclaration | ExportDeclaration>(sourceFile: SourceFile, decls: T[]): T[][] {
     const scanner = createScanner(sourceFile.languageVersion, /*skipTrivia*/ false, sourceFile.languageVariant);
     const group: T[][] = [];
@@ -195,6 +211,13 @@ function groupByNewlineContiguous<T extends ImportDeclaration | ExportDeclaratio
 
 // a new group is created if an import/export includes at least two new line
 // new line from multi-line comment doesn't count
+/**
+ * Determines if the given ImportDeclaration or ExportDeclaration is the start of a new group.
+ * @param {SourceFile} sourceFile - The source file containing the declaration.
+ * @param {ImportDeclaration | ExportDeclaration} decl - The declaration to check.
+ * @param {Scanner} scanner - The scanner to use for tokenizing the declaration.
+ * @returns {boolean} - True if the declaration is the start of a new group, false otherwise.
+ */
 function isNewGroup(sourceFile: SourceFile, decl: ImportDeclaration | ExportDeclaration, scanner: Scanner) {
     const startPos = decl.getFullStart();
     const endPos = decl.getStart();
@@ -216,6 +239,13 @@ function isNewGroup(sourceFile: SourceFile, decl: ImportDeclaration | ExportDecl
     return false;
 }
 
+/**
+ * Removes unused imports from an array of ImportDeclarations based on their usage in a SourceFile.
+ * @param oldImports - An array of ImportDeclarations to be filtered.
+ * @param sourceFile - The SourceFile in which the imports are used.
+ * @param program - The Program used to type-check the SourceFile.
+ * @returns An array of ImportDeclarations that are used in the SourceFile.
+ */
 function removeUnusedImports(oldImports: readonly ImportDeclaration[], sourceFile: SourceFile, program: Program) {
     const typeChecker = program.getTypeChecker();
     const compilerOptions = program.getCompilerOptions();
@@ -490,6 +520,12 @@ export function coalesceExports(exportGroup: readonly ExportDeclaration[], ignor
     return coalesceExportsWorker(exportGroup, comparer);
 }
 
+/**
+ * Coalesces an array of ExportDeclaration objects into a smaller array of ExportDeclaration objects by combining exports with the same name.
+ * @param {readonly ExportDeclaration[]} exportGroup - The array of ExportDeclaration objects to coalesce.
+ * @param {Comparer<string>} comparer - The function used to compare export names.
+ * @returns {ExportDeclaration[]} - The coalesced array of ExportDeclaration objects.
+ */
 function coalesceExportsWorker(exportGroup: readonly ExportDeclaration[], comparer: Comparer<string>) {
     if (exportGroup.length === 0) {
         return exportGroup;
@@ -534,6 +570,14 @@ function coalesceExportsWorker(exportGroup: readonly ExportDeclaration[], compar
      * may lack parent pointers.  The desired parts can easily be recovered based on the
      * categorization.
      */
+    /**
+     * Returns an object containing categorized exports from an array of ExportDeclaration objects.
+     * @param {readonly ExportDeclaration[]} exportGroup - An array of ExportDeclaration objects.
+     * @returns {{exportWithoutClause: ExportDeclaration | undefined, namedExports: ExportDeclaration[], typeOnlyExports: ExportDeclaration[]}} - An object containing categorized exports.
+     * The exportWithoutClause property contains the first ExportDeclaration object without an exportClause property, or undefined if none exist.
+     * The namedExports property contains an array of ExportDeclaration objects with an exportClause property.
+     * The typeOnlyExports property contains an array of ExportDeclaration objects with the isTypeOnly property set to true.
+     */
     function getCategorizedExports(exportGroup: readonly ExportDeclaration[]) {
         let exportWithoutClause: ExportDeclaration | undefined;
         const namedExports: ExportDeclaration[] = [];
@@ -561,6 +605,13 @@ function coalesceExportsWorker(exportGroup: readonly ExportDeclaration[], compar
     }
 }
 
+/**
+ * Updates an import declaration and clause.
+ * @param importDeclaration - The import declaration to update.
+ * @param name - The identifier name to update the import clause with.
+ * @param namedBindings - The named import bindings to update the import clause with.
+ * @returns The updated import declaration.
+ */
 function updateImportDeclarationAndClause(
     importDeclaration: ImportDeclaration,
     name: Identifier | undefined,
@@ -602,6 +653,11 @@ function compareModuleSpecifiersWorker(m1: Expression | undefined, m2: Expressio
         comparer(name1!, name2!);
 }
 
+/**
+ * Returns the module specifier expression of the provided import or require statement.
+ * @param declaration The import or require statement to get the module specifier expression from.
+ * @returns The module specifier expression as an Expression or undefined if not found.
+ */
 function getModuleSpecifierExpression(declaration: AnyImportOrRequireStatement): Expression | undefined {
     switch (declaration.kind) {
         case SyntaxKind.ImportEqualsDeclaration:
@@ -620,6 +676,12 @@ export function detectSorting(sourceFile: SourceFile, preferences: UserPreferenc
         preferences);
 }
 
+/**
+ * Detects the sorting kind of import declarations based on the provided import groups and user preferences.
+ * @param importGroups An array of arrays of ImportDeclaration objects representing import groups.
+ * @param preferences An object of UserPreferences type representing user preferences for sorting.
+ * @returns A SortKind enum value representing the detected sorting kind.
+ */
 function detectSortingWorker(importGroups: ImportDeclaration[][], preferences: UserPreferences): SortKind {
     const collateCaseSensitive = getOrganizeImportsComparer(preferences, /*ignoreCase*/ false);
     const collateCaseInsensitive = getOrganizeImportsComparer(preferences, /*ignoreCase*/ true);

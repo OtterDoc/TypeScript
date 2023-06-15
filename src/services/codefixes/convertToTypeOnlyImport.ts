@@ -88,6 +88,13 @@ function getDeclaration(sourceFile: SourceFile, pos: number) {
 }
 
 
+/**
+ * Determines if an import declaration with a given specifier can be converted to a type-only import.
+ * @param specifier - The ImportSpecifier to check.
+ * @param sourceFile - The SourceFile containing the import declaration.
+ * @param program - The Program containing the type information.
+ * @returns {boolean} - True if the import declaration can be converted to type-only, false otherwise.
+ */
 function canConvertImportDeclarationForSpecifier(specifier: ImportSpecifier, sourceFile: SourceFile, program: Program): boolean {
     if (specifier.parent.parent.name) {
         // An import declaration with a default import and named bindings can't be type-only
@@ -112,6 +119,12 @@ function canConvertImportDeclarationForSpecifier(specifier: ImportSpecifier, sou
     return true;
 }
 
+/**
+ * Updates an import declaration or specifier to be type-only.
+ * @param changes - The text changes to apply the update.
+ * @param sourceFile - The source file containing the import declaration or specifier.
+ * @param declaration - The import declaration or specifier to update.
+ */
 function doChange(changes: textChanges.ChangeTracker, sourceFile: SourceFile, declaration: ImportDeclaration | ImportSpecifier) {
     if (isImportSpecifier(declaration)) {
         changes.replaceNode(sourceFile, declaration, factory.updateImportSpecifier(declaration, /*isTypeOnly*/ true, declaration.propertyName, declaration.name));

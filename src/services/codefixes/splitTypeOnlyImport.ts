@@ -39,6 +39,12 @@ function getImportDeclaration(sourceFile: SourceFile, span: TextSpan) {
     return findAncestor(getTokenAtPosition(sourceFile, span.start), isImportDeclaration);
 }
 
+/**
+ * Updates an import declaration to only import types and inserts a new import declaration for named bindings.
+ * @param changes - The text changes object.
+ * @param importDeclaration - The import declaration to update.
+ * @param context - The code fix context.
+ */
 function splitTypeOnlyImport(changes: textChanges.ChangeTracker, importDeclaration: ImportDeclaration | undefined, context: CodeFixContextBase) {
     if (!importDeclaration) {
         return;

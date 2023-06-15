@@ -61,6 +61,11 @@ registerRefactor(refactorName, {
     getAvailableActions: getRefactorActionsToConvertToOptionalChain,
 });
 
+/**
+ * Returns an array of applicable refactor actions to convert to optional chain expression.
+ * @param {RefactorContext} context - The context object for the refactor.
+ * @returns {readonly ApplicableRefactorInfo[]} - An array of applicable refactor actions.
+ */
 function getRefactorActionsToConvertToOptionalChain(context: RefactorContext): readonly ApplicableRefactorInfo[] {
     const info = getInfo(context, context.triggerReason === "invoked");
     if (!info) return emptyArray;
@@ -124,6 +129,12 @@ function isValidExpressionOrStatement(node: Node): node is ValidExpressionOrStat
     return isValidExpression(node) || isValidStatement(node);
 }
 
+/**
+ * Retrieves information about an optional chain or refactor error.
+ * @param {RefactorContext} context - The context of the refactor.
+ * @param {boolean} [considerEmptySpans=true] - Whether or not to consider empty spans.
+ * @returns {OptionalChainInfo | RefactorErrorInfo | undefined} - The optional chain info, refactor error info, or undefined.
+ */
 function getInfo(context: RefactorContext, considerEmptySpans = true): OptionalChainInfo | RefactorErrorInfo | undefined {
     const { file, program } = context;
     const span = getRefactorContextSpan(context);
@@ -144,6 +155,12 @@ function getInfo(context: RefactorContext, considerEmptySpans = true): OptionalC
     return isConditionalExpression(expression) ? getConditionalInfo(expression, checker) : getBinaryInfo(expression);
 }
 
+/**
+ * Retrieves information about a conditional expression, including the final expression in the chain and any occurrences of the condition.
+ * @param expression The conditional expression to analyze.
+ * @param checker The TypeChecker instance to use for type checking.
+ * @returns An object containing either OptionalChainInfo or RefactorErrorInfo, or undefined if the final expression is nullable.
+ */
 function getConditionalInfo(expression: ConditionalExpression, checker: TypeChecker): OptionalChainInfo | RefactorErrorInfo | undefined {
     const condition = expression.condition;
     const finalExpression = getFinalExpressionInChain(expression.whenTrue);
@@ -163,6 +180,11 @@ function getConditionalInfo(expression: ConditionalExpression, checker: TypeChec
     }
 }
 
+/**
+ * Retrieves information about a binary expression that is either an optional chain or a refactor error.
+ * @param expression The binary expression to retrieve information from.
+ * @returns Either an OptionalChainInfo object, a RefactorErrorInfo object, or undefined.
+ */
 function getBinaryInfo(expression: BinaryExpression): OptionalChainInfo | RefactorErrorInfo | undefined {
     if (expression.operatorToken.kind !== SyntaxKind.AmpersandAmpersandToken) {
         return { error: getLocaleSpecificMessage(Diagnostics.Can_only_convert_logical_AND_access_chains) };
@@ -177,7 +199,10 @@ function getBinaryInfo(expression: BinaryExpression): OptionalChainInfo | Refact
 }
 
 /**
- * Gets a list of property accesses that appear in matchTo and occur in sequence in expression.
+ * Returns an array of Occurrence objects representing property accesses that appear in matchTo and occur in sequence in expression.
+ * @param {Expression} matchTo - The expression to match against.
+ * @param {Expression} expression - The expression to search for matches in.
+ * @returns {Occurrence[] | undefined} - An array of Occurrence objects representing property accesses that appear in matchTo and occur in sequence in expression, or undefined if no matches are found.
  */
 function getOccurrencesInExpression(matchTo: Expression, expression: Expression): Occurrence[] | undefined {
     const occurrences: Occurrence[] = [];
@@ -208,7 +233,10 @@ function getMatchingStart(chain: Expression, subchain: Expression): PropertyAcce
 }
 
 /**
- * Returns true if chain begins with subchain syntactically.
+ * Determines if a given chain of Nodes begins with a specified subchain of Nodes.
+ * @param {Node} chain - The chain of Nodes to search within.
+ * @param {Node} subchain - The subchain of Nodes to search for at the beginning of the chain.
+ * @returns {boolean} - True if the chain begins with the subchain, false otherwise.
  */
 function chainStartsWith(chain: Node, subchain: Node): boolean {
     // skip until we find a matching identifier.
@@ -227,6 +255,13 @@ function chainStartsWith(chain: Node, subchain: Node): boolean {
     return isIdentifier(chain) && isIdentifier(subchain) && chain.getText() === subchain.getText();
 }
 
+/**
+ * Returns the text of a chain node if it is an identifier or a string or numeric literal.
+ * If it is a property access expression, returns the text of the name node.
+ * If it is an element access expression, returns the text of the argument expression.
+ * @param {Node} node - The node to get the text of.
+ * @returns {string | undefined} - The text of the node, or undefined if it is not a valid type.
+ */
 function getTextOfChainNode(node: Node): string | undefined {
     if (isIdentifier(node) || isStringOrNumericLiteralLike(node)) {
         return node.getText();
@@ -267,7 +302,9 @@ function getValidParentNodeOfEmptySpan(node: Node): ValidExpressionOrStatement |
 }
 
 /**
- * Gets an expression of valid extraction type from a valid statement or expression.
+ * Returns a valid expression from a valid statement or expression.
+ * @param {ValidExpressionOrStatement} node - The statement or expression to extract the expression from.
+ * @returns {ValidExpression | undefined} - The extracted expression or undefined if none found.
  */
 function getExpression(node: ValidExpressionOrStatement): ValidExpression | undefined {
     if (isValidExpression(node)) {
@@ -282,10 +319,13 @@ function getExpression(node: ValidExpressionOrStatement): ValidExpression | unde
 }
 
 /**
- * Gets a property access expression which may be nested inside of a binary expression. The final
- * expression in an && chain will occur as the right child of the parent binary expression, unless
- * it is followed by a different binary operator.
- * @param node the right child of a binary expression or a call expression.
+ * Returns the final expression in a chain of property access, element access, and call expressions.
+ * If the input expression is a binary expression, it recursively traverses the left child until it
+ * reaches the final expression in the chain. If the input expression is a property access, element
+ * access, or call expression, it returns that expression. If the input expression is an optional
+ * chain, it returns undefined.
+ * @param node The input expression to traverse.
+ * @returns The final expression in the chain, or undefined if the input is an optional chain.
  */
 function getFinalExpressionInChain(node: Expression): CallExpression | PropertyAccessExpression | ElementAccessExpression | undefined {
     // foo && |foo.bar === 1|; - here the right child of the && binary expression is another binary expression.
@@ -302,7 +342,11 @@ function getFinalExpressionInChain(node: Expression): CallExpression | PropertyA
 }
 
 /**
- * Creates an access chain from toConvert with '?.' accesses at expressions appearing in occurrences.
+ * Converts an expression by creating an access chain with '?.' accesses at expressions appearing in occurrences.
+ * @param checker - The TypeChecker object.
+ * @param toConvert - The expression to convert.
+ * @param occurrences - The array of Occurrence objects.
+ * @returns The converted expression.
  */
 function convertOccurrences(checker: TypeChecker, toConvert: Expression, occurrences: Occurrence[]): Expression {
     if (isPropertyAccessExpression(toConvert) || isElementAccessExpression(toConvert) || isCallExpression(toConvert)) {
@@ -329,6 +373,15 @@ function convertOccurrences(checker: TypeChecker, toConvert: Expression, occurre
     return toConvert;
 }
 
+/**
+ * Converts an OptionalChainInfo object into a converted chain and replaces the original expression with it using a ChangeTracker object.
+ * @param {SourceFile} sourceFile - The source file containing the original expression.
+ * @param {TypeChecker} checker - The TypeChecker object used to check the types of the expressions.
+ * @param {textChanges.ChangeTracker} changes - The ChangeTracker object used to make the changes to the source file.
+ * @param {OptionalChainInfo} info - The OptionalChainInfo object containing the information needed to convert the expression.
+ * @param {string} _actionName - The name of the action being performed.
+ * @returns {void}
+ */
 function doChange(sourceFile: SourceFile, checker: TypeChecker, changes: textChanges.ChangeTracker, info: OptionalChainInfo, _actionName: string): void {
     const { finalExpression, occurrences, expression } = info;
     const firstOccurrence = occurrences[occurrences.length - 1];

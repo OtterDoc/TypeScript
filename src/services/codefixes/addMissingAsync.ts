@@ -80,6 +80,13 @@ function getFix(context: CodeFixContext | CodeFixAllContext, decl: FixableDeclar
     return createCodeFixAction(fixId, changes, Diagnostics.Add_async_modifier_to_containing_function, fixId, Diagnostics.Add_all_missing_async_modifiers);
 }
 
+/**
+ * Modifies the given `insertionSite` by adding the `Async` modifier and replaces it in the `sourceFile` using the provided `changeTracker`.
+ * @param {textChanges.ChangeTracker} changeTracker - The change tracker to use for making the modification.
+ * @param {SourceFile} sourceFile - The source file containing the `insertionSite`.
+ * @param {FixableDeclaration} insertionSite - The declaration to modify and replace.
+ * @param {Set<number>} [fixedDeclarations] - Optional set of already fixed declaration IDs to avoid infinite recursion.
+ */
 function makeChange(changeTracker: textChanges.ChangeTracker, sourceFile: SourceFile, insertionSite: FixableDeclaration, fixedDeclarations?: Set<number>) {
     if (fixedDeclarations) {
         if (fixedDeclarations.has(getNodeId(insertionSite))) {
@@ -96,6 +103,12 @@ function makeChange(changeTracker: textChanges.ChangeTracker, sourceFile: Source
         cloneWithModifier);
 }
 
+/**
+ * Returns a FixableDeclaration object if a span is provided, otherwise returns undefined.
+ * @param {SourceFile} sourceFile - The source file to search in.
+ * @param {TextSpan | undefined} span - The span to search for.
+ * @returns {FixableDeclaration | undefined} - The FixableDeclaration object if found, otherwise undefined.
+ */
 function getFixableErrorSpanDeclaration(sourceFile: SourceFile, span: TextSpan | undefined): FixableDeclaration | undefined {
     if (!span) return undefined;
     const token = getTokenAtPosition(sourceFile, span.start);

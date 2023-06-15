@@ -98,6 +98,11 @@ interface VariableInfo {
     readonly name: Identifier;
 }
 
+/**
+ * Returns an array of applicable refactor actions based on the provided RefactorContext object.
+ * @param {RefactorContext} context - The RefactorContext object containing information about the file, start position, program, and kind.
+ * @returns {readonly ApplicableRefactorInfo[]} An array of applicable refactor actions.
+ */
 function getRefactorActionsToConvertFunctionExpressions(context: RefactorContext): readonly ApplicableRefactorInfo[] {
     const { file, startPosition, program, kind } = context;
     const info = getFunctionInfo(file, startPosition, program);
@@ -146,6 +151,12 @@ function getRefactorActionsToConvertFunctionExpressions(context: RefactorContext
     }];
 }
 
+/**
+ * Returns RefactorEditInfo object or undefined based on the actionName parameter passed.
+ * @param {RefactorContext} context - The context object containing information about the file, startPosition and program.
+ * @param {string} actionName - The name of the action to be performed.
+ * @returns {RefactorEditInfo | undefined} - RefactorEditInfo object or undefined.
+ */
 function getRefactorEditsToConvertFunctionExpressions(context: RefactorContext, actionName: string): RefactorEditInfo | undefined {
     const { file, startPosition, program } = context;
     const info = getFunctionInfo(file, startPosition, program);
@@ -222,6 +233,13 @@ function isSingleVariableDeclaration(parent: Node): parent is VariableDeclaratio
     return isVariableDeclaration(parent) || (isVariableDeclarationList(parent) && parent.declarations.length === 1);
 }
 
+/**
+ * Tries to retrieve a function from a variable declaration.
+ * @param {SourceFile} sourceFile - The source file containing the variable declaration.
+ * @param {TypeChecker} typeChecker - The type checker for the source file.
+ * @param {Node} parent - The parent node of the variable declaration.
+ * @returns {ArrowFunction | FunctionExpression | undefined} The retrieved function or undefined if not found.
+ */
 function tryGetFunctionFromVariableDeclaration(sourceFile: SourceFile, typeChecker: TypeChecker, parent: Node): ArrowFunction | FunctionExpression | undefined {
     if (!isSingleVariableDeclaration(parent)) {
         return undefined;
@@ -234,6 +252,11 @@ function tryGetFunctionFromVariableDeclaration(sourceFile: SourceFile, typeCheck
     return undefined;
 }
 
+/**
+ * Converts a concise body to a block.
+ * @param {ConciseBody} body - The concise body to convert.
+ * @returns {Block} The resulting block.
+ */
 function convertToBlock(body: ConciseBody): Block {
     if (isExpression(body)) {
         const returnStatement = factory.createReturnStatement(body);
@@ -248,6 +271,11 @@ function convertToBlock(body: ConciseBody): Block {
     }
 }
 
+/**
+ * Returns information about a variable declaration within a function expression or arrow function.
+ * @param func The function expression or arrow function to analyze.
+ * @returns An object containing information about the variable declaration, or undefined if the function is not a variable declaration within a variable statement.
+ */
 function getVariableInfo(func: FunctionExpression | ArrowFunction): VariableInfo | undefined {
     const variableDeclaration = func.parent;
     if (!isVariableDeclaration(variableDeclaration) || !isVariableDeclarationInVariableStatement(variableDeclaration)) return undefined;
@@ -266,6 +294,13 @@ function getEditInfoForConvertToAnonymousFunction(context: RefactorContext, func
     return textChanges.ChangeTracker.with(context, t => t.replaceNode(file, func, newNode));
 }
 
+/**
+ * Converts a given FunctionExpression or ArrowFunction to a FunctionDeclaration and returns FileTextChanges array.
+ * @param {RefactorContext} context - The context object for the refactoring.
+ * @param {FunctionExpression | ArrowFunction} func - The function to be converted.
+ * @param {VariableInfo} variableInfo - The variable information object.
+ * @returns {FileTextChanges[]} - The array of file text changes.
+ */
 function getEditInfoForConvertToNamedFunction(context: RefactorContext, func: FunctionExpression | ArrowFunction, variableInfo: VariableInfo): FileTextChanges[] {
     const { file } = context;
     const body = convertToBlock(func.body);
@@ -288,6 +323,12 @@ function getEditInfoForConvertToNamedFunction(context: RefactorContext, func: Fu
     }
 }
 
+/**
+ * Returns an array of FileTextChanges after converting a given FunctionExpression to an Arrow Function.
+ * @param {RefactorContext} context - The context of the refactoring.
+ * @param {FunctionExpression} func - The FunctionExpression to be converted.
+ * @returns {FileTextChanges[]} - An array of FileTextChanges after the conversion.
+ */
 function getEditInfoForConvertToArrowFunction(context: RefactorContext, func: FunctionExpression): FileTextChanges[] {
     const { file } = context;
     const statements = func.body.statements;

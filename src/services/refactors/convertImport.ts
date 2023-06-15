@@ -106,6 +106,18 @@ type ImportConversionInfo =
     | { convertTo: ImportKind.Namespace, import: NamedImports }
     | { convertTo: ImportKind.Named, import: NamespaceImport };
 
+/**
+ * Retrieves information about an import declaration and returns an object with the following properties:
+ * - If the import declaration has a namespace import, returns { convertTo: ImportKind.Named, import: NamespaceImport }.
+ * - If the import declaration has named imports, returns { convertTo: ImportKind.Namespace, import: NamedImports }.
+ * - If the import declaration has a default import, returns { convertTo: ImportKind.Default, import: NamedImports }.
+ * - If the selection is not an import declaration, returns { error: "Selection is not an import declaration." }.
+ * - If the import declaration does not have an import clause, returns { error: "Could not find import clause." }.
+ * - If the import declaration does not have a namespace import or named imports, returns { error: "Could not find namespace import or named imports." }.
+ * @param {RefactorContext} context - The context of the refactoring operation.
+ * @param {boolean} [considerPartialSpans=true] - Whether to consider partial spans when searching for the import declaration.
+ * @returns {(ImportConversionInfo | RefactorErrorInfo | undefined)} An object with information about the import declaration, or undefined if the selection is not an import declaration or if the import declaration is not fully selected. If an error occurs, returns an object with an "error" property containing a message describing the error.
+ */
 function getImportConversionInfo(context: RefactorContext, considerPartialSpans = true): ImportConversionInfo | RefactorErrorInfo | undefined {
     const { file } = context;
     const span = getRefactorContextSpan(context);
@@ -151,6 +163,16 @@ function doChange(sourceFile: SourceFile, program: Program, changes: textChanges
     }
 }
 
+/**
+ * Converts a namespace import to a named import in a given source file.
+ * @param sourceFile - The source file to make changes in.
+ * @param checker - The type checker for the source file.
+ * @param changes - The change tracker to record changes in.
+ * @param toConvert - The namespace import to convert.
+ * @param allowSyntheticDefaultImports - Whether to allow synthetic default imports.
+ * @remarks
+ * This function replaces all references to the namespace import with the corresponding named import and updates the import declaration accordingly.
+ */
 function doChangeNamespaceToNamed(sourceFile: SourceFile, checker: TypeChecker, changes: textChanges.ChangeTracker, toConvert: NamespaceImport, allowSyntheticDefaultImports: boolean): void {
     let usedAsNamespaceOrDefault = false;
 
@@ -206,7 +228,14 @@ function getLeftOfPropertyAccessOrQualifiedName(propertyAccessOrQualifiedName: P
     return isPropertyAccessExpression(propertyAccessOrQualifiedName) ? propertyAccessOrQualifiedName.expression : propertyAccessOrQualifiedName.left;
 }
 
-/** @internal */
+/**
+ * Refactors a named import to a namespace import or default import if possible.
+ * @param sourceFile - The source file to refactor.
+ * @param program - The program containing the source file.
+ * @param changes - The text changes to apply.
+ * @param toConvert - The named import to convert.
+ * @param shouldUseDefault - Whether to use a default import instead of a namespace import.
+ */
 export function doChangeNamedToNamespaceOrDefault(sourceFile: SourceFile, program: Program, changes: textChanges.ChangeTracker, toConvert: NamedImports, shouldUseDefault = getShouldUseDefault(program, toConvert.parent)): void {
     const checker = program.getTypeChecker();
     const importDecl = toConvert.parent.parent;
@@ -220,6 +249,12 @@ export function doChangeNamedToNamespaceOrDefault(sourceFile: SourceFile, progra
         }
     });
     const preferredName = moduleSpecifier && isStringLiteral(moduleSpecifier) ? codefix.moduleSpecifierToValidIdentifier(moduleSpecifier.text, ScriptTarget.ESNext) : "module";
+    /**
+     * Checks if there is a namespace name conflict for a given named import.
+     * @param {ImportSpecifier} namedImport - The named import to check for conflicts.
+     * @returns {boolean} - True if there is a namespace name conflict, false otherwise.
+     * @remarks We need to check if the preferred namespace name (`preferredName`) we'd like to use in the refactored code will present a name conflict. A name conflict means that, in a scope where we would like to use the preferred namespace name, there already exists a symbol with that name in that scope. We are going to use the namespace name in the scopes the named imports being refactored are referenced, so we look for conflicts by looking at every reference to those named imports.
+     */
     function hasNamespaceNameConflict(namedImport: ImportSpecifier): boolean {
         // We need to check if the preferred namespace name (`preferredName`) we'd like to use in the refactored code will present a name conflict.
         // A name conflict means that, in a scope where we would like to use the preferred namespace name, there already exists a symbol with that name in that scope.

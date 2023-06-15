@@ -42,6 +42,15 @@ function getNodes(sourceFile: SourceFile, pos: number) {
     return extendsToken.kind === SyntaxKind.ExtendsKeyword ? { extendsToken, heritageClauses } : undefined;
 }
 
+/**
+ * Replaces the extends token with an implements keyword and modifies the heritage clauses if necessary.
+ * @param changes - The text changes to apply.
+ * @param sourceFile - The source file to modify.
+ * @param extendsToken - The extends token to replace.
+ * @param heritageClauses - An array of heritage clauses.
+ * @remarks If there is already an implements clause, the implements keyword will be replaced with a comma.
+ * @remarks Rough heuristic: delete trailing whitespace after keyword so that it's not excessive.
+ */
 function doChanges(changes: textChanges.ChangeTracker, sourceFile: SourceFile, extendsToken: Node, heritageClauses: readonly HeritageClause[]): void {
     changes.replaceNode(sourceFile, extendsToken, factory.createToken(SyntaxKind.ImplementsKeyword));
 

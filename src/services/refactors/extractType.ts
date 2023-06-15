@@ -159,6 +159,12 @@ interface InterfaceInfo {
 
 type ExtractInfo = TypeAliasInfo | InterfaceInfo;
 
+/**
+ * Extracts information about a type node selection within a given RefactorContext.
+ * @param {RefactorContext} context - The RefactorContext object containing the file and start position.
+ * @param {boolean} [considerEmptySpans=true] - Whether or not to consider empty spans.
+ * @returns {ExtractInfo | RefactorErrorInfo | undefined} - An object containing information about the extracted type, or an error message if extraction failed.
+ */
 function getRangeToExtract(context: RefactorContext, considerEmptySpans = true): ExtractInfo | RefactorErrorInfo | undefined {
     const { file, startPosition } = context;
     const isJS = isSourceFileJS(file);
@@ -181,6 +187,12 @@ function getRangeToExtract(context: RefactorContext, considerEmptySpans = true):
     return { isJS, selection, enclosingNode, typeParameters, typeElements };
 }
 
+/**
+ * Flattens a TypeLiteralNode reference into an array of TypeElements.
+ * @param {TypeChecker} checker - The TypeChecker instance.
+ * @param {TypeNode | undefined} node - The TypeNode to flatten.
+ * @returns {readonly TypeElement[] | undefined} - An array of flattened TypeElements or undefined if the node is not a TypeLiteralNode or if it contains duplicate property names.
+ */
 function flattenTypeLiteralNodeReference(checker: TypeChecker, node: TypeNode | undefined): readonly TypeElement[] | undefined {
     if (!node) return undefined;
     if (isIntersectionTypeNode(node)) {
@@ -209,10 +221,23 @@ function rangeContainsSkipTrivia(r1: TextRange, node: Node, file: SourceFile): b
     return rangeContainsStartEnd(r1, skipTrivia(file.text, node.pos), node.end);
 }
 
+/**
+ * Collects type parameters from a given selection of a type node.
+ * @param checker - The TypeChecker instance to use.
+ * @param selection - The selection of the type node to collect type parameters from.
+ * @param enclosingNode - The enclosing node of the selection.
+ * @param file - The SourceFile instance that contains the selection.
+ * @returns An array of TypeParameterDeclaration instances or undefined if the visitor function returns true.
+ */
 function collectTypeParameters(checker: TypeChecker, selection: TypeNode, enclosingNode: Node, file: SourceFile): TypeParameterDeclaration[] | undefined {
     const result: TypeParameterDeclaration[] = [];
     return visitor(selection) ? undefined : result;
 
+    /**
+     * A visitor function that traverses a TypeScript AST node and performs certain actions based on the type of node encountered.
+     * @param node The AST node to visit.
+     * @returns Returns true if the node should be skipped, otherwise returns undefined.
+     */
     function visitor(node: Node): true | undefined {
         if (isTypeReferenceNode(node)) {
             if (isIdentifier(node.typeName)) {
@@ -268,6 +293,17 @@ function collectTypeParameters(checker: TypeChecker, selection: TypeNode, enclos
     }
 }
 
+/**
+ * Creates a new type alias declaration and inserts it before the enclosing node in the provided file using the given changes object.
+ * @param changes - The text changes object to use for making the insertion.
+ * @param file - The source file to insert the new type alias declaration into.
+ * @param name - The name of the new type alias declaration.
+ * @param info - An object containing information about the type alias to be created.
+ * @param info.enclosingNode - The node that encloses the selection to be replaced by the new type alias declaration.
+ * @param info.selection - The selection to be replaced by the new type alias declaration.
+ * @param info.typeParameters - An array of type parameter declarations for the new type alias declaration.
+ * @returns void
+ */
 function doTypeAliasChange(changes: textChanges.ChangeTracker, file: SourceFile, name: string, info: TypeAliasInfo) {
     const { enclosingNode, selection, typeParameters } = info;
 
@@ -281,6 +317,13 @@ function doTypeAliasChange(changes: textChanges.ChangeTracker, file: SourceFile,
     changes.replaceNode(file, selection, factory.createTypeReferenceNode(name, typeParameters.map(id => factory.createTypeReferenceNode(id.name, /*typeArguments*/ undefined))), { leadingTriviaOption: textChanges.LeadingTriviaOption.Exclude, trailingTriviaOption: textChanges.TrailingTriviaOption.ExcludeWhitespace });
 }
 
+/**
+ * Creates a new interface declaration and inserts it before the enclosing node in the given file using the provided changes object.
+ * @param changes - The ChangeTracker object used to make modifications to the file.
+ * @param file - The SourceFile object representing the file being modified.
+ * @param name - The name of the new interface declaration.
+ * @param info - An object containing information about the new interface declaration, including its enclosing node, selection, type parameters, and type elements.
+ */
 function doInterfaceChange(changes: textChanges.ChangeTracker, file: SourceFile, name: string, info: InterfaceInfo) {
     const { enclosingNode, selection, typeParameters, typeElements } = info;
 
@@ -296,6 +339,15 @@ function doInterfaceChange(changes: textChanges.ChangeTracker, file: SourceFile,
     changes.replaceNode(file, selection, factory.createTypeReferenceNode(name, typeParameters.map(id => factory.createTypeReferenceNode(id.name, /*typeArguments*/ undefined))), { leadingTriviaOption: textChanges.LeadingTriviaOption.Exclude, trailingTriviaOption: textChanges.TrailingTriviaOption.ExcludeWhitespace });
 }
 
+/**
+ * Adds a JSDoc typedef tag to the enclosing node of a given selection in a TypeScript source file.
+ * @param changes - The ChangeTracker object for making changes to the source file.
+ * @param context - The RefactorContext object for the refactoring operation.
+ * @param file - The SourceFile object representing the TypeScript source file.
+ * @param name - The name of the type reference node to be created.
+ * @param info - An ExtractInfo object containing information about the selection.
+ * @returns void
+ */
 function doTypedefChange(changes: textChanges.ChangeTracker, context: RefactorContext, file: SourceFile, name: string, info: ExtractInfo) {
     const { enclosingNode, selection, typeParameters } = info;
 

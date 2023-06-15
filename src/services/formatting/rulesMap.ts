@@ -30,8 +30,9 @@ function getRulesMap(): RulesMap {
 }
 
 /**
- * For a given rule action, gets a mask of other rule actions that
- * cannot be applied at the same position.
+ * Returns a mask of other rule actions that cannot be applied at the same position as the given rule action.
+ * @param {RuleAction} ruleAction - The rule action to check against.
+ * @returns {RuleAction} - A mask of other rule actions that cannot be applied at the same position.
  */
 function getRuleActionExclusion(ruleAction: RuleAction): RuleAction {
     let mask = RuleAction.None;
@@ -52,6 +53,11 @@ function getRuleActionExclusion(ruleAction: RuleAction): RuleAction {
 
 /** @internal */
 export type RulesMap = (context: FormattingContext) => readonly Rule[] | undefined;
+/**
+ * Creates a mapping of rules based on the provided RuleSpec array.
+ * @param {readonly RuleSpec[]} rules - An array of RuleSpec objects.
+ * @returns {RulesMap} A function that takes a context object and returns an array of Rule objects.
+ */
 function createRulesMap(rules: readonly RuleSpec[]): RulesMap {
     const map = buildMap(rules);
     return context => {
@@ -73,6 +79,17 @@ function createRulesMap(rules: readonly RuleSpec[]): RulesMap {
     };
 }
 
+/**
+ * Builds a map of rules based on an array of RuleSpec objects.
+ * @param {readonly RuleSpec[]} rules - The array of RuleSpec objects to build the map from.
+ * @returns {readonly (readonly Rule[])[]} An array of arrays of Rule objects representing the map.
+ * The outer array represents the rows of the map, while the inner arrays represent the columns.
+ * Each Rule object represents a rule that applies to a specific combination of left and right tokens.
+ * @remarks This function uses a bucketing strategy to group rules that apply to the same combination of tokens.
+ * The bucket index is calculated using the getRuleBucketIndex function.
+ * During construction of the rules bucket in the map, the rulesBucketConstructionStateList array is used to keep track of the state of each bucket.
+ * This array is not used after construction is complete.
+ */
 function buildMap(rules: readonly RuleSpec[]): readonly (readonly Rule[])[] {
     // Map from bucket index to array of rules
     const map: Rule[][] = new Array(mapRowLength * mapRowLength);
@@ -128,6 +145,15 @@ enum RulesPosition {
 // Example:
 // In order to insert a rule to the end of sub-bucket (3), we get the index by adding
 // the values in the bitmap segments 3rd, 2nd, and 1st.
+/**
+ * Adds a rule to an array of rules.
+ * @param {Rule[]} rules - The array of rules to add the new rule to.
+ * @param {Rule} rule - The new rule to add to the array.
+ * @param {boolean} specificTokens - A boolean indicating whether the rule applies to specific tokens.
+ * @param {number[]} constructionState - An array of numbers representing the construction state.
+ * @param {number} rulesBucketIndex - The index of the rules bucket.
+ * @returns {void}
+ */
 function addRule(rules: Rule[], rule: Rule, specificTokens: boolean, constructionState: number[], rulesBucketIndex: number): void {
     const position = rule.action & RuleAction.StopAction ?
         specificTokens ? RulesPosition.StopRulesSpecific : RulesPosition.StopRulesAny :

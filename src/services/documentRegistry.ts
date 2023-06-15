@@ -29,19 +29,12 @@ import {
 } from "./_namespaces/ts";
 
 /**
- * The document registry represents a store of SourceFile objects that can be shared between
- * multiple LanguageService instances. A LanguageService instance holds on the SourceFile (AST)
- * of files in the context.
- * SourceFile objects account for most of the memory usage by the language service. Sharing
- * the same DocumentRegistry instance between different instances of LanguageService allow
- * for more efficient memory utilization since all projects will share at least the library
- * file (lib.d.ts).
+ * Represents a registry of SourceFile objects that can be shared between multiple LanguageService instances. This interface provides methods for acquiring, updating, and releasing SourceFile objects based on their file name, compilation settings, and other parameters.
  *
- * A more advanced use of the document registry is to serialize sourceFile objects to disk
- * and re-hydrate them when needed.
+ * @remarks
+ * Sharing the same DocumentRegistry instance between different instances of LanguageService allows for more efficient memory utilization since all projects will share at least the library file (lib.d.ts). A more advanced use of the document registry is to serialize SourceFile objects to disk and re-hydrate them when needed.
  *
- * To create a default DocumentRegistry, use createDocumentRegistry to create one, and pass it
- * to all subsequent createLanguageService calls.
+ * @public
  */
 export interface DocumentRegistry {
     /**
@@ -191,6 +184,10 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
     const buckets = new Map<DocumentRegistryBucketKeyWithMode, Map<Path, BucketEntry>>();
     const getCanonicalFileName = createGetCanonicalFileName(!!useCaseSensitiveFileNames);
 
+    /**
+     * Returns a JSON stringified array of bucket information containing the name of each bucket and an array of source files within each bucket, sorted by their reference count. Each source file object contains the name, scriptKind, and refCount properties.
+     * @returns {string} - JSON stringified array of bucket information
+     */
     function reportStats() {
         const bucketInfoArray = arrayFrom(buckets.keys()).filter(name => name && name.charAt(0) === "_").map(name => {
             const entries = buckets.get(name)!;
@@ -249,6 +246,19 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
         return entry;
     }
 
+    /**
+     * Acquires or updates a SourceFile object for a given file name and path.
+     * @param fileName - The name of the file.
+     * @param path - The path of the file.
+     * @param compilationSettingsOrHost - The CompilerOptions or MinimalResolutionCacheHost object.
+     * @param key - The DocumentRegistryBucketKey object.
+     * @param scriptSnapshot - The IScriptSnapshot object.
+     * @param version - The version of the script.
+     * @param acquiring - A boolean value indicating whether the LS is acquiring the document for the first time.
+     * @param scriptKind - The ScriptKind object.
+     * @param languageVersionOrOptions - The CreateSourceFileOptions or ScriptTarget object.
+     * @returns The SourceFile object.
+     */
     function acquireOrUpdateDocument(
         fileName: string,
         path: Path,
@@ -344,6 +354,12 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
 
         return entry.sourceFile;
 
+        /**
+         * Sets an entry in the bucket object based on the provided path and entry. If the entry already exists, it will be updated.
+         * @returns void
+         * @params path - The path to the entry in the bucket object.
+         * @params entry - The entry to be added or updated in the bucket object.
+         */
         function setBucketEntry() {
             if (!bucketEntry) {
                 bucket.set(path, entry);
@@ -366,6 +382,14 @@ export function createDocumentRegistryInternal(useCaseSensitiveFileNames?: boole
         return releaseDocumentWithKey(path, key, scriptKind, impliedNodeFormat);
     }
 
+    /**
+     * Releases a document from the document registry using the provided key and path.
+     * @param {Path} path - The path of the document to release.
+     * @param {DocumentRegistryBucketKey} key - The key of the document registry bucket.
+     * @param {ScriptKind} [scriptKind] - The script kind of the document.
+     * @param {ResolutionMode} [impliedNodeFormat] - The implied node format of the document.
+     * @returns {void}
+     */
     function releaseDocumentWithKey(path: Path, key: DocumentRegistryBucketKey, scriptKind?: ScriptKind, impliedNodeFormat?: ResolutionMode): void {
         const bucket = Debug.checkDefined(buckets.get(getDocumentRegistryBucketKeyWithMode(key, impliedNodeFormat)));
         const bucketEntry = bucket.get(path)!;
